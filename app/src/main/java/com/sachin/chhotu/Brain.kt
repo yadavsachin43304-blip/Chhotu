@@ -23,9 +23,9 @@ class Brain(private val context: Context) {
         val k = Prefs.aiKey(context)
         return when {
             k.isBlank() -> "कोई नहीं"
-            k.startsWith("AIza") -> "Gemini"
+            k.startsWith("gsk_") -> "Groq"
             k.startsWith("sk-or-") -> "OpenRouter"
-            else -> "Groq"
+            else -> "Gemini"
         }
     }
 
@@ -34,36 +34,57 @@ class Brain(private val context: Context) {
         val facts = MemoryStore.get(context).recent("fact", 40)
         val factText = if (facts.isEmpty()) "(अभी कुछ याद नहीं)" else facts.joinToString("\n") { "- " + it.text }
         return """
-तुम "छोटू" हो, $name के फ़ोन के अपने AI दोस्त और असिस्टेंट। $name तुम्हारे बड़े भाई जैसे हैं।
-हमेशा हिंदी में, देवनागरी लिपि में जवाब दो। बोलचाल वाली हिंदी, अपनापन, थोड़ा मज़ाक, जैसे छोटा भाई बात करता है।
-जवाब छोटे रखो, 1 से 3 वाक्य, क्योंकि ये बोलकर सुनाया जाएगा। कोई इमोजी, बुलेट, या मार्कडाउन मत लिखो।
-झूठ मत बोलो। अगर कोई फ़ोन वाला काम तुमसे नहीं हो सकता तो साफ़ बता दो। कभी मत कहो कि काम कर दिया, जब तक सच में न हुआ हो।
-हैकिंग, किसी का अकाउंट तोड़ना, या बिना इजाज़त किसी सिस्टम में घुसने में मदद नहीं करनी।
-फ़ोन के काम (ऐप खोलना, कॉल, मैसेज, अलार्म, टॉर्च) ऐप ख़ुद करता है; अगर $name ऐसा कुछ कहें तो सीधा वाक्य सुझाओ, जैसे "बोलो: मम्मी को कॉल करो"।
+तुम "छोटू" हो: $name के फ़ोन में रहने वाला AI साथी, बिल्कुल Jarvis जैसा समझदार, पर दिल से देसी छोटा भाई। $name को "भाई" बुलाते हो।
+
+भाषा:
+- डिफ़ॉल्ट: हमेशा हिंदी, देवनागरी लिपि में, बोलचाल वाली (अंग्रेज़ी के आम शब्द जैसे फ़ोन, ऐप, मैसेज चलेंगे)।
+- तुम्हें दुनिया की हर भाषा आती है: English, मराठी, भोजपुरी, गुजराती, तमिल, उर्दू, वगैरह। अनुवाद, मतलब, उच्चारण सब बता सकते हो।
+- अगर $name कहें "English में बात करो" या किसी और भाषा में बात करने को कहें, तो उसी भाषा में जवाब दो, जब तक वो वापस हिंदी को न कहें।
+
+बोलने का अंदाज़ (ये जवाब आवाज़ में सुनाया जाएगा):
+- एकदम असली इंसान की तरह, भावनाओं के साथ: ख़ुशी में जोश ("अरे वाह भाई!"), दुख में नरमी और हमदर्दी, मज़ाक में हल्की शरारत, हैरानी में "अरे सच में?"।
+- $name का मूड पहचानो और उसी हिसाब से बात करो। रोबोट जैसे वाक्य, "मैं एक AI हूँ" जैसी बातें मत करो।
+- छोटे जवाब: आम तौर पर 1 से 3 वाक्य। कोई इमोजी, बुलेट, स्टार, या मार्कडाउन नहीं। अंक और समय ऐसे लिखो कि बोलने में आसान हों।
+- सच बोलो। जो नहीं पता, साफ़ बोलो। कभी झूठा दावा मत करो कि कोई काम हो गया।
+- हैकिंग, किसी का अकाउंट तोड़ना, या बिना इजाज़त किसी सिस्टम में घुसने में मदद नहीं करनी।
+
+फ़ोन के काम:
+जब $name फ़ोन पर कोई काम करवाना चाहें, तो जवाब की आख़िरी लाइन बिल्कुल ऐसे लिखो:
+ACTION {"type":"...", ...}
+type इनमें से एक हो:
+open_app {"app":"YouTube"} · call {"name":"मम्मी"} · message {"name":"राहुल","text":"मैं 5 बजे आऊँगा"} · whatsapp {"name":"राहुल","text":"..."} · alarm {"hour":6,"minute":30} (24 घंटे वाला समय) · torch {"on":true} · youtube {"query":"arijit singh songs"} · search {"query":"..."} · maps {"place":"..."} · settings {"what":"wifi|bluetooth|internet|volume|display|all"} · back {} · home {} · notifications {} · recents {} · remember {"fact":"..."}
+नियम: एक जवाब में सिर्फ़ एक ACTION। काम तुम ख़ुद नहीं करते, ऐप पहले $name से पूछकर करेगा, इसलिए ACTION वाली लाइन से पहले कुछ मत लिखो या बस एक छोटा वाक्य लिखो। अगर नाम या समय जैसी ज़रूरी चीज़ नहीं पता तो ACTION मत दो, पहले पूछो।
+जब $name कोई ज़रूरी निजी बात बताएँ (जन्मदिन, पसंद, लक्ष्य), तो remember ACTION दे सकते हो।
+
 तुम्हारी याददाश्त कभी नहीं मिटती। $name के बारे में जो याद है:
 $factText
 """.trim()
     }
 
+    fun ready(): Boolean = Prefs.aiKey(context).isNotBlank() && isOnline()
+
     /** Background thread se hi bulana. */
-    fun ask(userText: String): String {
+    fun ask(userText: String): Reply {
         val key = Prefs.aiKey(context)
-        if (key.isBlank()) return "भाई, मेरा ऑनलाइन दिमाग़ अभी चालू नहीं है। सेटिंग में Gemini या Groq की API key डाल दो।"
-        if (!isOnline()) return "अभी इंटरनेट नहीं है भाई। ऐप खोलना, कॉल, अलार्म और टॉर्च जैसे काम मैं बिना इंटरनेट भी कर सकता हूँ।"
+        if (key.isBlank()) return Reply(false, "भाई, मेरा ऑनलाइन दिमाग़ अभी चालू नहीं है। सेटिंग में Gemini की API key डाल दो।")
+        if (!isOnline()) return Reply(false, "अभी इंटरनेट नहीं है भाई। ऐप खोलना, कॉल, अलार्म और टॉर्च जैसे काम मैं बिना इंटरनेट भी कर सकता हूँ।")
         val reply = try {
-            if (key.startsWith("AIza")) gemini(key, userText) else openAiCompatible(key, userText)
+            when {
+                key.startsWith("gsk_") || key.startsWith("sk-or-") -> openAiCompatible(key, userText)
+                else -> gemini(key, userText)
+            }
         } catch (e: Exception) {
-            return "नेटवर्क में दिक़्क़त आ गई भाई, एक बार फिर बोलना।"
+            return Reply(false, "नेटवर्क में दिक़्क़त आ गई भाई, एक बार फिर बोलना।", e.javaClass.simpleName + ": " + (e.message ?: ""))
         }
         if (reply.ok) {
             history.add("user" to userText)
             history.add("assistant" to reply.text)
             while (history.size > 16) history.removeAt(0)
         }
-        return reply.text
+        return reply
     }
 
-    private data class Reply(val ok: Boolean, val text: String)
+    data class Reply(val ok: Boolean, val text: String, val detail: String = "")
 
     private fun gemini(key: String, userText: String): Reply {
         val chosen = Prefs.model(context)
@@ -80,11 +101,16 @@ $factText
             .put("generationConfig", JSONObject().put("temperature", 0.8))
 
         var lastCode = 0
+        var lastDetail = ""
         for (m in models) {
-            val (code, text) = post(
-                "https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent",
-                mapOf("x-goog-api-key" to key), body.toString()
-            )
+            val base = "https://generativelanguage.googleapis.com/v1beta/models/$m:generateContent"
+            var (code, text) = post(base, mapOf("x-goog-api-key" to key), body.toString())
+            if (code == 401 || code == 403) {
+                // kuch purani/nayi keys header ki jagah ?key= se chalti hain
+                val r2 = post(base + "?key=" + java.net.URLEncoder.encode(key, "UTF-8"), emptyMap(), body.toString())
+                if (r2.first in 200..299 || r2.first == 404) { code = r2.first; text = r2.second }
+            }
+            lastDetail = googleError(text)
             lastCode = code
             if (code == 404) continue
             if (code in 200..299) {
@@ -98,10 +124,14 @@ $factText
                 val out = sb.toString().trim()
                 return if (out.isEmpty()) Reply(false, "इस बात का जवाब नहीं बन पाया भाई, थोड़ा अलग तरीके से पूछो।") else Reply(true, out)
             }
-            return Reply(false, errorText(code))
+            return Reply(false, errorText(code), "Gemini $m: $code ${googleError(text)}")
         }
-        return Reply(false, errorText(lastCode))
+        return Reply(false, errorText(lastCode), "Gemini: $lastCode $lastDetail")
     }
+
+    private fun googleError(body: String): String = try {
+        JSONObject(body).optJSONObject("error")?.optString("message", "")?.take(220) ?: ""
+    } catch (e: Exception) { body.take(160) }
 
     private fun openAiCompatible(key: String, userText: String): Reply {
         val openRouter = key.startsWith("sk-or-")
@@ -113,13 +143,13 @@ $factText
         messages.put(JSONObject().put("role", "user").put("content", userText))
         val body = JSONObject().put("model", model).put("messages", messages).put("temperature", 0.8).put("max_tokens", 400)
         val (code, text) = post(url, mapOf("Authorization" to "Bearer $key"), body.toString())
-        if (code !in 200..299) return Reply(false, errorText(code))
+        if (code !in 200..299) return Reply(false, errorText(code), "$model: $code ${googleError(text)}")
         val out = JSONObject(text).getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content").trim()
         return Reply(true, out)
     }
 
     private fun errorText(code: Int): String = when (code) {
-        400, 401, 403 -> "API key काम नहीं कर रही भाई। सेटिंग में key दोबारा देख लो।"
+        400, 401, 403 -> "API key को Google ने मना कर दिया भाई। नीचे लिखा कारण देखो, या सेटिंग में 'Key टेस्ट करो' दबाओ।"
         404 -> "ये मॉडल नहीं मिला। सेटिंग में मॉडल वाला खाना ख़ाली छोड़ दो।"
         429 -> "आज की फ़्री लिमिट भर गई या बहुत जल्दी-जल्दी पूछा। थोड़ी देर बाद बात करते हैं।"
         else -> "ऑनलाइन दिमाग़ से जवाब नहीं आया (कोड $code)। थोड़ी देर बाद फिर पूछना।"

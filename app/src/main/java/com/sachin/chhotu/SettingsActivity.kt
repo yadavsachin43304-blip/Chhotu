@@ -45,7 +45,7 @@ class SettingsActivity : AppCompatActivity() {
         me.addView(name)
 
         val brain = section("दिमाग़ (ऑनलाइन AI)")
-        label(brain, "API key: Gemini (AIza…) या Groq (gsk_…) या OpenRouter (sk-or-…)। छोटू key देखकर अपने-आप सही वाला चुन लेगा।")
+        label(brain, "API key: Gemini की कोई भी key (AQ… या AIza…), या Groq (gsk_…), या OpenRouter (sk-or-…)। छोटू key देखकर अपने-आप सही वाला चुन लेगा। Gemini key: aistudio.google.com/api-keys")
         val key = Ui.field(this, Prefs.aiKey(this), "यहाँ key पेस्ट करो").apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
@@ -63,6 +63,18 @@ class SettingsActivity : AppCompatActivity() {
         label(voice, "आवाज़ का नाम (Sarvam): shubh, aditya, rahul, rohan, kabir, priya, neha…")
         val speaker = Ui.field(this, Prefs.voice(this), "shubh")
         voice.addView(speaker)
+        brain.addView(Ui.button(this, "🔑 Key टेस्ट करो", false).apply {
+            setOnClickListener {
+                Prefs.save(this@SettingsActivity, name.text.toString(), key.text.toString(), model.text.toString(), sarvam.text.toString(), speaker.text.toString())
+                text = "टेस्ट हो रहा है…"
+                Engine.testKey { res ->
+                    text = "🔑 Key टेस्ट करो"
+                    androidx.appcompat.app.AlertDialog.Builder(this@SettingsActivity).setTitle("Key टेस्ट").setMessage(res).setPositiveButton("ठीक", null).show()
+                    refresh()
+                }
+            }
+        }, gap())
+
 
         col.addView(Ui.button(this, "सेव करो").apply {
             setOnClickListener {

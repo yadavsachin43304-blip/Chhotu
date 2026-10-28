@@ -10,6 +10,7 @@ import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import org.json.JSONObject
 import java.util.concurrent.CopyOnWriteArraySet
 
 /**
@@ -46,6 +47,8 @@ object Engine {
         private set
     private var pending: Outcome.Confirm? = null
     private var misses = 0
+    /** Chhotu jis bhasha me bola, agli baar usi me sunna */
+    private var listenLang = "hi-IN"
 
     fun init(context: Context) {
         if (initialized) return
@@ -128,8 +131,8 @@ object Engine {
         }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "hi-IN")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, listenLang)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, listenLang)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, app.packageName)
@@ -218,21 +221,55 @@ object Engine {
             say("ठीक है भाई, जब बुलाओ तब हाज़िर!")
             return
         }
-        when (val o = router.handle(text)) {
+        // Online ho to AI samjhega (Jarvis jaisa), offline ho to apne niyam
+        val smart = brain.ready()
+        val first = router.handle(text, fastOnly = smart)
+        if (first != Outcome.AskCloud) { act(first); return }
+        setState(State.THINKING, "सोच रहा हूँ…")
+        Thread {
+            val r = brain.ask(text)
+            main.post {
+                if (!r.ok) {
+                    val local = if (smart) router.handle(text) else Outcome.AskCloud
+                    if (local != Outcome.AskCloud) act(local)
+                    else {
+                        if (r.detail.isNotBlank()) listeners.forEach { it.onMessage("ⓘ " + r.detail, false) }
+                        say(r.text)
+                    }
+                    return@post
+                }
+                val lines = r.text.lines()
+                val actionLine = lines.lastOrNull { it.trim().startsWith("ACTION") }
+                val spoken = lines.filterNot { it.trim().startsWith("ACTION") }.joinToString(" ").trim()
+                if (actionLine != null) {
+                    val json = try { JSONObject(actionLine.substring(actionLine.indexOf('{'))) } catch (e: Exception) { null }
+                    val o = json?.let { router.fromAction(it) }
+                    if (o != null) { act(o); return@post }
+                }
+                say(spoken.ifEmpty { "हम्म, फिर से बोलना भाई।" })
+            }
+        }.start()
+    }
+
+    private fun act(o: Outcome) {
+        when (o) {
             is Outcome.Say -> say(o.text)
             is Outcome.Confirm -> { pending = o; say(o.question) }
             is Outcome.NeedPermission -> say(o.text)
-            Outcome.AskCloud -> {
-                setState(State.THINKING, "सोच रहा हूँ…")
-                Thread {
-                    val ans = brain.ask(text)
-                    main.post { say(ans) }
-                }.start()
-            }
+            Outcome.AskCloud -> say("हम्म, ये समझ नहीं आया भाई।")
         }
     }
 
+    /** Settings ke "Key test" ke liye */
+    fun testKey(cb: (String) -> Unit) {
+        Thread {
+            val r = brain.ask("बस एक छोटा सा नमस्ते बोलो।")
+            main.post { cb(if (r.ok) "✅ चल गया (${brain.providerName()}): ${r.text}" else "❌ ${r.text}\n\n${r.detail}") }
+        }.start()
+    }
+
     private fun say(text: String) {
+        listenLang = Lang.detect(text).let { if (it == "hi-IN" || it == "en-IN") it else listenLang }
         emit(text, false)
         setState(State.SPEAKING, "बोल रहा हूँ…")
         speaker.speak(text)

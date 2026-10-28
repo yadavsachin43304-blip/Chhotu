@@ -98,6 +98,15 @@ class Speaker(private val context: Context) : TextToSpeech.OnInitListener {
     private fun androidSpeak(text: String, my: Int) {
         val t = tts
         if (t == null || !ttsReady) { finish(my); return }
+        val lang = Lang.detect(text)
+        try {
+            val parts = lang.split("-")
+            val loc = Locale(parts[0], parts.getOrElse(1) { "IN" })
+            if (t.isLanguageAvailable(loc) >= TextToSpeech.LANG_AVAILABLE) {
+                t.language = loc
+                if (lang == "hi-IN") t.voices?.filter { it.locale.language == "hi" && !it.isNetworkConnectionRequired }?.maxByOrNull { it.quality }?.let { t.voice = it }
+            } else t.language = Locale("hi", "IN")
+        } catch (_: Exception) { }
         val f = File(context.cacheDir, "chhotu_tts.wav")
         f.delete()
         val r = t.synthesizeToFile(text, Bundle(), f, "file:$my")
@@ -199,10 +208,11 @@ class Speaker(private val context: Context) : TextToSpeech.OnInitListener {
     private fun sarvam(key: String, text: String): ByteArray? {
         fun body(langField: String) = JSONObject()
             .put("text", text)
-            .put(langField, "hi-IN")
+            .put(langField, Lang.detect(text))
             .put("model", "bulbul:v3")
             .put("speaker", Prefs.voice(context))
             .put("pace", 1.0)
+            .put("temperature", 0.75)
             .put("speech_sample_rate", 22050)
             .toString()
         var (code, resp) = Brain.post("https://api.sarvam.ai/text-to-speech", mapOf("api-subscription-key" to key), body("language_code"))

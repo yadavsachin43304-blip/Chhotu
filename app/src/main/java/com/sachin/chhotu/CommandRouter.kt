@@ -30,7 +30,8 @@ class CommandRouter(private val context: Context) {
 
     private val memory = MemoryStore.get(context)
 
-    fun handle(raw: String): Outcome {
+    /** fastOnly = sirf turant wale kaam (yaad, torch); baaki AI samjhega. */
+    fun handle(raw: String, fastOnly: Boolean = false): Outcome {
         val t = normalize(raw)
 
         // 1. Yaad rakhna
@@ -51,6 +52,8 @@ class CommandRouter(private val context: Context) {
             val off = has(t, "बंद", "band", "off", "bujha", "बुझा")
             return Outcome.Say(torch(!off))
         }
+
+        if (fastOnly) return Outcome.AskCloud
 
         // 3. Alarm
         if (has(t, "अलार्म", "alarm")) return alarm(t)
@@ -131,6 +134,94 @@ class CommandRouter(private val context: Context) {
         }
 
         return Outcome.AskCloud
+    }
+
+    /** AI ne jo ACTION diya, usko asli kaam me badlo (har bade kaam se pehle poochna). */
+    fun fromAction(o: org.json.JSONObject): Outcome? {
+        fun str(k: String) = o.optString(k, "").trim()
+        return when (o.optString("type")) {
+            "open_app" -> if (str("app").isEmpty()) null else openApp(str("app"))
+            "call" -> if (str("name").isEmpty()) null else handle(str("name") + " को कॉल करो")
+            "message" -> if (str("name").isEmpty()) null else handle(str("name") + " को मैसेज" + (if (str("text").isNotEmpty()) " कि " + str("text") else ""))
+            "whatsapp" -> whatsapp(str("name"), str("text"))
+            "alarm" -> {
+                val h = o.optInt("hour", -1); val m = o.optInt("minute", 0)
+                if (h !in 0..23 || m !in 0..59) null else alarmAt(h, m)
+            }
+            "torch" -> Outcome.Say(torch(o.optBoolean("on", true)))
+            "youtube" -> {
+                val q = str("query")
+                Outcome.Confirm(if (q.isEmpty()) "YouTube खोलूँ? हाँ या ना?" else "YouTube पर \"$q\" लगाऊँ? हाँ या ना?") {
+                    val yt = Intent(Intent.ACTION_SEARCH).setPackage("com.google.android.youtube").putExtra("query", q).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    try { context.startActivity(yt); "YouTube पर लगा दिया।" } catch (e: Exception) {
+                        openUrl("https://www.youtube.com/results?search_query=" + Uri.encode(q), "YouTube खोल दिया।")
+                    }
+                }
+            }
+            "search" -> {
+                val q = str("query"); if (q.isEmpty()) null else
+                Outcome.Confirm("Google पर \"$q\" ढूँढूँ? हाँ या ना?") { openUrl("https://www.google.com/search?q=" + Uri.encode(q), "Google पर खोल दिया।") }
+            }
+            "maps" -> {
+                val p = str("place"); if (p.isEmpty()) null else
+                Outcome.Confirm("मैप में \"$p\" दिखाऊँ? हाँ या ना?") {
+                    try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(p))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); "मैप खोल दिया।" }
+                    catch (e: Exception) { openUrl("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(p), "मैप खोल दिया।") }
+                }
+            }
+            "settings" -> when (str("what")) {
+                "wifi" -> handle("wifi खोलो")
+                "bluetooth" -> handle("bluetooth खोलो")
+                "internet" -> handle("internet खोलो")
+                "volume" -> handle("volume खोलो")
+                "display" -> openSettings(Settings.ACTION_DISPLAY_SETTINGS, "डिस्प्ले की सेटिंग खोल दी।")
+                else -> openSettings(Settings.ACTION_SETTINGS, "सेटिंग खोल दी।")
+            }
+            "back" -> global(AccessibilityService.GLOBAL_ACTION_BACK, "वापस चला गया।")
+            "home" -> global(AccessibilityService.GLOBAL_ACTION_HOME, "होम पर आ गए।")
+            "notifications" -> global(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS, "नोटिफ़िकेशन खोल दिए।")
+            "recents" -> global(AccessibilityService.GLOBAL_ACTION_RECENTS, "हाल के ऐप दिखा दिए।")
+            "remember" -> if (str("fact").isEmpty()) null else { memory.add("fact", str("fact")); Outcome.Say("पक्का याद रख लिया।") }
+            else -> null
+        }
+    }
+
+    private fun openUrl(url: String, ok: String): String = try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); ok
+    } catch (e: Exception) { "ब्राउज़र नहीं खुला।" }
+
+    private fun whatsapp(name: String, text: String): Outcome {
+        if (name.isEmpty()) return Outcome.Say("किसको WhatsApp करूँ भाई?")
+        var number = name.filter { it.isDigit() || it == '+' }
+        var who = name
+        if (number.length < 6) {
+            if (context.checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED)
+                return Outcome.NeedPermission(android.Manifest.permission.READ_CONTACTS, "कॉन्टैक्ट देखने की इजाज़त दे दो, फिर दोबारा बोलना।")
+            val c = findContact(name) ?: return Outcome.Say("\"$name\" नाम का कोई कॉन्टैक्ट नहीं मिला।")
+            who = c.first; number = c.second
+        }
+        var digits = number.filter { it.isDigit() }
+        if (digits.length == 10) digits = "91$digits"
+        if (digits.startsWith("0") && digits.length == 11) digits = "91" + digits.substring(1)
+        val q = if (text.isNotEmpty()) "$who को WhatsApp पर लिखूँ: \"$text\"? हाँ या ना?" else "$who का WhatsApp चैट खोलूँ? हाँ या ना?"
+        return Outcome.Confirm(q) {
+            memory.add("action", "WhatsApp draft: $who: $text")
+            openUrl("https://wa.me/$digits" + (if (text.isNotEmpty()) "?text=" + Uri.encode(text) else ""), "WhatsApp में मैसेज तैयार है, देख कर Send दबा देना।")
+        }
+    }
+
+    private fun alarmAt(hour: Int, minute: Int): Outcome {
+        val i = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+            putExtra(AlarmClock.EXTRA_HOUR, hour)
+            putExtra(AlarmClock.EXTRA_MINUTES, minute)
+            putExtra(AlarmClock.EXTRA_MESSAGE, "Chhotu")
+            putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val time = String.format(Locale.US, "%d:%02d", hour, minute)
+        return Outcome.Confirm("$time बजे का अलार्म लगाऊँ? हाँ या ना?") {
+            try { context.startActivity(i); memory.add("action", "Alarm: $time"); "$time का अलार्म लगा दिया।" } catch (e: Exception) { "अलार्म ऐप नहीं मिला।" }
+        }
     }
 
     // ---------- helpers ----------
