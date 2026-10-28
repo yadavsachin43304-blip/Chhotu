@@ -110,6 +110,12 @@ $factText
                 val r2 = post(base + "?key=" + java.net.URLEncoder.encode(key, "UTF-8"), emptyMap(), body.toString())
                 if (r2.first in 200..299 || r2.first == 404) { code = r2.first; text = r2.second }
             }
+            if ((code == 400 || code == 401 || code == 403) && key.startsWith("AQ.")) {
+                // Agent Platform / Vertex Express wali AQ key ka darwaza alag hai
+                val v = post("https://aiplatform.googleapis.com/v1/publishers/google/models/$m:generateContent",
+                    mapOf("x-goog-api-key" to key), body.toString())
+                if (v.first in 200..299) { code = v.first; text = v.second }
+            }
             lastDetail = googleError(text)
             lastCode = code
             if (code == 404) continue
@@ -124,7 +130,7 @@ $factText
                 val out = sb.toString().trim()
                 return if (out.isEmpty()) Reply(false, "इस बात का जवाब नहीं बन पाया भाई, थोड़ा अलग तरीके से पूछो।") else Reply(true, out)
             }
-            return Reply(false, errorText(code), "Gemini $m: $code ${googleError(text)}")
+            return Reply(false, errorText(code), "Gemini $m: $code ${googleError(text)}\n\nKey: ${key.take(4)}… (${key.length} अक्षर)")
         }
         return Reply(false, errorText(lastCode), "Gemini: $lastCode $lastDetail")
     }

@@ -21,12 +21,15 @@ object Prefs {
     fun powerOn(c: Context): Boolean = sp(c).getBoolean("power_on", false)
     fun setPower(c: Context, on: Boolean) = sp(c).edit().putBoolean("power_on", on).apply()
 
+    /** Copy-paste me aaye space, new line, quotes, chhupe hue characters hata do */
+    fun cleanKey(k: String): String = k.filter { it.code in 0x21..0x7E && it != '"' && it != '\'' && it != '`' }
+
     fun save(c: Context, name: String, aiKey: String, model: String, sarvamKey: String, voice: String) {
         sp(c).edit()
             .putString("user_name", name.trim().ifEmpty { "Sachin" })
-            .putString("ai_key", aiKey.trim())
+            .putString("ai_key", cleanKey(aiKey))
             .putString("model", model.trim())
-            .putString("sarvam_key", sarvamKey.trim())
+            .putString("sarvam_key", cleanKey(sarvamKey))
             .putString("voice", voice.trim().lowercase().ifEmpty { "shubh" })
             .apply()
     }
