@@ -1,10 +1,9 @@
 package com.sachin.chhotu
 
 import android.os.Bundle
-import android.widget.Button
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import java.text.SimpleDateFormat
@@ -16,17 +15,14 @@ class MemoryActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "छोटू की यादें"
+        window.statusBarColor = Ui.BG
+        window.navigationBarColor = Ui.BG
         val store = MemoryStore.get(this)
-        val pad = (12 * resources.displayMetrics.density).toInt()
-        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad, pad, pad) }
-
-        col.addView(TextView(this).apply {
-            text = "कुल यादें: ${store.count()}। ये कभी अपने-आप नहीं मिटतीं। बैकअप के लिए नीचे Export दबाओ, फ़ाइल Downloads/Chhotu में जाएगी।"
-            textSize = 14f
-        })
-        col.addView(Button(this).apply {
-            text = "📤 Export (JSON)"
+        val d = { v: Int -> Ui.dp(this, v) }
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(d(18), d(18), d(18), d(30)) }
+        col.addView(Ui.text(this, "छोटू की यादें", 24f, Ui.TEXT, true))
+        col.addView(Ui.text(this, "कुल ${store.count()} यादें। ये कभी अपने-आप नहीं मिटतीं। बैकअप फ़ाइल Downloads/Chhotu में जाती है।", 13f, Ui.MUTED).apply { setPadding(0, d(6), 0, d(12)) })
+        col.addView(Ui.button(this, "📤 बैकअप Export करो").apply {
             setOnClickListener {
                 val where = store.exportToDownloads()
                 AlertDialog.Builder(this@MemoryActivity).setMessage("बैकअप: $where").setPositiveButton("ठीक", null).show()
@@ -34,14 +30,29 @@ class MemoryActivity : AppCompatActivity() {
         })
 
         val fmt = SimpleDateFormat("dd MMM, HH:mm", Locale("hi", "IN"))
-        val label = mapOf("fact" to "📌 याद", "chat_user" to "🧑 आप", "chat_chhotu" to "🤖 छोटू", "action" to "⚡ काम")
-        for (m in store.all().reversed().take(500)) {
-            col.addView(TextView(this).apply {
-                text = "${label[m.type] ?: m.type} · ${fmt.format(Date(m.time))}\n${m.text}"
-                textSize = 14f
-                setPadding(0, pad, 0, 0)
-            })
+        val label = mapOf("fact" to "📌 याद", "chat_user" to "आप", "chat_chhotu" to "छोटू", "action" to "⚡ काम")
+        val all = store.all()
+        val facts = all.filter { it.type == "fact" }
+        if (facts.isNotEmpty()) {
+            col.addView(Ui.text(this, "पक्की यादें", 13f, Ui.ACCENT, true).apply { setPadding(0, d(20), 0, d(6)) })
+            for (m in facts.reversed()) col.addView(card(m.text, fmt.format(Date(m.time))))
         }
-        setContentView(ScrollView(this).apply { addView(col) })
+        col.addView(Ui.text(this, "बातचीत और काम", 13f, Ui.ACCENT, true).apply { setPadding(0, d(20), 0, d(6)) })
+        for (m in all.filter { it.type != "fact" }.reversed().take(400)) {
+            col.addView(card(m.text, "${label[m.type] ?: m.type} · ${fmt.format(Date(m.time))}"))
+        }
+        setContentView(ScrollView(this).apply { setBackgroundColor(Ui.BG); addView(col) })
+    }
+
+    private fun card(text: String, meta: String): LinearLayout {
+        val d = { v: Int -> Ui.dp(this, v) }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Ui.round(Ui.CARD, d(14).toFloat())
+            setPadding(d(14), d(10), d(14), d(10))
+            addView(Ui.text(this@MemoryActivity, meta, 11f, Ui.MUTED))
+            addView(Ui.text(this@MemoryActivity, text, 15f, Ui.TEXT))
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = d(8) }
+        }
     }
 }

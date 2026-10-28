@@ -1,210 +1,229 @@
 package com.sachin.chhotu
 
 import android.Manifest
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.Typeface
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.speech.RecognizerIntent
-import android.speech.tts.TextToSpeech
+import android.provider.Settings
 import android.view.Gravity
-import android.view.Menu
-import android.view.MenuItem
+import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
-import android.widget.Button
-import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import java.util.Locale
+import androidx.appcompat.widget.SwitchCompat
 
-class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
+class MainActivity : AppCompatActivity(), Engine.Listener {
 
+    private lateinit var face: FaceView
+    private lateinit var statusText: TextView
+    private lateinit var providerText: TextView
     private lateinit var chat: LinearLayout
     private lateinit var scroll: ScrollView
-    private lateinit var input: EditText
-    private lateinit var router: CommandRouter
-    private lateinit var brain: CloudBrain
-    private lateinit var memory: MemoryStore
-    private var tts: TextToSpeech? = null
-    private var ttsReady = false
-
-    private val speechLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
-        val text = res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-        if (!text.isNullOrBlank()) process(text)
-    }
+    private lateinit var input: android.widget.EditText
+    private lateinit var mic: TextView
+    private lateinit var power: SwitchCompat
 
     private val permLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        router = CommandRouter(this)
-        brain = CloudBrain(this)
-        memory = MemoryStore.get(this)
-        tts = TextToSpeech(this, this)
+        window.statusBarColor = Ui.BG
+        window.navigationBarColor = Ui.BG
+        Engine.init(this)
         buildUi()
-
-        permLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE))
-
-        val name = Prefs.userName(this)
-        addBubble("नमस्ते $name भाई! मैं छोटू हूँ। 🎤 दबा कर बोलो या लिखो। जैसे: \"WhatsApp खोलो\", \"मम्मी को कॉल करो\", \"सुबह 6 बजे का अलार्म\", \"याद रख कि...\"", false)
-        if (Prefs.groqKey(this).isBlank()) addBubble("ऑनलाइन बातचीत के लिए ऊपर ⚙ Settings में Groq API key डाल देना।", false)
+        loadHistory()
+        askPermissions()
+        Engine.addListener(this)
+        if (Prefs.powerOn(this) && !ChhotuService.running && hasMic()) ChhotuService.start(this)
     }
 
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+    private fun dp(v: Int) = Ui.dp(this, v)
 
     private fun buildUi() {
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        scroll = ScrollView(this)
-        chat = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(12))
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Ui.BG) }
+
+        // header
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(18), dp(14), dp(10), dp(6))
         }
+        val titleCol = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        titleCol.addView(Ui.text(this, "छोटू", 24f, Ui.TEXT, true))
+        providerText = Ui.text(this, "", 12f, Ui.MUTED)
+        titleCol.addView(providerText)
+        header.addView(titleCol, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        header.addView(iconButton("🧠") { startActivity(Intent(this, MemoryActivity::class.java)) })
+        header.addView(iconButton("⚙") { startActivity(Intent(this, SettingsActivity::class.java)) })
+        power = SwitchCompat(this).apply {
+            text = "Power  "
+            setTextColor(Ui.TEXT)
+            isChecked = Prefs.powerOn(this@MainActivity)
+            setOnCheckedChangeListener { _, on -> setPower(on) }
+        }
+        header.addView(power)
+        root.addView(header)
+
+        // face card
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            background = Ui.round(Ui.CARD, dp(24).toFloat())
+            setPadding(dp(12), dp(12), dp(12), dp(14))
+        }
+        face = FaceView(this)
+        face.setOnClickListener { Engine.toggle() }
+        card.addView(face, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(210)))
+        statusText = Ui.text(this, "छोटू तैयार है", 15f, Ui.MUTED).apply { gravity = Gravity.CENTER; maxLines = 2 }
+        card.addView(statusText, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(dp(14), dp(6), dp(14), dp(6))
+        })
+
+        // chat
+        scroll = ScrollView(this).apply { isVerticalScrollBarEnabled = false }
+        chat = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(14), dp(4), dp(14), dp(8)) }
         scroll.addView(chat)
         root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
+        // input bar
         val bar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(dp(8), dp(8), dp(8), dp(8))
             gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(8), dp(12), dp(14))
         }
-        input = EditText(this).apply {
-            hint = "छोटू से कुछ भी कहो…"
+        input = Ui.field(this, "", "छोटू से कुछ भी कहो…").apply {
+            background = Ui.round(Ui.CARD2, dp(26).toFloat())
+            setPadding(dp(18), dp(14), dp(18), dp(14))
             imeOptions = EditorInfo.IME_ACTION_SEND
             setSingleLine(true)
-            setOnEditorActionListener { _, id, _ ->
-                if (id == EditorInfo.IME_ACTION_SEND) { sendTyped(); true } else false
-            }
+            setOnEditorActionListener { _, id, _ -> if (id == EditorInfo.IME_ACTION_SEND) { sendTyped(); true } else false }
         }
         bar.addView(input, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        val send = Button(this).apply { text = "भेजो"; setOnClickListener { sendTyped() } }
-        bar.addView(send)
-        val mic = Button(this).apply { text = "🎤"; textSize = 20f; setOnClickListener { listen() } }
-        bar.addView(mic)
+        val send = roundIcon("➤", Ui.CARD2, 46) { sendTyped() }
+        bar.addView(send, LinearLayout.LayoutParams(dp(46), dp(46)).apply { leftMargin = dp(8) })
+        mic = roundIcon("🎤", Ui.ACCENT, 58) {
+            if (!hasMic()) askPermissions() else Engine.toggle()
+        }
+        bar.addView(mic, LinearLayout.LayoutParams(dp(58), dp(58)).apply { leftMargin = dp(8) })
         root.addView(bar)
+
         setContentView(root)
+    }
+
+    private fun iconButton(t: String, onClick: () -> Unit) = TextView(this).apply {
+        text = t; textSize = 20f; gravity = Gravity.CENTER
+        setPadding(dp(10), dp(6), dp(10), dp(6))
+        setOnClickListener { onClick() }
+    }
+
+    private fun roundIcon(t: String, color: Int, sizeDp: Int, onClick: () -> Unit) = TextView(this).apply {
+        text = t; textSize = if (sizeDp > 50) 24f else 18f
+        setTextColor(Color.WHITE)
+        gravity = Gravity.CENTER
+        background = Ui.circle(color)
+        setOnClickListener { onClick() }
+    }
+
+    private fun hasMic() = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+    private fun askPermissions() {
+        val list = mutableListOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_CONTACTS, Manifest.permission.CALL_PHONE)
+        if (Build.VERSION.SDK_INT >= 33) list.add(Manifest.permission.POST_NOTIFICATIONS)
+        val missing = list.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+        if (missing.isNotEmpty()) permLauncher.launch(missing.toTypedArray())
+    }
+
+    private fun setPower(on: Boolean) {
+        if (on) {
+            if (!hasMic()) { askPermissions(); power.isChecked = false; return }
+            Prefs.setPower(this, true)
+            if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(this)) {
+                AlertDialog.Builder(this)
+                    .setTitle("हर स्क्रीन पर छोटू")
+                    .setMessage("होम स्क्रीन और दूसरे ऐप्स के ऊपर छोटू का चेहरा दिखाने के लिए 'Display over other apps' की इजाज़त दो। फिर Power दोबारा ON करना।")
+                    .setPositiveButton("इजाज़त दो") { _, _ ->
+                        startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+                    }
+                    .setNegativeButton("बाद में", null)
+                    .show()
+            }
+            ChhotuService.start(this)
+            Engine.startConversation()
+        } else {
+            Prefs.setPower(this, false)
+            ChhotuService.stop(this)
+            Engine.stopAll()
+        }
     }
 
     private fun sendTyped() {
         val t = input.text.toString().trim()
-        if (t.isNotEmpty()) { input.setText(""); process(t) }
+        if (t.isNotEmpty()) { input.setText(""); Engine.handleTyped(t) }
     }
 
-    private fun listen() {
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            permLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO)); return
-        }
-        tts?.stop()
-        val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "बोलो भाई, छोटू सुन रहा है…")
-        }
-        try { speechLauncher.launch(i) } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, "इस फ़ोन में आवाज़ पहचानने वाला ऐप (Google) नहीं मिला", Toast.LENGTH_LONG).show()
-        }
+    private fun loadHistory() {
+        val past = MemoryStore.get(this).all().filter { it.type == "chat_user" || it.type == "chat_chhotu" }.takeLast(20)
+        if (past.isEmpty()) {
+            addBubble("नमस्ते ${Prefs.userName(this)} भाई! मैं छोटू हूँ। Power ON करो या 🎤 दबाओ, फिर बात करते-करते काम करवाओ। हर काम से पहले मैं पूछूँगा।", false)
+        } else past.forEach { addBubble(it.text, it.type == "chat_user") }
     }
 
-    private fun process(text: String) {
-        addBubble(text, true)
-        memory.add("chat_user", text)
-        when (val o = router.handle(text)) {
-            is Outcome.Say -> reply(o.text)
-            is Outcome.ConfirmCall -> confirmCall(o.name, o.number)
-            is Outcome.NeedPermission -> { permLauncher.launch(arrayOf(o.permission)); reply(o.text) }
-            Outcome.AskCloud -> {
-                val thinking = addBubble("सोच रहा हूँ…", false)
-                Thread {
-                    val ans = brain.ask(text)
-                    runOnUiThread { chat.removeView(thinking); reply(ans) }
-                }.start()
-            }
-        }
-    }
-
-    private fun confirmCall(name: String, number: String) {
-        reply("$name को कॉल करूँ?")
-        AlertDialog.Builder(this)
-            .setTitle("कॉल करें?")
-            .setMessage("$name\n$number")
-            .setPositiveButton("हाँ, कॉल करो") { _, _ ->
-                val hasPerm = checkSelfPermission(Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
-                val action = if (hasPerm) Intent.ACTION_CALL else Intent.ACTION_DIAL
-                try {
-                    startActivity(Intent(action, Uri.parse("tel:" + Uri.encode(number))))
-                    memory.add("action", "Call: $name ($number)")
-                } catch (e: Exception) { reply("कॉल नहीं लग पाई।") }
-            }
-            .setNegativeButton("नहीं") { _, _ -> reply("ठीक है, कॉल नहीं की।") }
-            .show()
-    }
-
-    private fun reply(text: String) {
-        addBubble(text, false)
-        memory.add("chat_chhotu", text)
-        speak(text)
-    }
-
-    private fun addBubble(text: String, fromUser: Boolean): TextView {
-        val tv = TextView(this).apply {
-            this.text = text
-            textSize = 16f
-            setTextColor(if (fromUser) Color.WHITE else Color.BLACK)
-            setBackgroundColor(if (fromUser) Color.parseColor("#FF6D28") else Color.parseColor("#EDEDED"))
-            setPadding(dp(12), dp(8), dp(12), dp(8))
-            if (!fromUser) setTypeface(typeface, Typeface.NORMAL)
+    private fun addBubble(text: String, fromUser: Boolean) {
+        val tv = Ui.text(this, text, 15f, if (fromUser) Color.WHITE else Ui.TEXT).apply {
+            background = Ui.round(if (fromUser) Ui.ACCENT else Ui.CARD, dp(18).toFloat())
+            setPadding(dp(14), dp(10), dp(14), dp(10))
+            setLineSpacing(0f, 1.15f)
         }
         val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             gravity = if (fromUser) Gravity.END else Gravity.START
-            topMargin = dp(6)
-            if (fromUser) leftMargin = dp(48) else rightMargin = dp(48)
+            topMargin = dp(8)
+            if (fromUser) leftMargin = dp(56) else rightMargin = dp(56)
         }
         chat.addView(tv, lp)
-        scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
-        return tv
+        while (chat.childCount > 80) chat.removeViewAt(0)
+        scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
     }
 
-    override fun onInit(status: Int) {
-        if (status == TextToSpeech.SUCCESS) {
-            val r = tts?.setLanguage(Locale("hi", "IN"))
-            ttsReady = r != TextToSpeech.LANG_MISSING_DATA && r != TextToSpeech.LANG_NOT_SUPPORTED
-            tts?.setSpeechRate(0.95f)
-            tts?.setPitch(1.08f)
-            if (!ttsReady) Toast.makeText(this, "फ़ोन में हिंदी आवाज़ नहीं है। Settings > Text-to-speech में Hindi डाउनलोड करो।", Toast.LENGTH_LONG).show()
+    // ---- Engine.Listener ----
+    override fun onState(state: Engine.State, status: String) {
+        runOnUiThread {
+            statusText.text = status
+            face.mood = when (state) {
+                Engine.State.IDLE -> FaceView.Mood.IDLE
+                Engine.State.LISTENING -> FaceView.Mood.LISTENING
+                Engine.State.THINKING -> FaceView.Mood.THINKING
+                Engine.State.SPEAKING -> FaceView.Mood.SPEAKING
+            }
+            mic.text = if (state == Engine.State.IDLE) "🎤" else "■"
+            mic.background = Ui.circle(if (state == Engine.State.IDLE) Ui.ACCENT else Ui.TEAL)
         }
     }
 
-    private fun speak(text: String) {
-        if (!ttsReady) return
-        val clean = text.replace(Regex("[*#_`]"), "")
-        tts?.speak(clean, TextToSpeech.QUEUE_FLUSH, null, "chhotu")
-    }
+    override fun onMessage(text: String, fromUser: Boolean) { runOnUiThread { addBubble(text, fromUser) } }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, 1, 0, "🧠 यादें").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-        menu.add(0, 2, 1, "⚙").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-        return true
-    }
+    override fun onLevel(level: Float) { face.level = level }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            1 -> startActivity(Intent(this, MemoryActivity::class.java))
-            2 -> startActivity(Intent(this, SettingsActivity::class.java))
-            else -> return super.onOptionsItemSelected(item)
-        }
-        return true
+    override fun onResume() {
+        super.onResume()
+        providerText.text = "दिमाग़: ${Engine.providerName()}  ·  आवाज़: " + (if (Prefs.sarvamKey(this).isNotBlank()) "Sarvam (इंसानी)" else "फ़ोन की")
+        power.setOnCheckedChangeListener(null)
+        power.isChecked = Prefs.powerOn(this)
+        power.setOnCheckedChangeListener { _, on -> setPower(on) }
     }
 
     override fun onDestroy() {
-        tts?.shutdown()
+        Engine.removeListener(this)
+        if (!ChhotuService.running) Engine.stopAll()
         super.onDestroy()
     }
 }

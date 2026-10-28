@@ -11,11 +11,13 @@ import android.os.Build
 import android.provider.AlarmClock
 import android.provider.ContactsContract
 import android.provider.Settings
+import java.util.Locale
 
 /** Ek command ka natija. */
 sealed class Outcome {
     data class Say(val text: String) : Outcome()
-    data class ConfirmCall(val name: String, val number: String) : Outcome()
+    /** Pehle user se poochna hai; haan bole to action chalega aur uska jawab bola jayega. */
+    class Confirm(val question: String, val action: () -> String) : Outcome()
     data class NeedPermission(val permission: String, val text: String) : Outcome()
     object AskCloud : Outcome()
 }
@@ -58,11 +60,11 @@ class CommandRouter(private val context: Context) {
             val name = strip(raw, "को", "ko", "कॉल करो", "कॉल कर", "कॉल", "काल", "call karo", "call kar", "call", "फ़ोन लगाओ", "फोन लगाओ", "फ़ोन लगा", "फोन लगा", "phone lagao", "phone laga", "फोन करो", "फ़ोन करो", "phone karo", "करो", "karo", "please", "ज़रा", "jara", "zara").trim()
             if (name.isEmpty()) return Outcome.Say("किसको कॉल करूँ भाई?")
             val digits = name.filter { it.isDigit() || it == '+' }
-            if (digits.length >= 6) return Outcome.ConfirmCall(digits, digits)
+            if (digits.length >= 6) return confirmCall(digits, digits)
             if (context.checkSelfPermission(android.Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED)
                 return Outcome.NeedPermission(android.Manifest.permission.READ_CONTACTS, "कॉन्टैक्ट देखने की इजाज़त दे दो, फिर दोबारा बोलना।")
             val c = findContact(name) ?: return Outcome.Say("\"$name\" नाम का कोई कॉन्टैक्ट नहीं मिला।")
-            return Outcome.ConfirmCall(c.first, c.second)
+            return confirmCall(c.first, c.second)
         }
 
         // 5. Message
@@ -84,14 +86,19 @@ class CommandRouter(private val context: Context) {
                 val c = findContact(name) ?: return Outcome.Say("\"$name\" नाम का कोई कॉन्टैक्ट नहीं मिला।")
                 shown = c.first; number = c.second
             }
-            val i = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$number")).apply {
-                putExtra("sms_body", body)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val num = number; val who = shown
+            val q = if (body.isNotEmpty()) "$who को ये मैसेज लिखूँ: \"$body\"? हाँ या ना?" else "$who के लिए मैसेज ऐप खोलूँ? हाँ या ना?"
+            return Outcome.Confirm(q) {
+                val i = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$num")).apply {
+                    putExtra("sms_body", body)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    context.startActivity(i)
+                    memory.add("action", "Message draft: $who: $body")
+                    "मैसेज तैयार है, एक बार देख कर Send दबा देना।"
+                } catch (e: Exception) { "मैसेज ऐप नहीं खुला।" }
             }
-            return try {
-                context.startActivity(i)
-                Outcome.Say("$shown के लिए मैसेज तैयार है, देख कर Send दबा देना।")
-            } catch (e: Exception) { Outcome.Say("मैसेज ऐप नहीं खुला।") }
         }
 
         // 6. Settings
@@ -127,6 +134,17 @@ class CommandRouter(private val context: Context) {
     }
 
     // ---------- helpers ----------
+
+    private fun confirmCall(name: String, number: String): Outcome =
+        Outcome.Confirm("$name को कॉल करूँ? हाँ या ना?") {
+            val hasPerm = context.checkSelfPermission(android.Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
+            val action = if (hasPerm) Intent.ACTION_CALL else Intent.ACTION_DIAL
+            try {
+                context.startActivity(Intent(action, Uri.parse("tel:" + Uri.encode(number))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                memory.add("action", "Call: $name ($number)")
+                "$name को कॉल लगा रहा हूँ।"
+            } catch (e: Exception) { "कॉल नहीं लग पाई।" }
+        }
 
     private fun normalize(s: String): String = s.lowercase().replace(Regex("[।,.!?]"), " ").replace(Regex("\\s+"), " ").trim()
 
@@ -169,8 +187,10 @@ class CommandRouter(private val context: Context) {
         val intent = pm.getLaunchIntentForPackage(match.activityInfo.packageName)
             ?: return Outcome.Say("ये ऐप खुल नहीं रहा।")
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
-        return Outcome.Say("${match.loadLabel(pm)} खोल दिया।")
+        val label = match.loadLabel(pm).toString()
+        return Outcome.Confirm("$label खोलूँ? हाँ या ना?") {
+            try { context.startActivity(intent); "$label खोल दिया।" } catch (e: Exception) { "$label नहीं खुल पाया।" }
+        }
     }
 
     private fun findContact(name: String): Pair<String, String>? {
@@ -217,10 +237,14 @@ class CommandRouter(private val context: Context) {
             putExtra(AlarmClock.EXTRA_SKIP_UI, true)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        return try {
-            context.startActivity(i)
-            Outcome.Say(String.format("%d:%02d का अलार्म लगा दिया।", hour, minute))
-        } catch (e: Exception) { Outcome.Say("अलार्म ऐप नहीं मिला।") }
+        val time = String.format(Locale.US, "%d:%02d", hour, minute)
+        return Outcome.Confirm("$time बजे का अलार्म लगाऊँ? हाँ या ना?") {
+            try {
+                context.startActivity(i)
+                memory.add("action", "Alarm: $time")
+                "$time का अलार्म लगा दिया।"
+            } catch (e: Exception) { "अलार्म ऐप नहीं मिला।" }
+        }
     }
 
     private fun hindiDigits(s: String): String {
@@ -237,7 +261,7 @@ class CommandRouter(private val context: Context) {
 
     private fun global(action: Int, ok: String): Outcome {
         if (!ChhotuAccessibilityService.isOn())
-            return Outcome.Say("इसके लिए Accessibility में Chhotu चालू करना होगा। ऊपर ⚙ में जाकर 'Accessibility चालू करो' दबाओ।")
+            return Outcome.Say("इसके लिए Accessibility में Chhotu चालू करना होगा। सेटिंग में जाकर 'Accessibility चालू करो' दबाओ।")
         return Outcome.Say(if (ChhotuAccessibilityService.global(action)) ok else "ये नहीं हो पाया।")
     }
 }
