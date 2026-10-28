@@ -7,7 +7,7 @@ interface TaskNodeDao {
     @Query("SELECT * FROM task_nodes ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentTasks(limit: Int): List<TaskNode>
     
-    @Query("SELECT * FROM task_nodes ORDER BY timestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM task_nodes WHERE command LIKE '%' || :command || '%' ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getTasksByCommand(command: String, limit: Int = 10): List<TaskNode>
     
     @Insert

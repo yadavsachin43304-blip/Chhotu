@@ -22,26 +22,52 @@ data class AutomationEntity(
 )
 
 @Dao
-interface AutomationDao {
+interface AutomationEntityDao {
     @Query("SELECT * FROM automations ORDER BY name")
-    suspend fun getAll(): List<AutomationManager.Automation>
-    
+    suspend fun getAll(): List<AutomationEntity>
+
     @Query("SELECT * FROM automations WHERE id = :id")
-    suspend fun getById(id: String): AutomationManager.Automation?
-    
+    suspend fun getById(id: String): AutomationEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(automation: AutomationManager.Automation)
-    
+    suspend fun insert(automation: AutomationEntity)
+
     @Update
-    suspend fun update(automation: AutomationManager.Automation)
-    
+    suspend fun update(automation: AutomationEntity)
+
     @Query("DELETE FROM automations WHERE id = :id")
     suspend fun delete(id: String)
 }
 
+class AutomationDao(private val d: AutomationEntityDao) {
+    suspend fun getAll(): List<AutomationManager.Automation> = d.getAll().map { it.toModel() }
+    suspend fun getById(id: String): AutomationManager.Automation? = d.getById(id)?.toModel()
+    suspend fun insert(a: AutomationManager.Automation) = d.insert(a.toEntity())
+    suspend fun update(a: AutomationManager.Automation) = d.update(a.toEntity())
+    suspend fun delete(id: String) = d.delete(id)
+}
+
+fun AutomationEntity.toModel(): AutomationManager.Automation {
+    val schedule = when (scheduleType) {
+        "weekly" -> AutomationManager.AutomationSchedule.Weekly(scheduleDayOfWeek, scheduleHour, scheduleMinute)
+        "interval" -> AutomationManager.AutomationSchedule.Interval(scheduleIntervalMs)
+        "once" -> AutomationManager.AutomationSchedule.Once(scheduleIntervalMs)
+        else -> AutomationManager.AutomationSchedule.Daily(scheduleHour, scheduleMinute)
+    }
+    return AutomationManager.Automation(id, name, command, schedule, enabled, lastRun, lastResult, runCount)
+}
+
+fun AutomationManager.Automation.toEntity(): AutomationEntity = when (val s = schedule) {
+    is AutomationManager.AutomationSchedule.Daily -> AutomationEntity(id, name, command, "daily", s.hour, s.minute, 0, 0, enabled, lastRun, lastResult, runCount)
+    is AutomationManager.AutomationSchedule.Weekly -> AutomationEntity(id, name, command, "weekly", s.hour, s.minute, s.dayOfWeek, 0, enabled, lastRun, lastResult, runCount)
+    is AutomationManager.AutomationSchedule.Interval -> AutomationEntity(id, name, command, "interval", 0, 0, 0, s.intervalMs, enabled, lastRun, lastResult, runCount)
+    is AutomationManager.AutomationSchedule.Once -> AutomationEntity(id, name, command, "once", 0, 0, 0, s.atMs, enabled, lastRun, lastResult, runCount)
+}
+
 @Database(entities = [AutomationEntity::class], version = 1)
 abstract class AutomationDB : RoomDatabase() {
-    abstract fun automationDao(): AutomationDao
+    abstract fun automationEntityDao(): AutomationEntityDao
+    fun automationDao(): AutomationDao = AutomationDao(automationEntityDao())
     
     companion object {
         @Volatile private var INSTANCE: AutomationDB? = null
