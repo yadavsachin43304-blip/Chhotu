@@ -135,6 +135,7 @@ object Engine {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, listenLang)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            if (!brain.isOnline()) putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, app.packageName)
         }
         setState(State.LISTENING, if (pending != null) "हाँ या ना बोलो…" else "सुन रहा हूँ…")

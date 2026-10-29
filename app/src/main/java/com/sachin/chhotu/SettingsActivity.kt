@@ -54,6 +54,47 @@ class SettingsActivity : AppCompatActivity() {
         val model = Ui.field(this, Prefs.model(this), "जैसे gemini-3.8-flash")
         brain.addView(model)
 
+        val own = section("छोटू का अपना दिमाग़ (बिना API, बिना इंटरनेट)")
+        label(own, "एक बार डाउनलोड (1.6 GB, Wi-Fi पर करना), फिर छोटू फ़ोन के अंदर ही सोचेगा। कोई key नहीं, कोई डेटा बाहर नहीं जाता। ऑनलाइन Gemini से धीमा और थोड़ा कम समझदार है, पर बिना नेट हमेशा साथ।")
+        val ownStatus = Ui.text(this, "", 14f, Ui.TEXT)
+        own.addView(ownStatus)
+        val ownBtn = Ui.button(this, "", false)
+        own.addView(ownBtn, gap())
+        val offSwitch = android.widget.Switch(this).apply {
+            text = "हमेशा अपना दिमाग़ इस्तेमाल करो (नेट होने पर भी)"
+            setTextColor(Ui.TEXT)
+            isChecked = Prefs.offlineOnly(this@SettingsActivity)
+            setOnCheckedChangeListener { _, on -> Prefs.setOfflineOnly(this@SettingsActivity, on) }
+        }
+        own.addView(offSwitch, gap())
+        fun ownRefresh() {
+            val ok = LocalBrain.installed(this)
+            ownStatus.text = if (ok) "✅ अपना दिमाग़ तैयार है" else if (LocalBrain.downloading) "⬇️ डाउनलोड हो रहा है…" else "❌ अभी डाउनलोड नहीं हुआ"
+            ownBtn.text = if (ok) "🗑 अपना दिमाग़ हटाओ (जगह खाली करो)" else "⬇️ अपना दिमाग़ डाउनलोड करो"
+            offSwitch.isEnabled = ok
+        }
+        ownRefresh()
+        ownBtn.setOnClickListener {
+            if (LocalBrain.installed(this)) {
+                androidx.appcompat.app.AlertDialog.Builder(this).setTitle("पक्का हटाना है?")
+                    .setMessage("1.6 GB जगह खाली होगी। यादें नहीं मिटेंगी। बाद में फिर डाउनलोड कर सकते हो।")
+                    .setPositiveButton("हाँ, हटाओ") { _, _ -> LocalBrain.delete(this); ownRefresh(); refresh() }
+                    .setNegativeButton("नहीं", null).show()
+                return@setOnClickListener
+            }
+            if (LocalBrain.downloading) return@setOnClickListener
+            val free = (getExternalFilesDir(null) ?: filesDir).usableSpace
+            if (free < LocalBrain.SIZE + 300_000_000L) {
+                ownStatus.text = "❌ फ़ोन में कम से कम 2 GB जगह चाहिए"
+                return@setOnClickListener
+            }
+            ownStatus.text = "⬇️ शुरू हो रहा है…"
+            Thread {
+                val err = LocalBrain.download(applicationContext) { p -> runOnUiThread { ownStatus.text = "⬇️ डाउनलोड: $p% (ऐप खुला रखो)" } }
+                runOnUiThread { ownRefresh(); if (err != null) ownStatus.text = "❌ " + err; refresh() }
+            }.start()
+        }
+
         val voice = section("आवाज़")
         label(voice, "Sarvam API key (ऑप्शनल): असली इंसान जैसी हिंदी आवाज़ के लिए। dashboard.sarvam.ai से मिलती है। ख़ाली रहे तो फ़ोन की हिंदी आवाज़ चलेगी।")
         val sarvam = Ui.field(this, Prefs.sarvamKey(this), "Sarvam key").apply {

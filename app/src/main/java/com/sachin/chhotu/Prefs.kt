@@ -18,6 +18,8 @@ object Prefs {
     fun sarvamKey(c: Context): String = sp(c).getString("sarvam_key", "") ?: ""
     fun voice(c: Context): String = sp(c).getString("voice", "shubh") ?: "shubh"
     fun userName(c: Context): String = sp(c).getString("user_name", "Sachin") ?: "Sachin"
+    fun offlineOnly(c: Context): Boolean = sp(c).getBoolean("offline_only", false)
+    fun setOfflineOnly(c: Context, on: Boolean) = sp(c).edit().putBoolean("offline_only", on).apply()
     fun powerOn(c: Context): Boolean = sp(c).getBoolean("power_on", false)
     fun setPower(c: Context, on: Boolean) = sp(c).edit().putBoolean("power_on", on).apply()
 

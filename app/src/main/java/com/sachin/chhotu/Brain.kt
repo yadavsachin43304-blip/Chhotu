@@ -21,6 +21,8 @@ class Brain(private val context: Context) {
 
     fun providerName(): String {
         val k = Prefs.aiKey(context)
+        val local = LocalBrain.installed(context)
+        if (local && (Prefs.offlineOnly(context) || k.isBlank() || !isOnline())) return "छोटू का अपना दिमाग़ (ऑफ़लाइन)"
         return when {
             k.isBlank() -> "कोई नहीं"
             k.startsWith("gsk_") -> "Groq"
@@ -61,11 +63,36 @@ $factText
 """.trim()
     }
 
-    fun ready(): Boolean = Prefs.aiKey(context).isNotBlank() && isOnline()
+    fun ready(): Boolean = (Prefs.aiKey(context).isNotBlank() && isOnline()) || LocalBrain.installed(context)
+
+    private fun localSystemPrompt(): String {
+        val name = Prefs.userName(context)
+        val facts = MemoryStore.get(context).recent("fact", 15)
+        return """
+तुम "छोटू" हो, $name के फ़ोन का समझदार और भावुक साथी, Jarvis जैसा। $name को "भाई" बुलाते हो।
+हमेशा हिंदी (देवनागरी) में, असली इंसान की तरह, प्यार और भावना के साथ, 1 से 2 छोटे वाक्यों में जवाब दो। कोई इमोजी या मार्कडाउन नहीं। अगर $name दूसरी भाषा में बात करने को कहें तो उसी भाषा में बोलो।
+सच बोलो, झूठा दावा मत करो। हैकिंग या ग़लत काम में मदद नहीं।
+फ़ोन का काम हो तो आख़िरी लाइन में सिर्फ़ ऐसा लिखो:
+ACTION {"type":"open_app","app":"YouTube"}
+दूसरे type: call {"name":".."}, message {"name":"..","text":".."}, whatsapp {"name":"..","text":".."}, alarm {"hour":6,"minute":30}, torch {"on":true}, youtube {"query":".."}, search {"query":".."}, maps {"place":".."}, settings {"what":"wifi"}, home {}, back {}, remember {"fact":".."}
+ऐप काम करने से पहले $name से पूछेगा। नाम या समय न पता हो तो पहले पूछो।
+$name के बारे में याद: ${if (facts.isEmpty()) "कुछ नहीं" else facts.joinToString("; ") { it.text }}
+""".trim()
+    }
+
+    private fun askLocal(userText: String): Reply = try {
+        val t = LocalBrain.ask(context, localSystemPrompt(), history, userText)
+        if (t.isBlank()) Reply(false, "हम्म, कुछ सूझा नहीं भाई, फिर से बोलना।")
+        else { history.add("user" to userText); history.add("assistant" to t); while (history.size > 16) history.removeAt(0); Reply(true, t) }
+    } catch (e: Throwable) {
+        Reply(false, "मेरा ऑफ़लाइन दिमाग़ अभी चल नहीं पाया भाई।", "Local: " + e.javaClass.simpleName + ": " + (e.message ?: ""))
+    }
 
     /** Background thread se hi bulana. */
     fun ask(userText: String): Reply {
         val key = Prefs.aiKey(context)
+        val local = LocalBrain.installed(context)
+        if (local && (Prefs.offlineOnly(context) || key.isBlank() || !isOnline())) return askLocal(userText)
         if (key.isBlank()) return Reply(false, "भाई, मेरा ऑनलाइन दिमाग़ अभी चालू नहीं है। सेटिंग में Gemini की API key डाल दो।")
         if (!isOnline()) return Reply(false, "अभी इंटरनेट नहीं है भाई। ऐप खोलना, कॉल, अलार्म और टॉर्च जैसे काम मैं बिना इंटरनेट भी कर सकता हूँ।")
         val reply = try {
@@ -76,6 +103,7 @@ $factText
         } catch (e: Exception) {
             return Reply(false, "नेटवर्क में दिक़्क़त आ गई भाई, एक बार फिर बोलना।", e.javaClass.simpleName + ": " + (e.message ?: ""))
         }
+        if (!reply.ok && local) return askLocal(userText)
         if (reply.ok) {
             history.add("user" to userText)
             history.add("assistant" to reply.text)
