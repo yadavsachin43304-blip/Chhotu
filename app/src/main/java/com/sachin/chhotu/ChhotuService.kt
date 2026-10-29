@@ -30,6 +30,8 @@ class ChhotuService : Service(), Engine.Listener {
 
     override fun onCreate() {
         super.onCreate()
+        ModelStore.cleanupOld(applicationContext)
+        LocalBrain.warmUp(applicationContext)
         Engine.init(this)
         startAsForeground()
         showBubble()

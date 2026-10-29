@@ -12,6 +12,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - name: Download sherpa-onnx (offline voice engine)
+        run: mkdir -p app/libs && curl -sSL -o app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/sherpa-onnx-2.0.1.aar
       - uses: actions/setup-java@v4
         with:
           java-version: '17'

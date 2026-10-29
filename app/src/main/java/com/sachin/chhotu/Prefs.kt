@@ -18,8 +18,14 @@ object Prefs {
     fun sarvamKey(c: Context): String = sp(c).getString("sarvam_key", "") ?: ""
     fun voice(c: Context): String = sp(c).getString("voice", "shubh") ?: "shubh"
     fun userName(c: Context): String = sp(c).getString("user_name", "Sachin") ?: "Sachin"
-    fun offlineOnly(c: Context): Boolean = sp(c).getBoolean("offline_only", false)
-    fun setOfflineOnly(c: Context, on: Boolean) = sp(c).edit().putBoolean("offline_only", on).apply()
+    /** Gemini key sirf ek optional "booster" hai. Default: Chhotu ka apna dimaag pehle. */
+    fun geminiFirst(c: Context): Boolean = sp(c).getBoolean("gemini_first", false)
+    fun setGeminiFirst(c: Context, on: Boolean) = sp(c).edit().putBoolean("gemini_first", on).apply()
+    fun offlineVoice(c: Context): String = sp(c).getString("offline_voice", "hm_omega") ?: "hm_omega"
+    fun setOfflineVoice(c: Context, v: String) = sp(c).edit().putString("offline_voice", v).apply()
+    fun voiceSpeed(c: Context): Float = sp(c).getFloat("voice_speed", 1.0f)
+    fun preferOfflineVoice(c: Context): Boolean = sp(c).getBoolean("prefer_offline_voice", false)
+    fun setPreferOfflineVoice(c: Context, on: Boolean) = sp(c).edit().putBoolean("prefer_offline_voice", on).apply()
     fun powerOn(c: Context): Boolean = sp(c).getBoolean("power_on", false)
     fun setPower(c: Context, on: Boolean) = sp(c).edit().putBoolean("power_on", on).apply()
 

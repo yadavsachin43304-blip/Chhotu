@@ -44,7 +44,7 @@ class SettingsActivity : AppCompatActivity() {
         val name = Ui.field(this, Prefs.userName(this), "Sachin")
         me.addView(name)
 
-        val brain = section("दिमाग़ (ऑनलाइन AI)")
+        val brain = section("ऑनलाइन बूस्टर (ऑप्शनल, ज़रूरी नहीं)")
         label(brain, "API key: Gemini की कोई भी key (AQ… या AIza…), या Groq (gsk_…), या OpenRouter (sk-or-…)। छोटू key देखकर अपने-आप सही वाला चुन लेगा। Gemini key: aistudio.google.com/api-keys")
         val key = Ui.field(this, Prefs.aiKey(this), "यहाँ key पेस्ट करो").apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -54,46 +54,58 @@ class SettingsActivity : AppCompatActivity() {
         val model = Ui.field(this, Prefs.model(this), "जैसे gemini-3.8-flash")
         brain.addView(model)
 
-        val own = section("छोटू का अपना दिमाग़ (बिना API, बिना इंटरनेट)")
-        label(own, "एक बार डाउनलोड (1.6 GB, Wi-Fi पर करना), फिर छोटू फ़ोन के अंदर ही सोचेगा। कोई key नहीं, कोई डेटा बाहर नहीं जाता। ऑनलाइन Gemini से धीमा और थोड़ा कम समझदार है, पर बिना नेट हमेशा साथ।")
-        val ownStatus = Ui.text(this, "", 14f, Ui.TEXT)
-        own.addView(ownStatus)
-        val ownBtn = Ui.button(this, "", false)
-        own.addView(ownBtn, gap())
-        val offSwitch = android.widget.Switch(this).apply {
-            text = "हमेशा अपना दिमाग़ इस्तेमाल करो (नेट होने पर भी)"
-            setTextColor(Ui.TEXT)
-            isChecked = Prefs.offlineOnly(this@SettingsActivity)
-            setOnCheckedChangeListener { _, on -> Prefs.setOfflineOnly(this@SettingsActivity, on) }
-        }
-        own.addView(offSwitch, gap())
-        fun ownRefresh() {
-            val ok = LocalBrain.installed(this)
-            ownStatus.text = if (ok) "✅ अपना दिमाग़ तैयार है" else if (LocalBrain.downloading) "⬇️ डाउनलोड हो रहा है…" else "❌ अभी डाउनलोड नहीं हुआ"
-            ownBtn.text = if (ok) "🗑 अपना दिमाग़ हटाओ (जगह खाली करो)" else "⬇️ अपना दिमाग़ डाउनलोड करो"
-            offSwitch.isEnabled = ok
-        }
-        ownRefresh()
-        ownBtn.setOnClickListener {
-            if (LocalBrain.installed(this)) {
-                androidx.appcompat.app.AlertDialog.Builder(this).setTitle("पक्का हटाना है?")
-                    .setMessage("1.6 GB जगह खाली होगी। यादें नहीं मिटेंगी। बाद में फिर डाउनलोड कर सकते हो।")
-                    .setPositiveButton("हाँ, हटाओ") { _, _ -> LocalBrain.delete(this); ownRefresh(); refresh() }
-                    .setNegativeButton("नहीं", null).show()
-                return@setOnClickListener
+        val own = section("छोटू का अपना दिमाग़ और आवाज़ (बिना API key)")
+        label(own, "एक बार Wi-Fi पर डाउनलोड करो, फिर छोटू फ़ोन के अंदर ही सोचता और बोलता है। नेट हो तो ताज़ा जानकारी भी ख़ुद ले आता है। कोई key नहीं, आपकी बातें बाहर नहीं जातीं।")
+        fun modelRow(m: ModelStore.Model, sizeText: String) {
+            val st = Ui.text(this, "", 14f, Ui.TEXT)
+            val btn = Ui.button(this, "", false)
+            own.addView(st, gap()); own.addView(btn, gap())
+            fun upd() {
+                val ok = ModelStore.ready(this, m)
+                st.text = m.title + ": " + (if (ok) "✅ तैयार" else if (ModelStore.downloading(m)) "⬇️ डाउनलोड हो रहा है…" else "❌ डाउनलोड नहीं हुआ ($sizeText)")
+                btn.text = if (ok) "🗑 हटाओ (जगह खाली करो)" else "⬇️ डाउनलोड करो ($sizeText)"
             }
-            if (LocalBrain.downloading) return@setOnClickListener
-            val free = (getExternalFilesDir(null) ?: filesDir).usableSpace
-            if (free < LocalBrain.SIZE + 300_000_000L) {
-                ownStatus.text = "❌ फ़ोन में कम से कम 2 GB जगह चाहिए"
-                return@setOnClickListener
+            upd()
+            btn.setOnClickListener {
+                if (ModelStore.ready(this, m)) {
+                    androidx.appcompat.app.AlertDialog.Builder(this).setTitle("पक्का हटाना है?")
+                        .setMessage("$sizeText जगह खाली होगी। यादें नहीं मिटेंगी। बाद में फिर डाउनलोड कर सकते हो।")
+                        .setPositiveButton("हाँ, हटाओ") { _, _ -> if (m == ModelStore.BRAIN) LocalBrain.close(); ModelStore.delete(this, m); upd(); refresh() }
+                        .setNegativeButton("नहीं", null).show()
+                    return@setOnClickListener
+                }
+                if (ModelStore.downloading(m)) return@setOnClickListener
+                if (ModelStore.dir(this).usableSpace < m.size * 2 + 300_000_000L) { st.text = "❌ फ़ोन में कम से कम ${(m.size * 2 / 1_000_000_000.0 + 0.5).toInt()} GB ख़ाली जगह चाहिए"; return@setOnClickListener }
+                st.text = m.title + ": ⬇️ शुरू हो रहा है…"
+                Thread {
+                    val err = ModelStore.download(applicationContext, m) { p -> runOnUiThread { st.text = m.title + ": ⬇️ $p% (ऐप खुला रखो)" } }
+                    runOnUiThread { upd(); if (err != null) st.text = m.title + ": ❌ " + err; refresh(); if (m == ModelStore.BRAIN) LocalBrain.warmUp(applicationContext) }
+                }.start()
             }
-            ownStatus.text = "⬇️ शुरू हो रहा है…"
-            Thread {
-                val err = LocalBrain.download(applicationContext) { p -> runOnUiThread { ownStatus.text = "⬇️ डाउनलोड: $p% (ऐप खुला रखो)" } }
-                runOnUiThread { ownRefresh(); if (err != null) ownStatus.text = "❌ " + err; refresh() }
-            }.start()
         }
+        modelRow(ModelStore.BRAIN, "2 GB")
+        modelRow(ModelStore.VOICE, "130 MB")
+        label(own, "छोटू की ऑफ़लाइन आवाज़")
+        val voiceGroup = android.widget.RadioGroup(this)
+        val names = linkedMapOf("hm_omega" to "ओमेगा (लड़का)", "hm_psi" to "साई (लड़का)", "hf_alpha" to "अल्फ़ा (लड़की)", "hf_beta" to "बीटा (लड़की)")
+        names.forEach { (id, title) ->
+            voiceGroup.addView(android.widget.RadioButton(this).apply {
+                text = title; setTextColor(Ui.TEXT); tag = id; this.id = android.view.View.generateViewId()
+                isChecked = Prefs.offlineVoice(this@SettingsActivity) == id
+                setOnCheckedChangeListener { b, on -> if (on) Prefs.setOfflineVoice(this@SettingsActivity, b.tag as String) }
+            })
+        }
+        own.addView(voiceGroup)
+        own.addView(android.widget.Switch(this).apply {
+            text = "Sarvam key होने पर भी फ़ोन वाली असली आवाज़ (Kokoro) इस्तेमाल करो"
+            setTextColor(Ui.TEXT); isChecked = Prefs.preferOfflineVoice(this@SettingsActivity)
+            setOnCheckedChangeListener { _, on -> Prefs.setPreferOfflineVoice(this@SettingsActivity, on) }
+        }, gap())
+        own.addView(android.widget.Switch(this).apply {
+            text = "Gemini key हो तो पहले Gemini से पूछो (ऑप्शनल बूस्टर)"
+            setTextColor(Ui.TEXT); isChecked = Prefs.geminiFirst(this@SettingsActivity)
+            setOnCheckedChangeListener { _, on -> Prefs.setGeminiFirst(this@SettingsActivity, on) }
+        }, gap())
 
         val voice = section("आवाज़")
         label(voice, "Sarvam API key (ऑप्शनल): असली इंसान जैसी हिंदी आवाज़ के लिए। dashboard.sarvam.ai से मिलती है। ख़ाली रहे तो फ़ोन की हिंदी आवाज़ चलेगी।")

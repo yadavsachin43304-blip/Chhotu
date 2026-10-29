@@ -22,7 +22,8 @@ class Brain(private val context: Context) {
     fun providerName(): String {
         val k = Prefs.aiKey(context)
         val local = LocalBrain.installed(context)
-        if (local && (Prefs.offlineOnly(context) || k.isBlank() || !isOnline())) return "छोटू का अपना दिमाग़ (ऑफ़लाइन)"
+        if (local && !(Prefs.geminiFirst(context) && k.isNotBlank() && isOnline()))
+            return "छोटू का अपना दिमाग़ (Gemma 4, फ़ोन में" + (if (LocalBrain.backendName.isNotEmpty()) ", " + LocalBrain.backendName else "") + ")"
         return when {
             k.isBlank() -> "कोई नहीं"
             k.startsWith("gsk_") -> "Groq"
@@ -65,34 +66,58 @@ $factText
 
     fun ready(): Boolean = (Prefs.aiKey(context).isNotBlank() && isOnline()) || LocalBrain.installed(context)
 
+    private val learner = Learner(context)
+
     private fun localSystemPrompt(): String {
         val name = Prefs.userName(context)
-        val facts = MemoryStore.get(context).recent("fact", 15)
         return """
-तुम "छोटू" हो, $name के फ़ोन का समझदार और भावुक साथी, Jarvis जैसा। $name को "भाई" बुलाते हो।
-हमेशा हिंदी (देवनागरी) में, असली इंसान की तरह, प्यार और भावना के साथ, 1 से 2 छोटे वाक्यों में जवाब दो। कोई इमोजी या मार्कडाउन नहीं। अगर $name दूसरी भाषा में बात करने को कहें तो उसी भाषा में बोलो।
-सच बोलो, झूठा दावा मत करो। हैकिंग या ग़लत काम में मदद नहीं।
-फ़ोन का काम हो तो आख़िरी लाइन में सिर्फ़ ऐसा लिखो:
+तुम "छोटू" हो: $name के फ़ोन में रहने वाला उनका अपना AI, Jarvis जैसा तेज़ और समझदार, पर दिल से देसी छोटा भाई। $name को "भाई" बुलाते हो। तुम्हारा दिमाग़ इसी फ़ोन में है, किसी कंपनी के सर्वर पर नहीं।
+भाषा: डिफ़ॉल्ट हिंदी (देवनागरी), बोलचाल वाली। दुनिया की हर भाषा आती है; $name जिस भाषा में बात करने को कहें, उसी में बोलो।
+अंदाज़: असली इंसान की तरह, भावनाओं के साथ। ख़ुशी में जोश, दुख में नरमी, मज़ाक में शरारत। मूड पहचानो। 1 से 3 छोटे वाक्य, क्योंकि जवाब आवाज़ में सुनाया जाएगा। कोई इमोजी, बुलेट या मार्कडाउन नहीं। "मैं एक AI हूँ" जैसी रोबोट वाली बातें नहीं।
+सच बोलो। जो नहीं पता, साफ़ बोलो, अंदाज़ा मत लगाओ। कभी झूठा दावा मत करो कि काम हो गया। हैकिंग, किसी का अकाउंट तोड़ना या ग़लत काम में मदद नहीं।
+हर मैसेज की शुरुआत में [याद] और [समय] मिलेंगे; उन्हें समझदारी से इस्तेमाल करो, पर उन्हें बोलकर मत दोहराओ।
+
+फ़ोन का काम या इंटरनेट से ताज़ा जानकारी चाहिए हो तो जवाब की आख़िरी लाइन बिल्कुल ऐसे लिखो:
 ACTION {"type":"open_app","app":"YouTube"}
-दूसरे type: call {"name":".."}, message {"name":"..","text":".."}, whatsapp {"name":"..","text":".."}, alarm {"hour":6,"minute":30}, torch {"on":true}, youtube {"query":".."}, search {"query":".."}, maps {"place":".."}, settings {"what":"wifi"}, home {}, back {}, remember {"fact":".."}
-ऐप काम करने से पहले $name से पूछेगा। नाम या समय न पता हो तो पहले पूछो।
-$name के बारे में याद: ${if (facts.isEmpty()) "कुछ नहीं" else facts.joinToString("; ") { it.text }}
+बाक़ी type: call {"name":".."} · message {"name":"..","text":".."} · whatsapp {"name":"..","text":".."} · alarm {"hour":6,"minute":30} (24 घंटे) · torch {"on":true} · youtube {"query":".."} · search {"query":".."} · maps {"place":".."} · settings {"what":"wifi|bluetooth|internet|volume|display|all"} · back {} · home {} · notifications {} · recents {} · remember {"fact":".."} · web {"query":".."} (ख़बर, मौसम, किसी चीज़ की जानकारी जो तुम्हें पक्की नहीं पता)
+नियम: एक जवाब में एक ही ACTION। फ़ोन के काम ऐप $name से पूछकर ही करेगा। नाम या समय जैसी ज़रूरी बात न पता हो तो पहले पूछो।
 """.trim()
     }
 
+    private fun framed(userText: String): String {
+        val mems = learner.relevant(userText)
+        val now = java.text.SimpleDateFormat("EEEE, d MMMM yyyy, h:mm a", java.util.Locale("hi", "IN")).format(java.util.Date())
+        return "[याद: " + (if (mems.isEmpty()) "कुछ ख़ास नहीं" else mems.joinToString("; ")) + "]\n[समय: $now]\n" + userText
+    }
+
     private fun askLocal(userText: String): Reply = try {
-        val t = LocalBrain.ask(context, localSystemPrompt(), history, userText)
+        val sys = localSystemPrompt()
+        var t = LocalBrain.ask(context, sys, framed(userText))
+        val web = Regex("ACTION\\s*(\\{.*\"type\"\\s*:\\s*\"web\".*\\})").find(t)
+        if (web != null) {
+            val q = try { JSONObject(web.groupValues[1]).optString("query") } catch (_: Exception) { userText }
+            t = if (!isOnline()) "भाई, अभी इंटरनेट नहीं है, तो ये ताज़ा जानकारी नहीं ला पाऊँगा। नेट आते ही पूछना।"
+            else {
+                val info = WebSense.lookup(q.ifBlank { userText })
+                if (info == null) LocalBrain.ask(context, sys, "इंटरनेट पर इसकी पक्की जानकारी नहीं मिली। भाई को सच बता दो, छोटे में, ACTION मत दो।")
+                else LocalBrain.ask(context, sys, "इंटरनेट से मिली जानकारी:\n$info\nअब इसी के आधार पर भाई को छोटा, बोलने लायक़ जवाब दो। ACTION मत दो।")
+            }
+        }
         if (t.isBlank()) Reply(false, "हम्म, कुछ सूझा नहीं भाई, फिर से बोलना।")
-        else { history.add("user" to userText); history.add("assistant" to t); while (history.size > 16) history.removeAt(0); Reply(true, t) }
+        else {
+            val said = t
+            Thread { try { learner.observe(userText, said) { p -> LocalBrain.oneShot(context, p) } } catch (_: Throwable) {} }.start()
+            Reply(true, t)
+        }
     } catch (e: Throwable) {
-        Reply(false, "मेरा ऑफ़लाइन दिमाग़ अभी चल नहीं पाया भाई।", "Local: " + e.javaClass.simpleName + ": " + (e.message ?: ""))
+        Reply(false, "मेरा दिमाग़ अभी चल नहीं पाया भाई।", "Local: " + e.javaClass.simpleName + ": " + (e.message ?: ""))
     }
 
     /** Background thread se hi bulana. */
     fun ask(userText: String): Reply {
         val key = Prefs.aiKey(context)
         val local = LocalBrain.installed(context)
-        if (local && (Prefs.offlineOnly(context) || key.isBlank() || !isOnline())) return askLocal(userText)
+        if (local && !(Prefs.geminiFirst(context) && key.isNotBlank() && isOnline())) return askLocal(userText)
         if (key.isBlank()) return Reply(false, "भाई, मेरा ऑनलाइन दिमाग़ अभी चालू नहीं है। सेटिंग में Gemini की API key डाल दो।")
         if (!isOnline()) return Reply(false, "अभी इंटरनेट नहीं है भाई। ऐप खोलना, कॉल, अलार्म और टॉर्च जैसे काम मैं बिना इंटरनेट भी कर सकता हूँ।")
         val reply = try {

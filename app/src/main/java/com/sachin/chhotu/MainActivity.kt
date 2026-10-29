@@ -36,6 +36,8 @@ class MainActivity : AppCompatActivity(), Engine.Listener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ModelStore.cleanupOld(applicationContext)
+        LocalBrain.warmUp(applicationContext)
         window.statusBarColor = Ui.BG
         window.navigationBarColor = Ui.BG
         Engine.init(this)

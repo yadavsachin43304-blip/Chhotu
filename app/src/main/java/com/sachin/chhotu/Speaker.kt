@@ -82,12 +82,24 @@ class Speaker(private val context: Context) : TextToSpeech.OnInitListener {
         val my = ++token
         speaking = true
         val key = Prefs.sarvamKey(context)
-        if (key.isNotBlank()) {
+        val lang = Lang.detect(text)
+        val kokoroOk = NaturalVoice.installed(context) && (lang == "hi-IN" || lang.startsWith("en"))
+        if (kokoroOk && (key.isBlank() || Prefs.preferOfflineVoice(context))) {
+            Thread {
+                val wav = try { NaturalVoice.synth(context, text, lang, Prefs.offlineVoice(context), Prefs.voiceSpeed(context)) } catch (e: Throwable) { null }
+                main.post {
+                    if (my != token) return@post
+                    if (wav != null) playWav(wav, my) else androidSpeak(text, my)
+                }
+            }.start()
+        } else if (key.isNotBlank()) {
             Thread {
                 val wav = try { sarvam(key, text) } catch (e: Exception) { null }
                 main.post {
                     if (my != token) return@post
-                    if (wav != null) playWav(wav, my) else androidSpeak(text, my)
+                    if (wav != null) playWav(wav, my)
+                    else if (kokoroOk) Thread { val w2 = try { NaturalVoice.synth(context, text, lang, Prefs.offlineVoice(context)) } catch (e: Throwable) { null }; main.post { if (my == token) { if (w2 != null) playWav(w2, my) else androidSpeak(text, my) } } }.start()
+                    else androidSpeak(text, my)
                 }
             }.start()
         } else {
