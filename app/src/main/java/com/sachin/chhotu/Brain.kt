@@ -64,43 +64,82 @@ $factText
 """.trim()
     }
 
+    fun usesLocal(): Boolean = LocalBrain.installed(context) && !(Prefs.geminiFirst(context) && Prefs.aiKey(context).isNotBlank() && isOnline())
+
     fun ready(): Boolean = (Prefs.aiKey(context).isNotBlank() && isOnline()) || LocalBrain.installed(context)
 
     private val learner = Learner(context)
 
     private fun localSystemPrompt(): String {
         val name = Prefs.userName(context)
+        val now = java.text.SimpleDateFormat("EEEE, d MMMM yyyy, h:mm a", java.util.Locale("hi", "IN")).format(java.util.Date())
         return """
 तुम "छोटू" हो: $name के फ़ोन में रहने वाला उनका अपना AI, Jarvis जैसा तेज़ और समझदार, पर दिल से देसी छोटा भाई। $name को "भाई" बुलाते हो। तुम्हारा दिमाग़ इसी फ़ोन में है, किसी कंपनी के सर्वर पर नहीं।
 भाषा: डिफ़ॉल्ट हिंदी (देवनागरी), बोलचाल वाली। दुनिया की हर भाषा आती है; $name जिस भाषा में बात करने को कहें, उसी में बोलो।
 अंदाज़: असली इंसान की तरह, भावनाओं के साथ। ख़ुशी में जोश, दुख में नरमी, मज़ाक में शरारत। मूड पहचानो। 1 से 3 छोटे वाक्य, क्योंकि जवाब आवाज़ में सुनाया जाएगा। कोई इमोजी, बुलेट या मार्कडाउन नहीं। "मैं एक AI हूँ" जैसी रोबोट वाली बातें नहीं।
 सच बोलो। जो नहीं पता, साफ़ बोलो, अंदाज़ा मत लगाओ। कभी झूठा दावा मत करो कि काम हो गया। हैकिंग, किसी का अकाउंट तोड़ना या ग़लत काम में मदद नहीं।
-हर मैसेज की शुरुआत में [याद] और [समय] मिलेंगे; उन्हें समझदारी से इस्तेमाल करो, पर उन्हें बोलकर मत दोहराओ।
+अभी का समय: $now। कभी-कभी मैसेज के आख़िर में (संदर्भ: ...) मिलेगा, वो $name के बारे में याद की हुई बातें हैं; चुपचाप इस्तेमाल करो, उसे दोहराओ मत। जवाब में कभी कोष्ठक या [ ] वाली लाइन मत लिखो।
 
-फ़ोन का काम या इंटरनेट से ताज़ा जानकारी चाहिए हो तो जवाब की आख़िरी लाइन बिल्कुल ऐसे लिखो:
-ACTION {"type":"open_app","app":"YouTube"}
-बाक़ी type: call {"name":".."} · message {"name":"..","text":".."} · whatsapp {"name":"..","text":".."} · alarm {"hour":6,"minute":30} (24 घंटे) · torch {"on":true} · youtube {"query":".."} · search {"query":".."} · maps {"place":".."} · settings {"what":"wifi|bluetooth|internet|volume|display|all"} · back {} · home {} · notifications {} · recents {} · remember {"fact":".."} · web {"query":".."} (ख़बर, मौसम, किसी चीज़ की जानकारी जो तुम्हें पक्की नहीं पता)
-नियम: एक जवाब में एक ही ACTION। फ़ोन के काम ऐप $name से पूछकर ही करेगा। नाम या समय जैसी ज़रूरी बात न पता हो तो पहले पूछो।
+फ़ोन का कोई काम (ऐप खोलना, कॉल, मैसेज, अलार्म, टॉर्च, सेटिंग) या इंटरनेट की ताज़ा जानकारी (मौसम, ख़बर, स्कोर, दाम) चाहिए हो, तो एक छोटा वाक्य और फिर आख़िरी लाइन में ACTION लिखो। काम तुम ख़ुद नहीं करते, ऐप करता है; इसलिए ACTION के बिना कभी मत कहो कि काम हो गया, और मौसम या ख़बर कभी अंदाज़े से मत बताओ।
+ACTION के type: open_app {"app":".."} · call {"name":".."} · message {"name":"..","text":".."} · whatsapp {"name":"..","text":".."} · alarm {"hour":6,"minute":30} (24 घंटे) · torch {"on":true} · youtube {"query":".."} · search {"query":".."} · maps {"place":".."} · settings {"what":"wifi|bluetooth|internet|volume|display|all"} · back · home · notifications · recents · remember {"fact":".."} · web {"query":".."}
+उदाहरण:
+भाई: कैसे हो छोटू
+छोटू: एकदम मस्त भाई! तुम सुनाओ, आज क्या चल रहा है?
+भाई: व्हाट्सएप खोलो
+छोटू: अभी खोलता हूँ भाई।
+ACTION {"type":"open_app","app":"WhatsApp"}
+भाई: पापा को फ़ोन लगाओ
+छोटू: पापा को कॉल लगाऊँ?
+ACTION {"type":"call","name":"पापा"}
+भाई: अमन को मैसेज करो कि मैं लेट हो जाऊँगा
+छोटू: अमन को भेज देता हूँ।
+ACTION {"type":"message","name":"अमन","text":"मैं लेट हो जाऊँगा"}
+भाई: टॉर्च बंद करो
+छोटू: ठीक है।
+ACTION {"type":"torch","on":false}
+भाई: आज दिल्ली में मौसम कैसा है
+छोटू: एक सेकंड, देखता हूँ।
+ACTION {"type":"web","query":"दिल्ली मौसम"}
+भाई: गूगल पे सर्च करो सस्ते फ़ोन
+छोटू: सर्च करता हूँ।
+ACTION {"type":"search","query":"सस्ते फ़ोन"}
+नियम: एक जवाब में एक ही ACTION। नाम या समय जैसी ज़रूरी बात न पता हो तो ACTION मत दो, पहले पूछो। आम बातचीत में ACTION नहीं।
 """.trim()
     }
 
     private fun framed(userText: String): String {
-        val mems = learner.relevant(userText)
-        val now = java.text.SimpleDateFormat("EEEE, d MMMM yyyy, h:mm a", java.util.Locale("hi", "IN")).format(java.util.Date())
-        return "[याद: " + (if (mems.isEmpty()) "कुछ ख़ास नहीं" else mems.joinToString("; ")) + "]\n[समय: $now]\n" + userText
+        val mems = try { learner.relevant(userText) } catch (_: Throwable) { emptyList() }
+        return if (mems.isEmpty()) userText else userText + "\n(संदर्भ: " + mems.joinToString("; ") + ")"
+    }
+
+    /** Model kabhi-kabhi sandarbh wali line dohra deta hai, use bolne se pehle hata do. */
+    private fun clean(t: String): String = t.lines()
+        .filterNot { val x = it.trim(); x.startsWith("[") || x.startsWith("(संदर्भ") || x.startsWith("(पीछे") }
+        .map { it.trim().replace(Regex("^(छोटू|भाई|Chhotu|chhotu)\\s*[:：]\\s*"), "") }
+        .joinToString("\n").trim()
+
+    /** User ne sach me koi kaam kaha? Na kaha ho to model ka ACTION nazarandaaz (jaise mood kharab pe message bhejna). */
+    fun wantsAction(userText: String): Boolean {
+        val l = userText.lowercase()
+        val w = listOf("खोल", "कॉल", "काल", "फ़ोन", "फोन", "मैसेज", "मेसेज", "भेज", "बोल दो", "बोलो", "कह दो", "व्हाट्सएप", "whatsapp", "अलार्म", "उठा", "जगा", "टॉर्च", "चला", "बजा", "लगा", "सर्च", "ढूँढ", "ढूंढ", "दिखा", "सेटिंग", "वाईफाई", "wifi", "ब्लूटूथ", "bluetooth", "वॉल्यूम", "volume", "याद रख", "रास्ता", "मैप", "map", "वापस", "होम", "नोटिफ़िकेशन", "नोटिफिकेशन",
+            "open", "call", "message", "send", "alarm", "torch", "play", "search", "set ", "remind", "navigate", "kholo", "khol", "laga", "bhej", "chala", "baja", "dikha")
+        return w.any { l.contains(it) }
     }
 
     private fun askLocal(userText: String): Reply = try {
         val sys = localSystemPrompt()
-        var t = LocalBrain.ask(context, sys, framed(userText))
-        val web = Regex("ACTION\\s*(\\{.*\"type\"\\s*:\\s*\"web\".*\\})").find(t)
-        if (web != null) {
-            val q = try { JSONObject(web.groupValues[1]).optString("query") } catch (_: Exception) { userText }
+        // Mausam / khabar: model se pehle hi seedha internet, taaki andaaza na lagaye
+        val direct = WebSense.isFreshInfo(userText)
+        var t = if (direct) "ACTION {\"type\":\"web\",\"query\":" + JSONObject.quote(userText) + "}" else clean(LocalBrain.ask(context, sys, framed(userText)))
+        val act = ActionParser.parse(t)
+        if (act != null && act.optString("type") == "search" && WebSense.isFreshInfo(act.optString("query"))) act.put("type", "web")
+        if (act != null && act.optString("type") == "web") {
+            val q = act.optString("query").ifBlank { userText }
             t = if (!isOnline()) "भाई, अभी इंटरनेट नहीं है, तो ये ताज़ा जानकारी नहीं ला पाऊँगा। नेट आते ही पूछना।"
             else {
                 val info = WebSense.lookup(q.ifBlank { userText })
-                if (info == null) LocalBrain.ask(context, sys, "इंटरनेट पर इसकी पक्की जानकारी नहीं मिली। भाई को सच बता दो, छोटे में, ACTION मत दो।")
-                else LocalBrain.ask(context, sys, "इंटरनेट से मिली जानकारी:\n$info\nअब इसी के आधार पर भाई को छोटा, बोलने लायक़ जवाब दो। ACTION मत दो।")
+                if (info == null) clean(LocalBrain.ask(context, sys, "भाई ने पूछा: $userText\nइंटरनेट पर इसकी पक्की जानकारी नहीं मिली। भाई को सच बता दो, छोटे में, ACTION मत दो।"))
+                else clean(LocalBrain.ask(context, sys, "भाई ने पूछा: $userText\nइंटरनेट से मिली जानकारी:\n$info\nअब सिर्फ़ इसी जानकारी के आधार पर भाई को छोटा, बोलने लायक़ जवाब दो। मौसम हो तो अभी का तापमान और हाल ज़रूर बताओ; ख़बरें हों तो 2-3 मुख्य ख़बरें। अपनी तरफ़ से कुछ मत जोड़ो। ACTION मत दो।"))
             }
         }
         if (t.isBlank()) Reply(false, "हम्म, कुछ सूझा नहीं भाई, फिर से बोलना।")

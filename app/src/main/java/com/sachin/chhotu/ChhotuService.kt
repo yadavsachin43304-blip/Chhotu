@@ -37,6 +37,8 @@ class ChhotuService : Service(), Engine.Listener {
         showBubble()
         Engine.addListener(this)
         running = true
+        // Power ON = chhotu tab tak sunta-bolta rahega jab tak Power Off na ho. Baar-baar mic dabane ki zarurat nahi.
+        if (!Engine.conversation) Engine.startConversation()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -59,7 +61,7 @@ class ChhotuService : Service(), Engine.Listener {
         val n: Notification = NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_chhotu)
             .setContentTitle("छोटू चालू है")
-            .setContentText("चेहरे पर टैप करो और बात करो")
+            .setContentText("सुन रहा हूँ, बस बोलो। बंद करना हो तो Power Off")
             .setOngoing(true)
             .setContentIntent(open)
             .addAction(0, "बात करो", talk)
