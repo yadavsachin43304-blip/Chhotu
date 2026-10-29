@@ -28,8 +28,28 @@ class ChhotuTest {
     private fun log(s: String) { Log.i("CHHOTU_TEST", s); report.append(s).append('\n'); save() }
     private fun save() { try { File(ctx.getExternalFilesDir(null), "test-report.txt").writeText(report.toString()) } catch (_: Exception) {} }
 
+    /** CI ne model /data/local/tmp me rakhe hain; app khud unhe apni jagah copy karta hai (jaise phone pe download ke baad hota). */
+    private fun stageModels() {
+        val src = File("/data/local/tmp/chhotu-brain-gemma4-universal.litertlm")
+        val dst = ModelStore.file(ctx, ModelStore.BRAIN)
+        if (src.exists() && dst.length() != src.length()) { val t = System.currentTimeMillis(); src.copyTo(dst, true); log("brain copied in ${System.currentTimeMillis() - t}ms") }
+        val tar = File("/data/local/tmp/kokoro.tar")
+        val out = ModelStore.dir(ctx)
+        if (tar.exists() && !NaturalVoice.installed(ctx)) {
+            org.apache.commons.compress.archivers.tar.TarArchiveInputStream(tar.inputStream().buffered()).use { t ->
+                while (true) {
+                    val e = t.nextEntry ?: break
+                    val f = File(out, e.name)
+                    if (e.isDirectory) f.mkdirs() else { f.parentFile?.mkdirs(); f.outputStream().use { t.copyTo(it) } }
+                }
+            }
+            log("voice unpacked")
+        }
+    }
+
     @Test fun brainVoiceAndEngine() {
         val failures = ArrayList<String>()
+        stageModels()
         log("brain installed=" + LocalBrain.installed(ctx) + " voice installed=" + NaturalVoice.installed(ctx))
         assertTrue("brain model missing", LocalBrain.installed(ctx))
 
