@@ -61,7 +61,7 @@ class ChhotuTest {
             Case("हेलो छोटू, कैसे हो?", null),
             Case("यार आज मेरा मूड बहुत ख़राब है, एग्ज़ाम में कम नंबर आए", null),
             Case("मुझे कल सुबह 7 बजे उठा देना", "alarm"),
-            Case("राहुल को व्हाट्सएप पर बोलो मैं 5 बजे आऊँगा", null),
+            Case("राहुल को व्हाट्सएप पर बोलो मैं 5 बजे आऊँगा", "whatsapp"),
             Case("आज पुणे का मौसम कैसा है?", null),
             Case("आज की ताज़ा ख़बर बताओ", null),
             Case("भारत की राजधानी क्या है?", null),
@@ -72,11 +72,13 @@ class ChhotuTest {
             val t0 = System.currentTimeMillis()
             val r = brain.ask(c.q)
             val ms = System.currentTimeMillis() - t0
-            val act = ActionParser.parse(r.text)
+            val act = ActionParser.parse(r.text)?.takeIf { it.optString("type") == "remember" || brain.wantsAction(c.q) }
             log("Q: ${c.q}\nA: ${r.text}\n   ok=${r.ok} action=${act} backend=${LocalBrain.backendName} time=${ms}ms ${r.detail}\n")
             if (!r.ok) failures.add("not ok: ${c.q} -> ${r.detail}")
             if (ActionParser.spoken(r.text).isBlank() && act == null) failures.add("empty: ${c.q}")
-            if (r.text.contains("[याद") || r.text.contains("(संदर्भ")) failures.add("echo: ${c.q}")
+            if (r.text.contains("[याद") || r.text.contains("(संदर्भ") || r.text.startsWith("छोटू:") || r.text.startsWith("भाई:")) failures.add("echo: ${c.q}")
+            if (c.expectType == null && act != null && c.q.contains("मूड")) failures.add("unwanted action: ${c.q} -> $act")
+            if (c.q.contains("मौसम") && !Regex("[0-9०-९]").containsMatchIn(r.text)) failures.add("weather without numbers: ${r.text}")
             if (c.expectType != null && act?.optString("type") != c.expectType) failures.add("expected ${c.expectType}: ${c.q} got $act")
         }
 

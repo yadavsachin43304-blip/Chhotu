@@ -115,7 +115,16 @@ ACTION {"type":"search","query":"सस्ते फ़ोन"}
     /** Model kabhi-kabhi sandarbh wali line dohra deta hai, use bolne se pehle hata do. */
     private fun clean(t: String): String = t.lines()
         .filterNot { val x = it.trim(); x.startsWith("[") || x.startsWith("(संदर्भ") || x.startsWith("(पीछे") }
+        .map { it.trim().replace(Regex("^(छोटू|भाई|Chhotu|chhotu)\\s*[:：]\\s*"), "") }
         .joinToString("\n").trim()
+
+    /** User ne sach me koi kaam kaha? Na kaha ho to model ka ACTION nazarandaaz (jaise mood kharab pe message bhejna). */
+    fun wantsAction(userText: String): Boolean {
+        val l = userText.lowercase()
+        val w = listOf("खोल", "कॉल", "काल", "फ़ोन", "फोन", "मैसेज", "मेसेज", "भेज", "बोल दो", "बोलो", "कह दो", "व्हाट्सएप", "whatsapp", "अलार्म", "उठा", "जगा", "टॉर्च", "चला", "बजा", "लगा", "सर्च", "ढूँढ", "ढूंढ", "दिखा", "सेटिंग", "वाईफाई", "wifi", "ब्लूटूथ", "bluetooth", "वॉल्यूम", "volume", "याद रख", "रास्ता", "मैप", "map", "वापस", "होम", "नोटिफ़िकेशन", "नोटिफिकेशन",
+            "open", "call", "message", "send", "alarm", "torch", "play", "search", "set ", "remind", "navigate", "kholo", "khol", "laga", "bhej", "chala", "baja", "dikha")
+        return w.any { l.contains(it) }
+    }
 
     private fun askLocal(userText: String): Reply = try {
         val sys = localSystemPrompt()
@@ -130,7 +139,7 @@ ACTION {"type":"search","query":"सस्ते फ़ोन"}
             else {
                 val info = WebSense.lookup(q.ifBlank { userText })
                 if (info == null) clean(LocalBrain.ask(context, sys, "भाई ने पूछा: $userText\nइंटरनेट पर इसकी पक्की जानकारी नहीं मिली। भाई को सच बता दो, छोटे में, ACTION मत दो।"))
-                else clean(LocalBrain.ask(context, sys, "भाई ने पूछा: $userText\nइंटरनेट से मिली जानकारी:\n$info\nअब इसी के आधार पर भाई को छोटा, बोलने लायक़ जवाब दो (ख़बरें हों तो 2-3 मुख्य ख़बरें)। ACTION मत दो।"))
+                else clean(LocalBrain.ask(context, sys, "भाई ने पूछा: $userText\nइंटरनेट से मिली जानकारी:\n$info\nअब सिर्फ़ इसी जानकारी के आधार पर भाई को छोटा, बोलने लायक़ जवाब दो। मौसम हो तो अभी का तापमान और हाल ज़रूर बताओ; ख़बरें हों तो 2-3 मुख्य ख़बरें। अपनी तरफ़ से कुछ मत जोड़ो। ACTION मत दो।"))
             }
         }
         if (t.isBlank()) Reply(false, "हम्म, कुछ सूझा नहीं भाई, फिर से बोलना।")

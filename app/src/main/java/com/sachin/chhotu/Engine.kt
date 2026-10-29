@@ -257,7 +257,10 @@ object Engine {
                     return@post
                 }
                 val spoken = ActionParser.spoken(r.text)
-                val json = ActionParser.parse(r.text)
+                val json = ActionParser.parse(r.text)?.takeIf { j ->
+                    // web/remember dimaag khud sambhalta hai; baaki phone ke kaam tabhi jab bhai ne sach me kaam kaha ho
+                    j.optString("type") == "remember" || brain.wantsAction(text) || spoken.isBlank()
+                }
                 if (json != null) {
                     val o = try { router.fromAction(json) } catch (_: Exception) { null }
                     if (o != null) { act(o); return@post }
