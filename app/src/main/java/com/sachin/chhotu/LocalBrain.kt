@@ -23,19 +23,54 @@ object LocalBrain {
     @Volatile var backendName = ""; private set
 
     fun installed(c: Context) = ModelStore.ready(c, ModelStore.BRAIN)
+    fun awake() = engine != null
+
+    /** Pehli baar dimaag load hone me (cache banne me) 1-2 minute lag sakte hain. UI ko batane ke liye. */
+    @Volatile var loading = false; private set
+    @Volatile var lastError = ""; private set
 
     @OptIn(ExperimentalApi::class)
     @Synchronized private fun engine(c: Context): LlmEngine {
         engine?.let { return it }
         val path = ModelStore.file(c, ModelStore.BRAIN).absolutePath
-        try { ExperimentalFlags.enableSpeculativeDecoding = true } catch (_: Throwable) {}
-        val e = try {
-            LlmEngine(EngineConfig(modelPath = path, backend = Backend.GPU(), cacheDir = c.cacheDir.path)).also { it.initialize(); backendName = "GPU" }
+        val prefs = c.getSharedPreferences("chhotu_brain", Context.MODE_PRIVATE)
+        loading = true
+        try {
+            try { ExperimentalFlags.enableSpeculativeDecoding = true } catch (_: Throwable) {}
+            // GPU kuch phones pe app ko hi gira deta hai. Isliye koshish se pehle nishaan lagate hain;
+            // agar app GPU ke dauraan gir gaya to agli baar seedha CPU.
+            val gpuOk = !prefs.getBoolean("gpu_trying", false) && !prefs.getBoolean("gpu_bad", false)
+            var e: LlmEngine? = null
+            if (gpuOk) {
+                prefs.edit().putBoolean("gpu_trying", true).commit()
+                try {
+                    e = LlmEngine(EngineConfig(modelPath = path, backend = Backend.GPU(), cacheDir = c.cacheDir.path)).also { it.initialize() }
+                    backendName = "GPU"
+                } catch (t: Throwable) {
+                    lastError = "GPU: " + t.message
+                    prefs.edit().putBoolean("gpu_bad", true).apply()
+                    e = null
+                } finally { prefs.edit().putBoolean("gpu_trying", false).commit() }
+            } else if (prefs.getBoolean("gpu_trying", false)) {
+                prefs.edit().putBoolean("gpu_trying", false).putBoolean("gpu_bad", true).commit()
+            }
+            if (e == null) {
+                e = try {
+                    LlmEngine(EngineConfig(modelPath = path, backend = Backend.CPU(), cacheDir = c.cacheDir.path)).also { it.initialize() }
+                } catch (t: Throwable) {
+                    // speculative decoding ke bina ek aur koshish
+                    try { ExperimentalFlags.enableSpeculativeDecoding = false } catch (_: Throwable) {}
+                    LlmEngine(EngineConfig(modelPath = path, backend = Backend.CPU(), cacheDir = c.cacheDir.path)).also { it.initialize() }
+                }
+                backendName = "CPU"
+            }
+            engine = e
+            lastError = ""
+            return e!!
         } catch (t: Throwable) {
-            LlmEngine(EngineConfig(modelPath = path, backend = Backend.CPU(), cacheDir = c.cacheDir.path)).also { it.initialize(); backendName = "CPU" }
-        }
-        engine = e
-        return e
+            lastError = t.javaClass.simpleName + ": " + (t.message ?: "")
+            throw t
+        } finally { loading = false }
     }
 
     /** App khulte hi background me dimaag garam kar do, taaki pehla jawab bhi tez aaye. */
@@ -64,7 +99,14 @@ object LocalBrain {
             ))
         }
         turns++
-        val out = convo!!.sendMessage(userText).toString()
+        val out = try { convo!!.sendMessage(userText).toString() } catch (t: Throwable) {
+            // baat-cheet kharab ho gayi (jaise context bhar gaya): nayi shuru karke ek baar aur
+            reset()
+            convo = e.createConversation(ConversationConfig(systemInstruction = Contents.of(system),
+                samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.8)))
+            turns = 1
+            convo!!.sendMessage(userText).toString()
+        }
         return out.replace(Regex("<[^>]{1,20}>"), "").trim()
     }
 }

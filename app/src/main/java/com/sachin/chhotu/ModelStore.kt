@@ -14,10 +14,11 @@ import java.net.URL
 object ModelStore {
     data class Model(val id: String, val title: String, val url: String, val size: Long, val fileName: String, val untar: Boolean = false)
 
-    // Dimaag: Gemma 4 E2B (Google, Apache-2.0, 140+ bhashayen), LiteRT-LM GPU build
+    // Dimaag: Gemma 4 E2B (Google, Apache-2.0, 140+ bhashayen), LiteRT-LM universal build (CPU + GPU dono).
+    // v0.5 me "-gpu" wali file thi jo sirf GPU pe chalti thi; jin phones ka GPU nahi chala unpe dimaag band rehta tha.
     val BRAIN = Model("brain", "छोटू का दिमाग़ (Gemma 4)",
-        "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-gpu.litertlm",
-        2008432640L, "chhotu-brain-gemma4.litertlm")
+        "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
+        2588147712L, "chhotu-brain-gemma4-universal.litertlm")
 
     // Awaaz: Kokoro multi-lang (Hindi awaazein: hf_alpha, hf_beta, hm_omega, hm_psi), sherpa-onnx
     val VOICE = Model("voice", "छोटू की असली आवाज़ (Kokoro)",
@@ -96,5 +97,7 @@ object ModelStore {
     fun cleanupOld(c: Context) {
         val base = c.getExternalFilesDir(null) ?: c.filesDir
         File(base, "chhotu-brain.task").delete(); File(base, "chhotu-brain.task.part").delete()
+        // v0.5 ki sirf-GPU wali file (2 GB) ab kaam ki nahi
+        val d = File(base, "models"); File(d, "chhotu-brain-gemma4.litertlm").delete(); File(d, "chhotu-brain-gemma4.litertlm.part").delete()
     }
 }

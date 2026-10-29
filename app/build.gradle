@@ -11,8 +11,9 @@ android {
         applicationId "com.sachin.chhotu"
         minSdk 24
         targetSdk 34
-        versionCode 5
-        versionName "0.5"
+        versionCode 6
+        versionName "0.6"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -36,4 +37,7 @@ dependencies {
     // Offline insaani awaaz (Kokoro via sherpa-onnx), aar CI me download hota hai
     implementation files('libs/sherpa-onnx.aar')
     implementation 'org.apache.commons:commons-compress:1.26.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
 }

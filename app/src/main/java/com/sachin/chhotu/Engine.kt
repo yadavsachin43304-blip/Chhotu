@@ -47,6 +47,7 @@ object Engine {
         private set
     private var pending: Outcome.Confirm? = null
     private var misses = 0
+    private var netErrors = 0
     /** Chhotu jis bhasha me bola, agli baar usi me sunna */
     private var listenLang = "hi-IN"
 
@@ -86,7 +87,7 @@ object Engine {
 
     fun startConversation() = main.post {
         conversation = true
-        misses = 0
+        misses = 0; netErrors = 0
         speaker.stop()
         listen()
     }
@@ -139,10 +140,19 @@ object Engine {
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, app.packageName)
         }
         setState(State.LISTENING, if (pending != null) "हाँ या ना बोलो…" else "सुन रहा हूँ…")
+        muteBeep()
         try { r.startListening(intent) } catch (e: Exception) {
             recognizer?.destroy(); recognizer = null
             setState(State.IDLE, "माइक शुरू नहीं हुआ")
         }
+    }
+
+    /** Har baar sunna shuru hone pe phone "ting" karta hai; lagataar baat-cheet me wo chidh jaata hai, to thodi der ke liye chup. */
+    private fun muteBeep() {
+        val am = app.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+        val streams = intArrayOf(android.media.AudioManager.STREAM_NOTIFICATION, android.media.AudioManager.STREAM_SYSTEM)
+        try { for (st in streams) am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_MUTE, 0) } catch (_: Exception) { return }
+        main.postDelayed({ try { for (st in streams) am.adjustStreamVolume(st, android.media.AudioManager.ADJUST_UNMUTE, 0) } catch (_: Exception) {} }, 900)
     }
 
     private val recListener = object : RecognitionListener {
@@ -164,32 +174,35 @@ object Engine {
         override fun onResults(results: Bundle?) {
             val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
             if (text.isNullOrBlank()) { onError(SpeechRecognizer.ERROR_NO_MATCH); return }
-            misses = 0
+            misses = 0; netErrors = 0
             handle(text)
         }
         override fun onError(error: Int) {
             when (error) {
+                // Baat-cheet mode me chhotu kabhi khud se sunna band nahi karta. Sirf Power Off / stop se band.
                 SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
                     misses++
-                    if (conversation && misses < 3) main.postDelayed({ if (conversation) listen() }, 250)
-                    else { conversation = false; pending = null; setState(State.IDLE, "छोटू तैयार है (टैप करके बोलो)") }
-                }
-                SpeechRecognizer.ERROR_RECOGNIZER_BUSY, SpeechRecognizer.ERROR_CLIENT -> {
-                    recognizer?.destroy(); recognizer = null
-                    if (conversation) main.postDelayed({ if (conversation) listen() }, 600)
-                    else setState(State.IDLE, "छोटू तैयार है")
+                    if (conversation || pending != null) {
+                        if (pending != null && misses >= 3) { pending = null }
+                        main.postDelayed({ if (conversation || pending != null) listen() }, 150)
+                    } else setState(State.IDLE, "छोटू तैयार है")
                 }
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
                     conversation = false
                     setState(State.IDLE, "माइक की इजाज़त चाहिए")
                 }
                 SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT, SpeechRecognizer.ERROR_SERVER -> {
-                    conversation = false
-                    say("आवाज़ पहचानने में नेटवर्क की दिक़्क़त है। फ़ोन की सेटिंग में Hindi का offline speech पैक डाउनलोड कर लो, या लिख कर बताओ।")
+                    recognizer?.destroy(); recognizer = null
+                    netErrors++
+                    if (netErrors == 1) say("आवाज़ पहचानने में नेटवर्क की दिक़्क़त है भाई। फ़ोन की सेटिंग में Hindi का offline speech पैक डाउनलोड कर लो, तब बिना नेट भी सुन लूँगा।")
+                    else if (conversation) main.postDelayed({ if (conversation) listen() }, (1500L * netErrors).coerceAtMost(8000L))
+                    else setState(State.IDLE, "छोटू तैयार है")
                 }
                 else -> {
-                    conversation = false
-                    setState(State.IDLE, "छोटू तैयार है")
+                    // busy / client / audio jaisi gadbad: recognizer naya banao aur phir suno
+                    recognizer?.destroy(); recognizer = null
+                    if (conversation || pending != null) main.postDelayed({ if (conversation || pending != null) listen() }, 700)
+                    else setState(State.IDLE, "छोटू तैयार है")
                 }
             }
         }
@@ -197,7 +210,8 @@ object Engine {
 
     // ---------- thinking ----------
 
-    private val stopWords = listOf("बस करो", "बस कर", "बाय", "bye", "चुप हो जा", "चुप", "stop", "band karo", "बंद करो बात", "रुक जा", "ruk ja", "so ja", "सो जा", "बाद में बात")
+    /** Sirf saaf "band ho jao" pe hi chhotu band hota hai, warna baat chalti rehti hai. */
+    private val powerOffWords = listOf("छोटू बंद", "बंद हो जाओ", "बंद हो जा", "power off", "पावर ऑफ", "chhotu band", "band ho jao", "band ho ja", "सो जाओ छोटू")
     private val yesWords = listOf("हाँ", "हां", "हा ", "haan", "han", "haa", "yes", "कर दो", "kar do", "करो", "karo", "ठीक है", "theek", "thik", "बिल्कुल", "बिलकुल", "bilkul", "ok", "okay", "ओके", "चलो", "chalo", "जी", "ji", "sure", "खोलो", "लगाओ", "भेजो")
     private val noWords = listOf("नहीं", "नही", "nahi", "nahin", "na ", "ना", "no", "mat", "मत", "रहने दो", "rehne do", "रहने", "cancel", "कैंसल", "छोड़ो", "chhodo")
 
@@ -217,16 +231,19 @@ object Engine {
             }
             return
         }
-        if (conversation && matches(text, stopWords) && text.length < 25) {
+        if (matches(text, powerOffWords) && text.length < 30) {
             conversation = false
-            say("ठीक है भाई, जब बुलाओ तब हाज़िर!")
+            say("ठीक है भाई, मैं बंद हो रहा हूँ। जब चाहो Power ON कर देना।")
+            main.postDelayed({ Prefs.setPower(app, false); ChhotuService.stop(app) }, 3500)
             return
         }
         // Online ho to AI samjhega (Jarvis jaisa), offline ho to apne niyam
         val smart = brain.ready()
-        val first = router.handle(text, fastOnly = smart)
+        // Apne (phone wale) dimaag ke saath pehle pakke niyam (call, app, alarm...), kyunki chhota model kabhi-kabhi chook jaata hai.
+        // Cloud dimaag ho to wo khud samajh leta hai.
+        val first = router.handle(text, fastOnly = smart && !brain.usesLocal())
         if (first != Outcome.AskCloud) { act(first); return }
-        setState(State.THINKING, "सोच रहा हूँ…")
+        setState(State.THINKING, if (LocalBrain.installed(app) && !LocalBrain.awake()) "दिमाग़ जग रहा है (पहली बार 1-2 मिनट)…" else "सोच रहा हूँ…")
         Thread {
             val r = brain.ask(text)
             main.post {
@@ -239,12 +256,10 @@ object Engine {
                     }
                     return@post
                 }
-                val lines = r.text.lines()
-                val actionLine = lines.lastOrNull { it.trim().startsWith("ACTION") }
-                val spoken = lines.filterNot { it.trim().startsWith("ACTION") }.joinToString(" ").trim()
-                if (actionLine != null) {
-                    val json = try { JSONObject(actionLine.substring(actionLine.indexOf('{'))) } catch (e: Exception) { null }
-                    val o = json?.let { router.fromAction(it) }
+                val spoken = ActionParser.spoken(r.text)
+                val json = ActionParser.parse(r.text)
+                if (json != null) {
+                    val o = try { router.fromAction(json) } catch (_: Exception) { null }
                     if (o != null) { act(o); return@post }
                 }
                 say(spoken.ifEmpty { "हम्म, फिर से बोलना भाई।" })
@@ -276,8 +291,11 @@ object Engine {
         speaker.speak(text)
     }
 
+    /** Test ke liye: bolne ke baad apne aap mic na khole */
+    @Volatile var autoListen = true
+
     private fun afterSpeaking() {
-        if (conversation || pending != null) {
+        if (autoListen && (conversation || pending != null)) {
             main.postDelayed({ if ((conversation || pending != null) && state == State.SPEAKING) listen() }, 200)
         } else {
             setState(State.IDLE, "छोटू तैयार है")
