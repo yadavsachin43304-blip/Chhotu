@@ -82,6 +82,12 @@ class ChhotuTest {
             if (c.expectType != null && act?.optString("type") != c.expectType) failures.add("expected ${c.expectType}: ${c.q} got $act")
         }
 
+        // Dimaag beech me fail ho (jaise Vivo pe GPU) to chhotu khud sambhal le
+        LocalBrain.failNextSend = true
+        val rec = brain.ask("मेरा हाल पूछो")
+        log("RECOVERY: ok=${rec.ok} ${rec.text} ${rec.detail}")
+        if (!rec.ok) failures.add("no recovery after send failure: ${rec.detail}")
+
         // Awaaz
         if (NaturalVoice.installed(ctx)) {
             val t0 = System.currentTimeMillis()

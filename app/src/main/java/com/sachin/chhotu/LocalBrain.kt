@@ -24,6 +24,8 @@ object LocalBrain {
 
     fun installed(c: Context) = ModelStore.ready(c, ModelStore.BRAIN)
     fun awake() = engine != null
+    /** Sirf test ke liye: agla jawab jaan-boojh kar fail karo, dekhne ke liye ki chhotu khud sambhal leta hai */
+    @Volatile var failNextSend = false
 
     /** Pehli baar dimaag load hone me (cache banne me) 1-2 minute lag sakte hain. UI ko batane ke liye. */
     @Volatile var loading = false; private set
@@ -45,10 +47,14 @@ object LocalBrain {
                 prefs.edit().putBoolean("gpu_trying", true).commit()
                 try {
                     e = LlmEngine(EngineConfig(modelPath = path, backend = Backend.GPU(), cacheDir = c.cacheDir.path)).also { it.initialize() }
+                    // Kuch phones (jaise Mali GPU wale Vivo) GPU pe load to kar lete hain par jawab banate waqt fail.
+                    // Isliye ek chhota sa asli jawab bana kar dekhte hain.
+                    e.createConversation(ConversationConfig(samplerConfig = SamplerConfig(topK = 1, topP = 1.0, temperature = 0.0))).use { it.sendMessage("hi").toString() }
                     backendName = "GPU"
                 } catch (t: Throwable) {
                     lastError = "GPU: " + t.message
                     prefs.edit().putBoolean("gpu_bad", true).apply()
+                    try { e?.close() } catch (_: Throwable) {}
                     e = null
                 } finally { prefs.edit().putBoolean("gpu_trying", false).commit() }
             } else if (prefs.getBoolean("gpu_trying", false)) {
@@ -99,10 +105,16 @@ object LocalBrain {
             ))
         }
         turns++
-        val out = try { convo!!.sendMessage(userText).toString() } catch (t: Throwable) {
-            // baat-cheet kharab ho gayi (jaise context bhar gaya): nayi shuru karke ek baar aur
-            reset()
-            convo = e.createConversation(ConversationConfig(systemInstruction = Contents.of(system),
+        val out = try {
+            if (failNextSend) { failNextSend = false; throw IllegalStateException("test: simulated send failure") }
+            convo!!.sendMessage(userText).toString()
+        } catch (t: Throwable) {
+            // GPU pe jawab fail hua -> hamesha ke liye CPU. Warna baat-cheet nayi karke ek baar aur.
+            val e2 = if (backendName == "GPU") {
+                c.getSharedPreferences("chhotu_brain", Context.MODE_PRIVATE).edit().putBoolean("gpu_bad", true).commit()
+                close(); engine(c)
+            } else { reset(); e }
+            convo = e2.createConversation(ConversationConfig(systemInstruction = Contents.of(system),
                 samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.8)))
             turns = 1
             convo!!.sendMessage(userText).toString()

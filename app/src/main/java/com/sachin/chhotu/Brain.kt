@@ -157,7 +157,9 @@ ACTION {"type":"search","query":"सस्ते फ़ोन"}
         val key = Prefs.aiKey(context)
         val local = LocalBrain.installed(context)
         if (local && !(Prefs.geminiFirst(context) && key.isNotBlank() && isOnline())) return askLocal(userText)
-        if (key.isBlank()) return Reply(false, "भाई, मेरा ऑनलाइन दिमाग़ अभी चालू नहीं है। सेटिंग में Gemini की API key डाल दो।")
+        if (key.isBlank()) return Reply(false,
+            if (ModelStore.downloading(ModelStore.BRAIN)) "भाई, मेरा दिमाग़ अभी डाउनलोड हो रहा है। पूरा होते ही बात करता हूँ।"
+            else "भाई, मेरा दिमाग़ अभी फ़ोन में नहीं है। सेटिंग में जाकर 'छोटू का दिमाग़' डाउनलोड कर दो, Wi‑Fi पर।")
         if (!isOnline()) return Reply(false, "अभी इंटरनेट नहीं है भाई। ऐप खोलना, कॉल, अलार्म और टॉर्च जैसे काम मैं बिना इंटरनेट भी कर सकता हूँ।")
         val reply = try {
             when {
