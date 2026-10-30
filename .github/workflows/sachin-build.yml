@@ -48,4 +48,5 @@ jobs:
         with: { name: pokeclaw-test, path: out/*.png }
       - name: Release
         env: { GH_TOKEN: '${{ github.token }}' }
-        run: gh release create pokeclaw-${{ github.run_number }} out/*.apk --target ${{ github.sha }} --title "PokeClaw (built from source) #${{ github.run_number }}" --notes "Built from agents-io/PokeClaw (Apache-2.0) source. Smoke-tested on Android 14 emulator."
+        run: |
+          gh release create "pokeclaw-${{ github.run_number }}" out/*.apk --target "${{ github.sha }}" --title "PokeClaw built from source ${{ github.run_number }}" --notes "Built from agents-io/PokeClaw (Apache-2.0) source. Smoke-tested on Android 14 emulator."
