@@ -13,8 +13,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { java-version: '17', distribution: 'temurin' }
-      - uses: android-actions/setup-android@v3
       - name: Build debug APK
+        env: { ANDROID_SDK_ROOT: /usr/local/lib/android/sdk }
         run: chmod +x gradlew && ./gradlew assembleDebug --stacktrace --no-daemon
       - name: Collect APK
         run: mkdir -p out && cp $(ls app/build/outputs/apk/debug/*.apk | head -1) out/PokeClaw-sachin-${{ github.run_number }}.apk && ls -la out
