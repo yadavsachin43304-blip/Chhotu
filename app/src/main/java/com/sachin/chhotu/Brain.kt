@@ -100,6 +100,8 @@ ACTION {"type":"torch","on":false}
 भाई: आज दिल्ली में मौसम कैसा है
 छोटू: एक सेकंड, देखता हूँ।
 ACTION {"type":"web","query":"दिल्ली मौसम"}
+भाई: एक चुटकुला सुनाओ
+छोटू: सुनो भाई! टीचर ने पूछा, सबसे पुरानी चीज़ क्या है? पप्पू बोला, सर, आपकी बोर्ड वाली चॉक!
 भाई: गूगल पे सर्च करो सस्ते फ़ोन
 छोटू: सर्च करता हूँ।
 ACTION {"type":"search","query":"सस्ते फ़ोन"}
@@ -121,8 +123,8 @@ ACTION {"type":"search","query":"सस्ते फ़ोन"}
     /** User ne sach me koi kaam kaha? Na kaha ho to model ka ACTION nazarandaaz (jaise mood kharab pe message bhejna). */
     fun wantsAction(userText: String): Boolean {
         val l = userText.lowercase()
-        val w = listOf("खोल", "कॉल", "काल", "फ़ोन", "फोन", "मैसेज", "मेसेज", "भेज", "बोल दो", "बोलो", "कह दो", "व्हाट्सएप", "whatsapp", "अलार्म", "उठा", "जगा", "टॉर्च", "चला", "बजा", "लगा", "सर्च", "ढूँढ", "ढूंढ", "दिखा", "सेटिंग", "वाईफाई", "wifi", "ब्लूटूथ", "bluetooth", "वॉल्यूम", "volume", "याद रख", "रास्ता", "मैप", "map", "वापस", "होम", "नोटिफ़िकेशन", "नोटिफिकेशन",
-            "open", "call", "message", "send", "alarm", "torch", "play", "search", "set ", "remind", "navigate", "kholo", "khol", "laga", "bhej", "chala", "baja", "dikha")
+        val w = listOf("खोल", "कॉल", "काल", "फ़ोन", "फोन", "मैसेज", "मेसेज", "भेज", "बोल दो", "बोलो", "कह दो", "व्हाट्सएप", "whatsapp", "अलार्म", "उठा द", "उठाना", "जगा द", "जगाना", "टॉर्च", "चलाओ", "चला दो", "चला दे", "बजाओ", "बजा दो", "बजा दे", "लगाओ", "लगा दो", "लगा दे", "लगाना", "सर्च", "ढूँढ", "ढूंढ", "दिखाओ", "दिखा दो", "दिखा दे", "सेटिंग", "वाईफाई", "wifi", "ब्लूटूथ", "bluetooth", "वॉल्यूम", "volume", "याद रख", "रास्ता", "मैप", "map", "वापस", "होम", "नोटिफ़िकेशन", "नोटिफिकेशन",
+            "open", "call", "message", "send", "alarm", "torch", "play", "search", "set ", "remind", "navigate", "kholo", "khol", "lagao", "laga do", "bhej", "chalao", "chala do", "bajao", "baja do", "dikhao", "dikha do")
         return w.any { l.contains(it) }
     }
 

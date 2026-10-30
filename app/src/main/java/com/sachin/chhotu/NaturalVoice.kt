@@ -30,7 +30,7 @@ object NaturalVoice {
                 tokens = File(d, "tokens.txt").absolutePath,
                 dataDir = File(d, "espeak-ng-data").absolutePath,
             ),
-            numThreads = 2,
+            numThreads = 3,
         ))
         return OfflineTts(config = cfg).also { tts = it }
     }
