@@ -126,11 +126,19 @@ ACTION {"type":"search","query":"सस्ते फ़ोन"}
         return w.any { l.contains(it) }
     }
 
-    private fun askLocal(userText: String): Reply = try {
+    private fun askLocal(userText: String, onSentence: ((String) -> Unit)? = null): Reply = try {
         val sys = localSystemPrompt()
+        // Kaam wali baat (call, alarm...) pe pehle poora jawab, taaki confirm sahi bane. Baaki baat-cheet turant bolte hue.
+        val stream = if (onSentence != null && !wantsAction(userText)) SentenceStream(onSentence) else null
+        fun gen(prompt: String): String {
+            val s = stream ?: return LocalBrain.ask(context, sys, prompt)
+            s.restart()
+            val r = LocalBrain.ask(context, sys, prompt) { s.add(it) }
+            s.flush(); return r
+        }
         // Mausam / khabar: model se pehle hi seedha internet, taaki andaaza na lagaye
         val direct = WebSense.isFreshInfo(userText)
-        var t = if (direct) "ACTION {\"type\":\"web\",\"query\":" + JSONObject.quote(userText) + "}" else clean(LocalBrain.ask(context, sys, framed(userText)))
+        var t = if (direct) "ACTION {\"type\":\"web\",\"query\":" + JSONObject.quote(userText) + "}" else clean(gen(framed(userText)))
         val act = ActionParser.parse(t)
         if (act != null && act.optString("type") == "search" && WebSense.isFreshInfo(act.optString("query"))) act.put("type", "web")
         if (act != null && act.optString("type") == "web") {
@@ -138,25 +146,25 @@ ACTION {"type":"search","query":"सस्ते फ़ोन"}
             t = if (!isOnline()) "भाई, अभी इंटरनेट नहीं है, तो ये ताज़ा जानकारी नहीं ला पाऊँगा। नेट आते ही पूछना।"
             else {
                 val info = WebSense.lookup(q.ifBlank { userText })
-                if (info == null) clean(LocalBrain.ask(context, sys, "भाई ने पूछा: $userText\nइंटरनेट पर इसकी पक्की जानकारी नहीं मिली। भाई को सच बता दो, छोटे में, ACTION मत दो।"))
-                else clean(LocalBrain.ask(context, sys, "भाई ने पूछा: $userText\nइंटरनेट से मिली जानकारी:\n$info\nअब सिर्फ़ इसी जानकारी के आधार पर भाई को छोटा, बोलने लायक़ जवाब दो। मौसम हो तो अभी का तापमान और हाल ज़रूर बताओ; ख़बरें हों तो 2-3 मुख्य ख़बरें। अपनी तरफ़ से कुछ मत जोड़ो। ACTION मत दो।"))
+                if (info == null) clean(gen("भाई ने पूछा: $userText\nइंटरनेट पर इसकी पक्की जानकारी नहीं मिली। भाई को सच बता दो, छोटे में, ACTION मत दो।"))
+                else clean(gen("भाई ने पूछा: $userText\nइंटरनेट से मिली जानकारी:\n$info\nअब सिर्फ़ इसी जानकारी के आधार पर भाई को छोटा, बोलने लायक़ जवाब दो। मौसम हो तो अभी का तापमान और हाल ज़रूर बताओ; ख़बरें हों तो 2-3 मुख्य ख़बरें। अपनी तरफ़ से कुछ मत जोड़ो। ACTION मत दो।"))
             }
         }
         if (t.isBlank()) Reply(false, "हम्म, कुछ सूझा नहीं भाई, फिर से बोलना।")
         else {
             val said = t
             Thread { try { learner.observe(userText, said) { p -> LocalBrain.oneShot(context, p) } } catch (_: Throwable) {} }.start()
-            Reply(true, t)
+            Reply(true, t, streamed = (stream?.count ?: 0) > 0)
         }
     } catch (e: Throwable) {
         Reply(false, "मेरा दिमाग़ अभी चल नहीं पाया भाई।", "Local: " + e.javaClass.simpleName + ": " + (e.message ?: ""))
     }
 
     /** Background thread se hi bulana. */
-    fun ask(userText: String): Reply {
+    fun ask(userText: String, onSentence: ((String) -> Unit)? = null): Reply {
         val key = Prefs.aiKey(context)
         val local = LocalBrain.installed(context)
-        if (local && !(Prefs.geminiFirst(context) && key.isNotBlank() && isOnline())) return askLocal(userText)
+        if (local && !(Prefs.geminiFirst(context) && key.isNotBlank() && isOnline())) return askLocal(userText, onSentence)
         if (key.isBlank()) return Reply(false,
             if (ModelStore.downloading(ModelStore.BRAIN)) "भाई, मेरा दिमाग़ अभी डाउनलोड हो रहा है। पूरा होते ही बात करता हूँ।"
             else "भाई, मेरा दिमाग़ अभी फ़ोन में नहीं है। सेटिंग में जाकर 'छोटू का दिमाग़' डाउनलोड कर दो, Wi‑Fi पर।")
@@ -178,7 +186,38 @@ ACTION {"type":"search","query":"सस्ते फ़ोन"}
         return reply
     }
 
-    data class Reply(val ok: Boolean, val text: String, val detail: String = "")
+    data class Reply(val ok: Boolean, val text: String, val detail: String = "", val streamed: Boolean = false)
+
+    /**
+     * Model ke tukdon ko bolne laayak vaakyon me todta hai. ACTION aate hi bolna band.
+     * Isse chhotu poora jawab banne ka intezaar nahi karta: pehla vaakya bante hi bolna shuru.
+     */
+    class SentenceStream(private val out: (String) -> Unit) {
+        private val buf = StringBuilder()
+        private var stopped = false
+        var count = 0; private set
+        fun add(piece: String) {
+            if (stopped) return
+            buf.append(piece)
+            val a = buf.indexOf("ACTION")
+            if (a >= 0) { val before = buf.substring(0, a); buf.setLength(0); buf.append(before); stopped = true; flush(); return }
+            // "ACT" adhoora ho sakta hai, use abhi mat bolo
+            while (true) {
+                val m = Regex("[।!?\\n]|\\.\\s").find(buf) ?: break
+                val end = m.range.last + 1
+                val sentence = buf.substring(0, end)
+                buf.delete(0, end)
+                emit(sentence)
+            }
+        }
+        fun restart() { stopped = false; buf.setLength(0) }
+        fun flush() { val r = buf.toString(); buf.setLength(0); emit(r) }
+        private fun emit(raw: String) {
+            val t = raw.lines().filterNot { val x = it.trim(); x.startsWith("[") || x.startsWith("(संदर्भ") || x.startsWith("(पीछे") || x.startsWith("{") }
+                .joinToString(" ") { it.trim().replace(Regex("^(छोटू|भाई|Chhotu|chhotu)\\s*[:：]\\s*"), "") }.trim()
+            if (t.any { it.isLetterOrDigit() }) { count++; out(t) }
+        }
+    }
 
     private fun gemini(key: String, userText: String): Reply {
         val chosen = Prefs.model(context)

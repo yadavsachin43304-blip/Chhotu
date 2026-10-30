@@ -80,24 +80,14 @@ class SettingsActivity : AppCompatActivity() {
                 Thread {
                     val err = ModelStore.download(applicationContext, m) { p -> runOnUiThread { st.text = m.title + ": ⬇️ $p% (ऐप खुला रखो)" } }
                     runOnUiThread { upd(); if (err != null) st.text = m.title + ": ❌ " + err; refresh(); if (m == ModelStore.BRAIN) LocalBrain.warmUp(applicationContext) }
+                    if (m == ModelStore.BRAIN && !ModelStore.ready(applicationContext, ModelStore.VOICE)) ModelStore.download(applicationContext, ModelStore.VOICE) { }
                 }.start()
             }
         }
-        modelRow(ModelStore.BRAIN, "2 GB")
-        modelRow(ModelStore.VOICE, "130 MB")
-        label(own, "छोटू की ऑफ़लाइन आवाज़")
-        val voiceGroup = android.widget.RadioGroup(this)
-        val names = linkedMapOf("hm_omega" to "ओमेगा (लड़का)", "hm_psi" to "साई (लड़का)", "hf_alpha" to "अल्फ़ा (लड़की)", "hf_beta" to "बीटा (लड़की)")
-        names.forEach { (id, title) ->
-            voiceGroup.addView(android.widget.RadioButton(this).apply {
-                text = title; setTextColor(Ui.TEXT); tag = id; this.id = android.view.View.generateViewId()
-                isChecked = Prefs.offlineVoice(this@SettingsActivity) == id
-                setOnCheckedChangeListener { b, on -> if (on) Prefs.setOfflineVoice(this@SettingsActivity, b.tag as String) }
-            })
-        }
-        own.addView(voiceGroup)
+        modelRow(ModelStore.BRAIN, "2.6 GB")
+        modelRow(ModelStore.VOICE, "67 MB")
         own.addView(android.widget.Switch(this).apply {
-            text = "Sarvam key होने पर भी फ़ोन वाली असली आवाज़ (Kokoro) इस्तेमाल करो"
+            text = "Sarvam key होने पर भी फ़ोन वाली असली आवाज़ इस्तेमाल करो"
             setTextColor(Ui.TEXT); isChecked = Prefs.preferOfflineVoice(this@SettingsActivity)
             setOnCheckedChangeListener { _, on -> Prefs.setPreferOfflineVoice(this@SettingsActivity, on) }
         }, gap())

@@ -20,10 +20,10 @@ object ModelStore {
         "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
         2588147712L, "chhotu-brain-gemma4-universal.litertlm")
 
-    // Awaaz: Kokoro multi-lang (Hindi awaazein: hf_alpha, hf_beta, hm_omega, hm_psi), sherpa-onnx
-    val VOICE = Model("voice", "छोटू की असली आवाज़ (Kokoro)",
-        "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-multi-lang-v1_0.tar.bz2",
-        132353410L, "kokoro-int8-multi-lang-v1_0.tar.bz2", untar = true)
+    // Awaaz: Piper Hindi "pratham" (ladka), sherpa-onnx. Kokoro (v0.5-v0.6) Hindi me kamzor aur phone pe dheema tha.
+    val VOICE = Model("voice", "छोटू की असली आवाज़",
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-hi_IN-pratham-medium.tar.bz2",
+        67238438L, "vits-piper-hi_IN-pratham-medium.tar.bz2", untar = true)
 
     @Volatile private var busy = HashSet<String>()
 
@@ -99,5 +99,7 @@ object ModelStore {
         File(base, "chhotu-brain.task").delete(); File(base, "chhotu-brain.task.part").delete()
         // v0.5 ki sirf-GPU wali file (2 GB) ab kaam ki nahi
         val d = File(base, "models"); File(d, "chhotu-brain-gemma4.litertlm").delete(); File(d, "chhotu-brain-gemma4.litertlm.part").delete()
+        // purani Kokoro awaaz (v0.5-v0.6) ki jagah ab Piper
+        File(d, "kokoro-int8-multi-lang-v1_0").deleteRecursively(); File(d, "kokoro-int8-multi-lang-v1_0.tar.bz2").delete(); File(d, "kokoro-int8-multi-lang-v1_0.tar.bz2.part").delete()
     }
 }

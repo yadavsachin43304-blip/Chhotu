@@ -3,6 +3,8 @@ package com.sachin.chhotu
 import android.content.Context
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Contents
+import com.google.ai.edge.litertlm.Message
+import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.Conversation
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.EngineConfig
@@ -94,8 +96,31 @@ object LocalBrain {
         engine(c).createConversation(ConversationConfig(samplerConfig = SamplerConfig(topK = 20, topP = 0.9, temperature = 0.3))).use { it.sendMessage(prompt).toString().trim() }
     } catch (_: Throwable) { null }
 
+    /** Ek baar me poora jawab (bina stream). */
+    fun ask(c: Context, system: String, userText: String): String = ask(c, system, userText, null)
+
+    /** Model jaise-jaise likhta hai waise-waise tukde (stream) bhejo, taaki chhotu pehla vaakya turant bolna shuru kare. */
+    private fun send(conv: Conversation, text: String, onChunk: ((String) -> Unit)?): String {
+        if (failNextSend) { failNextSend = false; throw IllegalStateException("test: simulated send failure") }
+        if (onChunk == null) return conv.sendMessage(text).toString()
+        val sb = StringBuilder()
+        val done = java.util.concurrent.CountDownLatch(1)
+        var err: Throwable? = null
+        conv.sendMessageAsync(text, object : MessageCallback {
+            override fun onMessage(message: Message) {
+                val piece = message.toString()
+                if (piece.isNotEmpty()) { sb.append(piece); try { onChunk(piece) } catch (_: Throwable) {} }
+            }
+            override fun onDone() { done.countDown() }
+            override fun onError(throwable: Throwable) { err = throwable; done.countDown() }
+        })
+        if (!done.await(180, java.util.concurrent.TimeUnit.SECONDS)) throw IllegalStateException("जवाब बहुत देर से")
+        err?.let { if (sb.isEmpty()) throw it }
+        return sb.toString()
+    }
+
     /** Background thread se. system sirf nayi baat-cheet shuru hone par lagta hai. */
-    @Synchronized fun ask(c: Context, system: String, userText: String): String {
+    @Synchronized fun ask(c: Context, system: String, userText: String, onChunk: ((String) -> Unit)?): String {
         val e = engine(c)
         if (convo == null || turns >= 16) {
             reset()
@@ -106,8 +131,7 @@ object LocalBrain {
         }
         turns++
         val out = try {
-            if (failNextSend) { failNextSend = false; throw IllegalStateException("test: simulated send failure") }
-            convo!!.sendMessage(userText).toString()
+            send(convo!!, userText, onChunk)
         } catch (t: Throwable) {
             // GPU pe jawab fail hua -> hamesha ke liye CPU. Warna baat-cheet nayi karke ek baar aur.
             val e2 = if (backendName == "GPU") {
@@ -117,7 +141,7 @@ object LocalBrain {
             convo = e2.createConversation(ConversationConfig(systemInstruction = Contents.of(system),
                 samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = 0.8)))
             turns = 1
-            convo!!.sendMessage(userText).toString()
+            send(convo!!, userText, onChunk)
         }
         return out.replace(Regex("<[^>]{1,20}>"), "").trim()
     }

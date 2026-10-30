@@ -38,6 +38,9 @@ class MainActivity : AppCompatActivity(), Engine.Listener {
         super.onCreate(savedInstanceState)
         ModelStore.cleanupOld(applicationContext)
         LocalBrain.warmUp(applicationContext)
+        // Awaaz chhoti (67 MB) hai: dimaag ho aur awaaz na ho to apne aap le aao, taaki chhotu bol sake
+        if (LocalBrain.installed(applicationContext) && !NaturalVoice.installed(applicationContext) && !ModelStore.downloading(ModelStore.VOICE))
+            Thread { try { ModelStore.download(applicationContext, ModelStore.VOICE) { } } catch (_: Throwable) {} }.start()
         window.statusBarColor = Ui.BG
         window.navigationBarColor = Ui.BG
         Engine.init(this)

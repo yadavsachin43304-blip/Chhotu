@@ -46,6 +46,8 @@ object Engine {
     var conversation = false
         private set
     private var pending: Outcome.Confirm? = null
+    /** Har naye sawaal ka number: purane (beech me roke gaye) jawab ke tukde naye jawab me na ghusein */
+    @Volatile private var turnId = 0
     private var misses = 0
     private var netErrors = 0
     /** Chhotu jis bhasha me bola, agli baar usi me sunna */
@@ -93,6 +95,7 @@ object Engine {
     }
 
     fun stopAll(sayBye: Boolean = false) = main.post {
+        turnId++
         conversation = false
         pending = null
         recognizer?.cancel()
@@ -244,9 +247,30 @@ object Engine {
         val first = router.handle(text, fastOnly = smart && !brain.usesLocal())
         if (first != Outcome.AskCloud) { act(first); return }
         setState(State.THINKING, if (LocalBrain.installed(app) && !LocalBrain.awake()) "दिमाग़ जग रहा है (पहली बार 1-2 मिनट)…" else "सोच रहा हूँ…")
+        val turn = ++turnId
         Thread {
-            val r = brain.ask(text)
+            // Jawab ka pehla vaakya bante hi bolna shuru (poore jawab ka intezaar nahi)
+            var started = false
+            val r = brain.ask(text) { sentence ->
+                main.post {
+                    if (turn != turnId) return@post
+                    if (!started) { started = true; setState(State.SPEAKING, "बोल रहा हूँ…"); speaker.begin() }
+                    speaker.add(sentence)
+                }
+            }
             main.post {
+                if (turn != turnId) return@post
+                if (started) {
+                    val shown = if (r.ok) ActionParser.spoken(r.text).ifBlank { r.text } else r.text
+                    listenLang = Lang.detect(shown).let { if (it == "hi-IN" || it == "en-IN") it else listenLang }
+                    emit(shown, false)
+                    if (!r.ok) speaker.add(r.text)
+                    val json = if (r.ok) ActionParser.parse(r.text)?.takeIf { it.optString("type") == "remember" } else null
+                    val o = json?.let { try { router.fromAction(it) } catch (_: Exception) { null } }
+                    if (o is Outcome.Say) speaker.add(o.text)
+                    speaker.end()
+                    return@post
+                }
                 if (!r.ok) {
                     val local = if (smart) router.handle(text) else Outcome.AskCloud
                     if (local != Outcome.AskCloud) act(local)

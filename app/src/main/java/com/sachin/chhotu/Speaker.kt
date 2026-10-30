@@ -37,6 +37,14 @@ class Speaker(private val context: Context) : TextToSpeech.OnInitListener {
     private var token = 0
     private val frameMs = 40
 
+    // ---- Lagaataar bolna: vaakya aate jaate hain, peeche awaaz banti rehti hai, aage bajti rehti hai ----
+    private class Item(val text: String, val wav: java.util.concurrent.Future<ByteArray?>)
+    private val queue = ArrayDeque<Item>()
+    private val synth = java.util.concurrent.Executors.newSingleThreadExecutor()
+    private var streamOpen = false
+    private var busy = false
+    private var seq = 0
+
     override fun onInit(status: Int) {
         if (status != TextToSpeech.SUCCESS) return
         val t = tts ?: return
@@ -47,69 +55,93 @@ class Speaker(private val context: Context) : TextToSpeech.OnInitListener {
                 ?.maxByOrNull { it.quality }
             if (best != null) t.voice = best
         } catch (_: Exception) { }
-        t.setSpeechRate(0.97f)
+        t.setSpeechRate(1.0f)
         t.setPitch(1.05f)
         t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String?) {}
-            override fun onDone(id: String?) {
-                val parts = id?.split(":") ?: return
-                val myToken = parts.getOrNull(1)?.toIntOrNull() ?: return
-                if (parts[0] == "file") {
-                    val f = File(context.cacheDir, "chhotu_tts.wav")
-                    main.post { if (myToken == token) { if (f.exists() && f.length() > 100) playWav(f.readBytes(), myToken) else finish(myToken) } }
-                } else if (parts[0] == "live") {
-                    main.post { finish(myToken) }
-                }
-            }
+            override fun onDone(id: String?) { main.post { segmentDone(id) } }
             @Deprecated("old api")
-            override fun onError(id: String?) { onErr(id) }
-            override fun onError(id: String?, errorCode: Int) { onErr(id) }
-            private fun onErr(id: String?) {
-                val parts = id?.split(":") ?: return
-                val myToken = parts.getOrNull(1)?.toIntOrNull() ?: return
-                main.post { if (myToken == token) finish(myToken) }
-            }
+            override fun onError(id: String?) { main.post { segmentDone(id) } }
+            override fun onError(id: String?, errorCode: Int) { main.post { segmentDone(id) } }
         })
         ttsReady = true
     }
 
     fun isSpeaking() = speaking
 
-    fun speak(raw: String) {
+    /** Ek poora jawab bolo. */
+    fun speak(raw: String) { begin(); add(raw); end() }
+
+    /** Naya jawab shuru: purana sab chup. Main thread se. */
+    fun begin() {
         stop()
-        val text = clean(raw)
-        if (text.isEmpty()) { onDone(); return }
-        val my = ++token
+        streamOpen = true
         speaking = true
-        val key = Prefs.sarvamKey(context)
-        val lang = Lang.detect(text)
-        val kokoroOk = NaturalVoice.installed(context) && (lang == "hi-IN" || lang.startsWith("en"))
-        if (kokoroOk && (key.isBlank() || Prefs.preferOfflineVoice(context))) {
-            Thread {
-                val wav = try { NaturalVoice.synth(context, text, lang, Prefs.offlineVoice(context), Prefs.voiceSpeed(context)) } catch (e: Throwable) { null }
-                main.post {
-                    if (my != token) return@post
-                    if (wav != null) playWav(wav, my) else androidSpeak(text, my)
-                }
-            }.start()
-        } else if (key.isNotBlank()) {
-            Thread {
-                val wav = try { sarvam(key, text) } catch (e: Exception) { null }
-                main.post {
-                    if (my != token) return@post
-                    if (wav != null) playWav(wav, my)
-                    else if (kokoroOk) Thread { val w2 = try { NaturalVoice.synth(context, text, lang, Prefs.offlineVoice(context)) } catch (e: Throwable) { null }; main.post { if (my == token) { if (w2 != null) playWav(w2, my) else androidSpeak(text, my) } } }.start()
-                    else androidSpeak(text, my)
-                }
-            }.start()
-        } else {
-            androidSpeak(text, my)
-        }
     }
 
+    /** Ek aur vaakya line me lagao. Awaaz turant peeche banni shuru. Main thread se. */
+    fun add(raw: String) {
+        val text = clean(raw)
+        if (text.isEmpty()) return
+        if (!streamOpen && !busy && queue.isEmpty()) { streamOpen = true; speaking = true }
+        speaking = true
+        val wav = synth.submit<ByteArray?> { try { makeWav(text) } catch (_: Throwable) { null } }
+        queue.addLast(Item(text, wav))
+        if (!busy) next()
+    }
+
+    /** Jawab poora ho gaya; line khaali hote hi onDone. Main thread se. */
+    fun end() {
+        streamOpen = false
+        if (!busy && queue.isEmpty()) finish(token)
+    }
+
+    /** Phone me rakhi insaani awaaz (Piper), ya Sarvam (net + key). Dono na hon to null = phone ki TTS. */
+    private fun makeWav(text: String): ByteArray? {
+        val lang = Lang.detect(text)
+        val key = Prefs.sarvamKey(context)
+        val offline = NaturalVoice.installed(context)
+        if (offline && (key.isBlank() || Prefs.preferOfflineVoice(context))) {
+            NaturalVoice.synth(context, text, lang, Prefs.offlineVoice(context), Prefs.voiceSpeed(context))?.let { return it }
+        }
+        if (key.isNotBlank()) { try { sarvam(key, text) } catch (_: Exception) { null }?.let { return it } }
+        if (offline) return NaturalVoice.synth(context, text, lang, Prefs.offlineVoice(context), Prefs.voiceSpeed(context))
+        return null
+    }
+
+    private fun next() {
+        val my = token
+        val item = queue.removeFirstOrNull()
+        if (item == null) { busy = false; if (!streamOpen) finish(my); return }
+        busy = true
+        Thread {
+            val wav = try { item.wav.get(60, java.util.concurrent.TimeUnit.SECONDS) } catch (_: Throwable) { null }
+            main.post {
+                if (my != token) return@post
+                if (wav != null && wav.size > 100) playWav(wav, my) else androidSpeak(item.text, my)
+            }
+        }.start()
+    }
+
+    /** Ek tukda bajna khatam: agla. */
+    private fun advance(my: Int) {
+        if (my != token) return
+        releasePlayer()
+        onLevel(0f)
+        next()
+    }
+
+    private fun segmentDone(id: String?) {
+        val parts = id?.split(":") ?: return
+        val myToken = parts.getOrNull(1)?.toIntOrNull() ?: return
+        val mySeq = parts.getOrNull(2)?.toIntOrNull() ?: return
+        if (myToken == token && mySeq == seq) { seq++; advance(myToken) }
+    }
+
+    /** Phone ki apni TTS se seedha bolna (file banaye bina, kyunki kuch phones (Vivo) file nahi banate). */
     private fun androidSpeak(text: String, my: Int) {
         val t = tts
-        if (t == null || !ttsReady) { finish(my); return }
+        if (t == null || !ttsReady) { advance(my); return }
         val lang = Lang.detect(text)
         try {
             val parts = lang.split("-")
@@ -119,21 +151,21 @@ class Speaker(private val context: Context) : TextToSpeech.OnInitListener {
                 if (lang == "hi-IN") t.voices?.filter { it.locale.language == "hi" && !it.isNetworkConnectionRequired }?.maxByOrNull { it.quality }?.let { t.voice = it }
             } else t.language = Locale("hi", "IN")
         } catch (_: Exception) { }
-        val f = File(context.cacheDir, "chhotu_tts.wav")
-        f.delete()
-        val r = t.synthesizeToFile(text, Bundle(), f, "file:$my")
-        if (r != TextToSpeech.SUCCESS) {
-            // file nahi bani to seedha bolo, hoth andaaze se chalenge
-            t.speak(text, TextToSpeech.QUEUE_FLUSH, null, "live:$my")
-            simulate(my)
-        }
+        val mySeq = ++seq
+        val params = Bundle().apply { putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, android.media.AudioManager.STREAM_MUSIC) }
+        val r = t.speak(text, TextToSpeech.QUEUE_FLUSH, params, "live:$my:$mySeq")
+        if (r != TextToSpeech.SUCCESS) { seq++; advance(my); return }
+        simulate(my, mySeq)
+        // Kuch phones onDone nahi bhejte: andaaze ke time ke baad khud aage badho, taaki chhotu atke nahi
+        val guess = 2500L + text.length * 110L
+        main.postDelayed({ if (my == token && seq == mySeq) { seq++; advance(my) } }, guess)
     }
 
-    private fun simulate(my: Int) {
+    private fun simulate(my: Int, mySeq: Int) {
         val start = System.currentTimeMillis()
         val tick = object : Runnable {
             override fun run() {
-                if (my != token || !speaking) return
+                if (my != token || !speaking || seq != mySeq) return
                 val tSec = (System.currentTimeMillis() - start) / 1000f
                 onLevel((0.25f + 0.6f * abs(sin(tSec * 17f)) * (0.6f + 0.4f * abs(sin(tSec * 3.3f)))).coerceIn(0f, 1f))
                 main.postDelayed(this, 40)
@@ -145,22 +177,22 @@ class Speaker(private val context: Context) : TextToSpeech.OnInitListener {
     private fun playWav(bytes: ByteArray, my: Int) {
         envelope = computeEnvelope(bytes)
         try {
-            val f = File(context.cacheDir, "chhotu_play.wav")
+            val f = File(context.cacheDir, "chhotu_play_${my % 2}.wav")
             f.writeBytes(bytes)
             val mp = MediaPlayer()
             mp.setAudioAttributes(AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                .setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
             mp.setDataSource(f.absolutePath)
-            mp.setOnCompletionListener { finish(my) }
-            mp.setOnErrorListener { _, _, _ -> finish(my); true }
+            mp.setOnCompletionListener { advance(my) }
+            mp.setOnErrorListener { _, _, _ -> advance(my); true }
             mp.prepare()
             mp.start()
             player = mp
             val tick = object : Runnable {
                 override fun run() {
                     val p = player ?: return
-                    if (my != token || !speaking) return
+                    if (my != token || !speaking || p !== mp) return
                     val env = envelope
                     val level = try {
                         if (env != null && env.isNotEmpty()) {
@@ -174,13 +206,14 @@ class Speaker(private val context: Context) : TextToSpeech.OnInitListener {
             }
             main.post(tick)
         } catch (e: Exception) {
-            finish(my)
+            advance(my)
         }
     }
 
     private fun finish(my: Int) {
         if (my != token) return
         releasePlayer()
+        busy = false
         speaking = false
         onLevel(0f)
         onDone()
@@ -189,6 +222,10 @@ class Speaker(private val context: Context) : TextToSpeech.OnInitListener {
     fun stop() {
         token++
         speaking = false
+        streamOpen = false
+        busy = false
+        queue.forEach { it.wav.cancel(true) }
+        queue.clear()
         try { tts?.stop() } catch (_: Exception) { }
         releasePlayer()
         onLevel(0f)
@@ -204,6 +241,7 @@ class Speaker(private val context: Context) : TextToSpeech.OnInitListener {
         stop()
         tts?.shutdown()
         tts = null
+        synth.shutdownNow()
     }
 
     private fun clean(s: String): String {

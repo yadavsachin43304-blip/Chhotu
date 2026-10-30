@@ -33,7 +33,7 @@ class ChhotuTest {
         val src = File("/data/local/tmp/chhotu-brain-gemma4-universal.litertlm")
         val dst = ModelStore.file(ctx, ModelStore.BRAIN)
         if (src.exists() && dst.length() != src.length()) { val t = System.currentTimeMillis(); src.copyTo(dst, true); log("brain copied in ${System.currentTimeMillis() - t}ms") }
-        val tar = File("/data/local/tmp/kokoro.tar")
+        val tar = File("/data/local/tmp/voice.tar")
         val out = ModelStore.dir(ctx)
         if (tar.exists() && !NaturalVoice.installed(ctx)) {
             org.apache.commons.compress.archivers.tar.TarArchiveInputStream(tar.inputStream().buffered()).use { t ->
@@ -82,6 +82,16 @@ class ChhotuTest {
             if (c.expectType != null && act?.optString("type") != c.expectType) failures.add("expected ${c.expectType}: ${c.q} got $act")
         }
 
+        // Stream: pehla vaakya kitni jaldi aata hai (yahi chhotu ke bolna shuru karne ka samay hai)
+        for (q in listOf("मुझे पढ़ाई में मन लगाने के लिए कोई अच्छी सलाह दो", "तुम्हें कौन सा खाना सबसे अच्छा लगता है और क्यों?")) {
+            val t0 = System.currentTimeMillis(); var first = -1L; val parts = ArrayList<String>()
+            val r = brain.ask(q) { s -> if (first < 0) first = System.currentTimeMillis() - t0; parts.add(s) }
+            val total = System.currentTimeMillis() - t0
+            log("STREAM Q: $q\n  first_sentence=${first}ms total=${total}ms streamed=${r.streamed} parts=${parts.size}: ${parts.joinToString(" | ")}")
+            if (!r.streamed || parts.isEmpty()) failures.add("no streaming: $q")
+            if (parts.any { it.contains("ACTION") || it.contains("{") }) failures.add("action spoken: $parts")
+        }
+
         // Dimaag beech me fail ho (jaise Vivo pe GPU) to chhotu khud sambhal le
         LocalBrain.failNextSend = true
         val rec = brain.ask("मेरा हाल पूछो")
@@ -91,8 +101,9 @@ class ChhotuTest {
         // Awaaz
         if (NaturalVoice.installed(ctx)) {
             val t0 = System.currentTimeMillis()
-            val wav = NaturalVoice.synth(ctx, "नमस्ते भाई, मैं छोटू हूँ। बताओ आज क्या करना है?", "hi-IN", "hm_omega")
+            val wav = NaturalVoice.synth(ctx, "नमस्ते भाई, मैं छोटू हूँ। बताओ आज क्या करना है?", "hi-IN", "pratham")
             log("voice wav bytes=${wav?.size} time=${System.currentTimeMillis() - t0}ms")
+            if (wav != null) File(ctx.getExternalFilesDir(null), "voice-sample.wav").writeBytes(wav)
             if (wav == null || wav.size < 20000) failures.add("voice failed")
         } else failures.add("voice model missing")
 
