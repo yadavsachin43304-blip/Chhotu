@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PokeClaw v4</title>
+<style>
+:root {
+  --bg: #0C111B;
+  --surface: #151D2E;
+  --bubble-ai: #1E2D45;
+  --bubble-border: #2A3D5A;
+  --accent: #60A5FA;
+  --text1: #ECECF1;
+  --text2: #A3A3B5;
+  --text3: #52526E;
+  --border: #1E293B;
+  --user-bubble: #2563EB;
+  --orange: #E8751A;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text1);
+  max-width: 390px; margin: 0 auto; height: 100vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* Toolbar */
+.toolbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 12px 16px; background: var(--surface); border-bottom: 1px solid #1A2234;
+}
+.tb-left { display:flex; align-items:center; gap:10px; }
+.tb-title { font-size:18px; font-weight:700; }
+.tb-title b { color: var(--accent); font-weight:700; }
+.tb-badge {
+  font-size:10px; padding:2px 8px; border-radius:10px;
+  background: var(--bubble-ai); color: var(--accent); border:1px solid var(--bubble-border);
+}
+.tb-badge.cloud { color: var(--orange); border-color: #E8751A40; background: #2A1F1A; }
+.tb-icons { display:flex; gap:14px; }
+.tb-icons svg { width:20px; height:20px; fill: var(--text2); }
+
+/* Content */
+.content { flex:1; overflow-y:auto; }
+
+/* ===== PROMPT SUGGESTION (matching existing app style) ===== */
+.prompt-list { padding: 0 16px; display:flex; flex-direction:column; gap:6px; }
+.prompt-item {
+  display:flex; align-items:center; border-radius:12px;
+  background: var(--surface); border: 0.5px solid var(--border);
+  cursor:pointer; transition: border-color 0.15s; overflow:hidden;
+}
+.prompt-item:active { border-color: var(--accent); }
+.prompt-bar { width:3px; min-height:38px; border-radius:12px 0 0 12px; flex-shrink:0; }
+.prompt-bar.task { background: var(--accent); }
+.prompt-bar.chat { background: var(--accent); opacity:0.5; }
+.prompt-text { padding:10px 14px; font-size:13px; color: var(--text2); }
+
+/* Section label */
+.sec-label {
+  font-size:11px; font-weight:600; color: var(--text3); padding:14px 16px 6px;
+  text-transform:uppercase; letter-spacing:0.5px;
+}
+
+/* Show more */
+.toggle-more {
+  display:flex; align-items:center; justify-content:center; gap:4px;
+  padding:8px; color: var(--accent); font-size:11px; cursor:pointer;
+}
+.toggle-more svg { width:12px; height:12px; fill: var(--accent); transition:transform 0.3s; }
+.toggle-more.open svg { transform:rotate(180deg); }
+
+/* Collapsed list */
+.prompt-list.collapsed .prompt-item:nth-child(n+7) { display:none; }
+
+/* ===== SKILL CARD (background task) — matching existing app ===== */
+.skill-card {
+  margin: 0 16px; border-radius:16px;
+  background: var(--surface); border: 0.5px solid var(--border);
+  cursor:pointer; transition: border-color 0.15s;
+}
+.skill-card:active { border-color: var(--bubble-border); }
+.skill-card.running { border: 1px solid var(--orange); background: #E8751A0A; }
+.sc-row { display:flex; align-items:center; padding:14px 16px; gap:12px; }
+.sc-icon {
+  width:44px; height:44px; border-radius:12px;
+  background: #60A5FA1F; display:flex; align-items:center; justify-content:center;
+  font-size:20px; flex-shrink:0;
+}
+.skill-card.running .sc-icon { background: #E8751A26; }
+.sc-info { flex:1; }
+.sc-title { font-size:14px; font-weight:600; }
+.sc-desc { font-size:11px; color: var(--text3); margin-top:2px; }
+.sc-arrow { color: var(--text3); font-size:18px; }
+.sc-status { display:flex; align-items:center; gap:6px; }
+.sc-dot { width:6px; height:6px; border-radius:50%; background:#3FB950; animation:pulse 2s infinite; }
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.sc-stop { padding:4px 12px; border-radius:6px; border:1px solid #F4433640; background:transparent; color:#F44336; font-size:11px; cursor:pointer; }
+
+/* ===== CHAT MESSAGES ===== */
+.chat-area { flex:1; display:flex; flex-direction:column; padding:12px 16px; overflow-y:auto; }
+.msg { max-width:80%; padding:10px 14px; border-radius:16px; font-size:13px; line-height:1.5; margin-bottom:6px; word-wrap:break-word; }
+.msg-user { background:var(--user-bubble); color:white; align-self:flex-end; border-bottom-right-radius:4px; }
+.msg-ai { background:var(--bubble-ai); color:#D0DAE8; align-self:flex-start; border:1px solid var(--bubble-border); border-bottom-left-radius:4px; }
+
+/* Empty state */
+.empty { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; text-align:center; padding:20px; }
+.empty-icon { font-size:36px; margin-bottom:8px; }
+.empty-t { font-size:16px; font-weight:600; }
+.empty-s { font-size:13px; color:var(--accent); margin:4px 0; }
+.empty-d { font-size:11px; color:var(--text3); max-width:260px; line-height:1.5; }
+
+/* ===== INPUT BAR ===== */
+.input-bar {
+  display:flex; align-items:center; gap:6px;
+  padding:6px 10px 10px; background:var(--surface); border-top:1px solid #1A2234;
+}
+.inp {
+  flex:1; padding:9px 14px; border-radius:20px;
+  background:var(--bg); border:1px solid var(--border);
+  color:var(--text1); font-size:14px; outline:none;
+}
+.inp:focus { border-color:#60A5FA50; box-shadow:0 0 0 2px #60A5FA10; }
+.inp::placeholder { color:var(--text3); }
+.btn-c {
+  width:34px; height:34px; border-radius:50%; border:none;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; flex-shrink:0; transition:all 0.12s;
+}
+.btn-c svg { width:15px; height:15px; }
+.btn-chat { background:#60A5FA20; }
+.btn-chat.on { background:var(--user-bubble); }
+.btn-chat svg { fill:white; }
+.btn-do { background:#E8751A18; border:1.5px solid #E8751A40; }
+.btn-do.on { background:var(--orange); border-color:var(--orange); }
+.btn-do svg { fill:var(--orange); }
+.btn-do.on svg { fill:white; }
+/* Cloud single button */
+.btn-one { background:#60A5FA20; }
+.btn-one.on { background:var(--user-bubble); }
+.btn-one svg { fill:white; }
+
+/* Sheet */
+.overlay { position:fixed; inset:0; background:#00000070; z-index:50; display:none; align-items:flex-end; justify-content:center; }
+.overlay.show { display:flex; }
+.sheet { background:var(--surface); border-radius:16px 16px 0 0; width:390px; padding:16px; animation:su 0.25s ease; }
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sh-bar { width:32px; height:3px; border-radius:2px; background:var(--bubble-border); margin:0 auto 14px; }
+.sh-title { font-size:15px; font-weight:600; margin-bottom:12px; }
+.fr { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.fl { font-size:11px; color:var(--text2); width:50px; }
+.fi { flex:1; padding:8px 10px; border-radius:8px; font-size:12px; background:var(--bg); border:1px solid var(--border); color:var(--text1); outline:none; }
+.fi:focus { border-color:#60A5FA40; }
+.tp { display:flex; gap:6px; flex:1; }
+.tp-p { padding:5px 10px; border-radius:14px; font-size:11px; background:var(--bg); border:1px solid var(--border); color:var(--text2); cursor:pointer; }
+.tp-p.on { background:#2563EB18; border-color:var(--user-bubble); color:var(--accent); }
+.btn-go { width:100%; padding:11px; border-radius:10px; border:none; background:var(--user-bubble); color:white; font-size:13px; font-weight:600; cursor:pointer; margin-top:6px; }
+
+/* Demo switcher */
+.dsw { position:fixed;top:10px;right:12px;display:flex;gap:3px;z-index:100; }
+.dsw button { padding:3px 8px;border-radius:5px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text3); }
+.dsw button.on { background:var(--bubble-ai);color:var(--accent);border-color:var(--bubble-border); }
+
+/* Toast */
+.toast { position:fixed;bottom:60px;left:50%;transform:translateX(-50%);padding:7px 16px;background:var(--user-bubble);color:white;border-radius:8px;font-size:12px;z-index:200; }
+</style>
+</head>
+<body>
+
+<div class="dsw">
+  <button class="on" id="dl" onclick="sw('local')">Local</button>
+  <button id="dc" onclick="sw('cloud')">Cloud</button>
+</div>
+
+<div class="toolbar">
+  <div class="tb-left">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="#A3A3B5"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    <div class="tb-title">Poke<b>Claw</b></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="tb-badge" id="badge">Local AI</div>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="#A3A3B5"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+  </div>
+</div>
+
+<div class="content" id="content">
+  <!-- LOCAL VIEW -->
+  <div id="v-local">
+    <div class="sec-label">Quick Tasks</div>
+    <div class="prompt-list collapsed" id="pl">
+      <div class="prompt-item" onclick="fill('How much battery left?')"><div class="prompt-bar task"></div><div class="prompt-text">🔋 How much battery left?</div></div>
+      <div class="prompt-item" onclick="fill('What WiFi am I on?')"><div class="prompt-bar task"></div><div class="prompt-text">📶 What WiFi am I on?</div></div>
+      <div class="prompt-item" onclick="fill('Read my notifications')"><div class="prompt-bar task"></div><div class="prompt-text">🔔 Read my notifications</div></div>
+      <div class="prompt-item" onclick="fill('Call ')"><div class="prompt-bar task"></div><div class="prompt-text">📞 Call someone</div></div>
+      <div class="prompt-item" onclick="fill('Send _ to _ on WhatsApp')"><div class="prompt-bar task"></div><div class="prompt-text">💬 Send a message</div></div>
+      <div class="prompt-item" onclick="fill('How much storage?')"><div class="prompt-bar task"></div><div class="prompt-text">💾 How much storage?</div></div>
+      <div class="prompt-item" onclick="fill('Turn on dark mode')"><div class="prompt-bar task"></div><div class="prompt-text">🌙 Turn on dark mode</div></div>
+      <div class="prompt-item" onclick="fill('What apps do I have?')"><div class="prompt-bar task"></div><div class="prompt-text">📱 What apps do I have?</div></div>
+      <div class="prompt-item" onclick="fill('How hot is my phone?')"><div class="prompt-bar task"></div><div class="prompt-text">🌡️ How hot is my phone?</div></div>
+      <div class="prompt-item" onclick="fill('Is bluetooth on?')"><div class="prompt-bar task"></div><div class="prompt-text">🔵 Is bluetooth on?</div></div>
+      <div class="prompt-item" onclick="fill('What Android version?')"><div class="prompt-bar task"></div><div class="prompt-text">📲 What Android version?</div></div>
+      <div class="prompt-item" onclick="fill('Take a screenshot')"><div class="prompt-bar task"></div><div class="prompt-text">📸 Take a screenshot</div></div>
+    </div>
+    <div class="toggle-more" id="tm" onclick="toggleMore()"><span id="tmt">Show more</span><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div>
+
+    <div class="sec-label">Background</div>
+    <div class="skill-card" id="sk" onclick="openSheet()">
+      <div class="sc-row">
+        <div class="sc-icon">👁️</div>
+        <div class="sc-info">
+          <div class="sc-title">Monitor & Auto-Reply</div>
+          <div class="sc-desc">Watch messages and reply automatically</div>
+        </div>
+        <div class="sc-arrow" id="sk-arrow">›</div>
+      </div>
+    </div>
+    <div style="height:12px;"></div>
+  </div>
+
+  <!-- CLOUD VIEW -->
+  <div id="v-cloud" style="display:none;height:100%;display:flex;flex-direction:column;">
+    <div class="chat-area" id="ca">
+      <div class="empty">
+        <div class="empty-icon">🦞</div>
+        <div class="empty-t">PokeClaw</div>
+        <div class="empty-s">Cloud AI</div>
+        <div class="empty-d">Chat and tasks in one place. Type below or pick a quick task.</div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface);border-top:1px solid #1A2234;">
+      <div class="sec-label" style="padding-top:8px;">Quick Tasks</div>
+      <div class="prompt-list" style="padding-bottom:4px;" id="cpl">
+        <div class="prompt-item" onclick="cfill('How much battery left?')"><div class="prompt-bar task"></div><div class="prompt-text">🔋 Battery</div></div>
+        <div class="prompt-item" onclick="cfill('Call Mom')"><div class="prompt-bar task"></div><div class="prompt-text">📞 Call</div></div>
+        <div class="prompt-item" onclick="cfill('Send hi to Mom on WhatsApp')"><div class="prompt-bar task"></div><div class="prompt-text">💬 Send message</div></div>
+        <div class="prompt-item" onclick="cfill('Search YouTube for cat videos')"><div class="prompt-bar task"></div><div class="prompt-text">🔍 Search YouTube</div></div>
+        <div class="prompt-item" onclick="cfill('Compose email to test@example.com')"><div class="prompt-bar task"></div><div class="prompt-text">📧 Compose email</div></div>
+        <div class="prompt-item" onclick="cfill('Read my notifications')"><div class="prompt-bar task"></div><div class="prompt-text">🔔 Notifications</div></div>
+      </div>
+
+      <div class="sec-label">Background</div>
+      <div class="skill-card" onclick="openSheet()" style="margin-bottom:8px;">
+        <div class="sc-row">
+          <div class="sc-icon">👁️</div>
+          <div class="sc-info">
+            <div class="sc-title">Monitor & Auto-Reply</div>
+            <div class="sc-desc">Watch messages and reply automatically</div>
+          </div>
+          <div class="sc-arrow">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INPUT BAR -->
+<div class="input-bar">
+  <input class="inp" id="inp" placeholder="Chat with local AI..." oninput="chk()">
+  <div id="lb" style="display:flex;gap:4px;">
+    <button class="btn-c btn-chat" id="bc" onclick="go('chat')" title="Send as chat"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+    <button class="btn-c btn-do" id="bd" onclick="go('task')" title="Run as task"><svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg></button>
+  </div>
+  <div id="cb" style="display:none;">
+    <button class="btn-c btn-one" id="bo" onclick="go('auto')"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+  </div>
+</div>
+
+<!-- MONITOR SHEET -->
+<div class="overlay" id="ov" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <div class="sh-bar"></div>
+    <div class="sh-title">👁️ Monitor & Auto-Reply</div>
+    <div class="fr"><span class="fl">Contact</span><input class="fi" placeholder="e.g. Mom, Girlfriend" id="mc"></div>
+    <div class="fr"><span class="fl">App</span><select class="fi" style="appearance:auto;"><option>WhatsApp</option><option>LINE</option><option>Telegram</option><option>WeChat</option></select></div>
+    <div class="fr"><span class="fl">Tone</span><div class="tp"><div class="tp-p on" onclick="tone(this)">Casual</div><div class="tp-p" onclick="tone(this)">Formal</div><div class="tp-p" onclick="tone(this)">Funny</div></div></div>
+    <button class="btn-go" onclick="startM()">Start Monitoring</button>
+  </div>
+</div>
+
+<script>
+let mode='local', expanded=false;
+
+function sw(m) {
+  mode=m;
+  document.getElementById('v-local').style.display = m==='local'?'block':'none';
+  document.getElementById('v-cloud').style.display = m==='cloud'?'flex':'none';
+  document.getElementById('lb').style.display = m==='local'?'flex':'none';
+  document.getElementById('cb').style.display = m==='cloud'?'flex':'none';
+  const b=document.getElementById('badge');
+  const i=document.getElementById('inp');
+  if(m==='cloud'){
+    b.textContent='Cloud AI'; b.className='tb-badge cloud';
+    i.placeholder='Chat or give a task...';
+    document.getElementById('dc').classList.add('on'); document.getElementById('dl').classList.remove('on');
+  } else {
+    b.textContent='Local AI'; b.className='tb-badge';
+    i.placeholder='Chat with local AI...';
+    document.getElementById('dl').classList.add('on'); document.getElementById('dc').classList.remove('on');
+  }
+}
+
+function toggleMore(){
+  expanded=!expanded;
+  document.getElementById('pl').classList.toggle('collapsed',!expanded);
+  document.getElementById('tmt').textContent=expanded?'Show less':'Show more';
+  document.getElementById('tm').classList.toggle('open',expanded);
+}
+
+function fill(t){
+  const i=document.getElementById('inp');
+  i.value=t; i.placeholder='Describe a phone task...'; i.focus(); chk();
+  document.getElementById('bd').classList.add('on');
+  document.getElementById('bc').classList.remove('on');
+  const u=t.indexOf('_'); if(u>=0) setTimeout(()=>i.setSelectionRange(u,u+1),50);
+}
+function cfill(t){
+  const i=document.getElementById('inp'); i.value=t; i.focus(); chk();
+  document.getElementById('bo').classList.add('on');
+}
+
+function chk(){
+  const v=document.getElementById('inp').value.trim();
+  document.getElementById('bc').classList.toggle('on', v.length>0&&mode==='local');
+  document.getElementById('bd').classList.toggle('on', v.length>0&&mode==='local');
+  if(mode==='cloud') document.getElementById('bo').classList.toggle('on', v.length>0);
+}
+
+function go(type){
+  const i=document.getElementById('inp'), v=i.value.trim();
+  if(!v) return;
+  if(mode==='cloud'){
+    const ca=document.getElementById('ca');
+    const em=ca.querySelector('.empty'); if(em) em.remove();
+    const u=document.createElement('div'); u.className='msg msg-user'; u.textContent=v; ca.appendChild(u);
+    setTimeout(()=>{
+      const a=document.createElement('div'); a.className='msg msg-ai';
+      a.textContent='Battery: 73%, not charging, 32.0°C';
+      ca.appendChild(a); ca.scrollTop=ca.scrollHeight;
+    },800);
+  } else {
+    const label=type==='task'?'Task':'Chat';
+    const t=document.createElement('div'); t.className='toast'; t.textContent=label+': '+v;
+    document.body.appendChild(t); setTimeout(()=>t.remove(),2000);
+  }
+  i.value=''; i.placeholder=mode==='local'?'Chat with local AI...':'Chat or give a task...'; chk();
+}
+
+function openSheet(){ document.getElementById('ov').classList.add('show'); }
+function closeSheet(){ document.getElementById('ov').classList.remove('show'); }
+function tone(e){ e.parentElement.querySelectorAll('.tp-p').forEach(p=>p.classList.remove('on')); e.classList.add('on'); }
+function startM(){
+  const c=document.getElementById('mc').value||'Girlfriend';
+  closeSheet();
+  const sk=document.getElementById('sk');
+  sk.classList.add('running');
+  sk.querySelector('.sc-desc').textContent='Monitoring '+c+' on WhatsApp';
+  sk.querySelector('.sc-title').innerHTML='<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3FB950;animation:pulse 2s infinite;margin-right:6px;vertical-align:middle;"></span>Active';
+  document.getElementById('sk-arrow').innerHTML='<button class="sc-stop" onclick="event.stopPropagation();stopM()">Stop</button>';
+}
+function stopM(){
+  const sk=document.getElementById('sk');
+  sk.classList.remove('running');
+  sk.querySelector('.sc-desc').textContent='Watch messages and reply automatically';
+  sk.querySelector('.sc-title').textContent='Monitor & Auto-Reply';
+  document.getElementById('sk-arrow').textContent='›';
+}
+
+sw('local');
+</script>
+</body>
+</html>

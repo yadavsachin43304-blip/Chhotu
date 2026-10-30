@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PokeClaw v7</title>
+<style>
+:root{--bg:#151211;--surface:#1F1A18;--accent:#E8845A;--user:#D45A30;--ai:#342C28;--aib:#3D332C;--t1:#E0D5CC;--t2:#7A6E64;--t3:#5A4F47;--border:#332B27;--div:#2A2220;--taskbg:#1E1612;--taskborder:#E8845A50;--taskglow:#E8845A15;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--t1);max-width:390px;margin:0 auto;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Toolbar */
+.tb{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--div);}
+.tb-t{font-size:18px;font-weight:700;}.tb-t b{color:var(--accent);}
+.tb-badge{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--ai);color:var(--accent);border:1px solid var(--aib);}
+
+/* Chat area */
+.chat{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+
+/* Messages */
+.msg{max-width:80%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.5;margin:3px 16px;word-wrap:break-word;}
+.msg-u{background:var(--user);color:#FEF2ED;align-self:flex-end;border-bottom-right-radius:4px;}
+.msg-a{background:var(--ai);color:var(--t1);align-self:flex-start;border:1px solid var(--aib);border-bottom-left-radius:4px;}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:20px;}
+.empty-i{font-size:36px;margin-bottom:8px;}.empty-t{font-size:16px;font-weight:600;}.empty-s{font-size:12px;color:var(--accent);margin:2px 0 12px;}
+
+/* Mode explainer cards */
+.mcards{display:flex;gap:8px;max-width:280px;margin-bottom:8px;}
+.mc{flex:1;padding:10px;border-radius:10px;text-align:center;}
+.mc-chat{background:var(--surface);border:0.5px solid var(--border);}
+.mc-task{background:var(--taskbg);border:1px solid var(--taskborder);cursor:pointer;}
+.mc-task:active{border-color:var(--accent);}
+.mc-icon{font-size:20px;margin-bottom:3px;}
+.mc-label{font-size:12px;font-weight:600;}
+.mc-desc{font-size:9px;line-height:1.3;margin-top:2px;}
+.mc-chat .mc-desc{color:var(--t3);}
+.mc-task .mc-label{color:var(--accent);}.mc-task .mc-desc{color:var(--accent);}
+.mc-arrow{display:flex;align-items:center;color:var(--t3);font-size:14px;}
+
+/* Prompts */
+.prompts{padding:0 24px;display:flex;flex-direction:column;gap:5px;}
+.pr{display:flex;align-items:center;border-radius:10px;background:var(--surface);border:0.5px solid var(--border);cursor:pointer;overflow:hidden;}
+.pr:active{border-color:var(--accent);}
+.pr-bar{width:3px;min-height:34px;background:var(--accent);opacity:0.5;border-radius:10px 0 0 10px;flex-shrink:0;}
+.pr-txt{padding:8px 12px;font-size:12px;color:var(--t2);}
+
+/* Quick Tasks (shown when Task mode, above toggle) */
+.qt-panel{display:none;padding:0 10px;max-height:40vh;overflow-y:auto;background:var(--surface);border-top:1px solid var(--div);}
+.qt-panel.show{display:block;}
+.sl{font-size:9px;font-weight:600;color:var(--accent);padding:8px 4px 4px;text-transform:uppercase;letter-spacing:0.5px;}
+.qt{display:flex;flex-direction:column;gap:3px;}
+.qt-i{display:flex;align-items:center;border-radius:9px;background:var(--bg);border:0.5px solid var(--border);cursor:pointer;overflow:hidden;}
+.qt-i:active{border-color:var(--accent);}
+.qt-bar{width:3px;min-height:30px;background:var(--accent);border-radius:9px 0 0 9px;flex-shrink:0;}
+.qt-txt{padding:7px 10px;font-size:11px;color:var(--t2);}
+.qt.collapsed .qt-i:nth-child(n+6){display:none;}
+.qt-more{display:flex;align-items:center;justify-content:center;gap:3px;padding:5px;color:var(--accent);font-size:10px;cursor:pointer;}
+.qt-more svg{width:10px;height:10px;fill:var(--accent);transition:transform 0.3s;}
+.qt-more.open svg{transform:rotate(180deg);}
+
+.bgc{border-radius:10px;background:var(--bg);border:0.5px solid var(--border);cursor:pointer;margin:4px 0 6px;}
+.bgc:active{border-color:var(--aib);}
+.bgc-row{display:flex;align-items:center;padding:10px;gap:8px;}
+.bgc-icon{width:34px;height:34px;border-radius:9px;background:#E8845A15;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.bgc-t{font-size:12px;font-weight:600;}.bgc-d{font-size:9px;color:var(--t3);}
+.bgc-arr{color:var(--t3);font-size:14px;}
+
+/* ===== INPUT AREA (toggle + input wrapped together) ===== */
+.input-area{background:var(--surface);border-top:1px solid var(--div);transition:background 0.25s,border-color 0.25s;}
+.input-area.task{background:var(--taskbg);border-top-color:var(--taskborder);}
+
+/* Segmented toggle row */
+.seg-row{display:flex;padding:6px 10px 2px;gap:4px;}
+.seg-btn{
+  flex:1;padding:6px;border-radius:8px;text-align:center;
+  font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;
+  border:1px solid transparent;color:var(--t3);background:transparent;
+}
+.seg-btn.on{background:var(--ai);color:var(--t1);border-color:var(--aib);}
+.seg-btn.task-on{background:var(--accent);color:white;border-color:var(--accent);}
+
+/* Input row */
+.inp-row{display:flex;align-items:center;gap:6px;padding:4px 10px 10px;}
+.inp{flex:1;padding:9px 14px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--t1);font-size:14px;outline:none;transition:all 0.25s;}
+.inp::placeholder{color:var(--t3);}
+.inp.task{border-color:var(--accent);background:var(--taskbg);box-shadow:0 0 0 2px var(--taskglow);}
+.inp.task::placeholder{color:#E8845A50;}
+.btn-s{width:34px;height:34px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:#E8845A20;transition:background 0.15s;}
+.btn-s.on{background:var(--user);}
+.btn-s.task-on{background:var(--accent);}
+.btn-s svg{width:14px;height:14px;fill:white;}
+
+/* Demo */
+.dsw{position:fixed;top:10px;right:12px;display:flex;gap:3px;z-index:100;}
+.dsw button{padding:3px 8px;border-radius:5px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--t3);}
+.dsw button.on{background:var(--ai);color:var(--accent);border-color:var(--aib);}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+</style>
+</head>
+<body>
+
+<div class="dsw">
+  <button class="on" id="dl" onclick="sw('local')">Local</button>
+  <button id="dc" onclick="sw('cloud')">Cloud</button>
+</div>
+
+<div class="tb">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="#7A6E64"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    <div class="tb-t">Poke<b>Claw</b></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="tb-badge" id="badge">Local AI</div>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="#7A6E64"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+  </div>
+</div>
+
+<!-- CHAT (always same view) -->
+<div class="chat" id="chat">
+  <div class="empty" id="empty">
+    <div class="empty-i">🦞</div>
+    <div class="empty-t">PokeClaw</div>
+    <div class="empty-s" id="empty-s">Local AI</div>
+    <div class="mcards" id="mcards">
+      <div class="mc mc-chat"><div class="mc-icon">💬</div><div class="mc-label">Chat</div><div class="mc-desc">Ask questions<br>Conversation</div></div>
+      <div class="mc-arrow">→</div>
+      <div class="mc mc-task" onclick="setTask(true)"><div class="mc-icon">🤖</div><div class="mc-label">Task</div><div class="mc-desc">Control phone<br>Run commands</div></div>
+    </div>
+    <div id="hint" style="font-size:10px;color:var(--t3);line-height:1.5;">Select <b style='color:var(--accent)'>🤖 Task</b> below to control your phone</div>
+    <div id="arrow" style="font-size:14px;color:var(--t3);animation:bounce 1.5s infinite;margin-top:4px;">↓</div>
+  </div>
+  <div class="prompts" id="prompts">
+    <div class="pr" onclick="fill('Tell me a joke')"><div class="pr-bar"></div><div class="pr-txt">Tell me a joke</div></div>
+    <div class="pr" onclick="fill('What can you do?')"><div class="pr-bar"></div><div class="pr-txt">What can you do?</div></div>
+    <div class="pr" onclick="fill('Help me draft an email')"><div class="pr-bar"></div><div class="pr-txt">Help me draft an email</div></div>
+  </div>
+</div>
+
+<!-- Quick Tasks panel (slides up when Task mode) -->
+<div class="qt-panel" id="qtp">
+  <div class="sl">Quick Tasks</div>
+  <div class="qt collapsed" id="qt">
+    <div class="qt-i" onclick="fillTask('How much battery left?')"><div class="qt-bar"></div><div class="qt-txt">🔋 How much battery left?</div></div>
+    <div class="qt-i" onclick="fillTask('What WiFi am I on?')"><div class="qt-bar"></div><div class="qt-txt">📶 What WiFi am I on?</div></div>
+    <div class="qt-i" onclick="fillTask('Read my notifications')"><div class="qt-bar"></div><div class="qt-txt">🔔 Read my notifications</div></div>
+    <div class="qt-i" onclick="fillTask('Call ')"><div class="qt-bar"></div><div class="qt-txt">📞 Call someone</div></div>
+    <div class="qt-i" onclick="fillTask('Send hi to Mom on WhatsApp')"><div class="qt-bar"></div><div class="qt-txt">💬 Send hi to Mom on WhatsApp</div></div>
+    <div class="qt-i" onclick="fillTask('How much storage do I have?')"><div class="qt-bar"></div><div class="qt-txt">💾 How much storage do I have?</div></div>
+    <div class="qt-i" onclick="fillTask('Turn on dark mode')"><div class="qt-bar"></div><div class="qt-txt">🌙 Turn on dark mode</div></div>
+    <div class="qt-i" onclick="fillTask('What apps do I have?')"><div class="qt-bar"></div><div class="qt-txt">📱 What apps do I have?</div></div>
+    <div class="qt-i" onclick="fillTask('How hot is my phone?')"><div class="qt-bar"></div><div class="qt-txt">🌡️ How hot is my phone?</div></div>
+    <div class="qt-i" onclick="fillTask('Is bluetooth on?')"><div class="qt-bar"></div><div class="qt-txt">🔵 Is bluetooth on?</div></div>
+    <div class="qt-i" onclick="fillTask('What Android version?')"><div class="qt-bar"></div><div class="qt-txt">📲 What Android version?</div></div>
+    <div class="qt-i" onclick="fillTask('Take a screenshot')"><div class="qt-bar"></div><div class="qt-txt">📸 Take a screenshot</div></div>
+  </div>
+  <div class="qt-more" id="qtm" onclick="toggleQT()"><span id="qtt">Show more</span><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div>
+  <div class="sl">Background</div>
+  <div class="bgc"><div class="bgc-row"><div class="bgc-icon">👁️</div><div><div class="bgc-t">Monitor & Auto-Reply</div><div class="bgc-d">Watch messages and reply automatically</div></div><div class="bgc-arr">›</div></div></div>
+</div>
+
+<!-- INPUT AREA: toggle + input wrapped -->
+<div class="input-area" id="iarea">
+  <!-- Segmented toggle (Local only) -->
+  <div class="seg-row" id="seg-row">
+    <div class="seg-btn on" id="seg-chat" onclick="setTask(false)">💬 Chat</div>
+    <div class="seg-btn" id="seg-task" onclick="setTask(true)">🤖 Task</div>
+  </div>
+  <!-- Input -->
+  <div class="inp-row">
+    <input class="inp" id="inp" placeholder="Chat with local AI..." oninput="chk()">
+    <button class="btn-s" id="send" onclick="doSend()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+  </div>
+</div>
+
+<script>
+let isLocal=true, isTask=false, qtOpen=false;
+
+function sw(m){
+  isLocal=m==='local';
+  isTask=false;
+  update();
+  document.getElementById('dl').classList.toggle('on',isLocal);
+  document.getElementById('dc').classList.toggle('on',!isLocal);
+}
+
+function setTask(on){
+  isTask=on;
+  update();
+}
+
+function update(){
+  const segRow=document.getElementById('seg-row');
+  const segChat=document.getElementById('seg-chat');
+  const segTask=document.getElementById('seg-task');
+  const iarea=document.getElementById('iarea');
+  const inp=document.getElementById('inp');
+  const qtp=document.getElementById('qtp');
+  const badge=document.getElementById('badge');
+  const mcards=document.getElementById('mcards');
+  const hint=document.getElementById('hint');
+  const arrow=document.getElementById('arrow');
+  const prompts=document.getElementById('prompts');
+  const emptyS=document.getElementById('empty-s');
+
+  if(!isLocal){
+    // Cloud: no toggle, no task panel
+    segRow.style.display='none';
+    qtp.classList.remove('show');
+    iarea.classList.remove('task');
+    inp.className='inp';
+    inp.placeholder='Chat or give a task...';
+    badge.textContent='Cloud AI';
+    mcards.style.display='none';
+    hint.style.display='none';
+    arrow.style.display='none';
+    emptyS.textContent='Cloud AI';
+    prompts.innerHTML=`
+      <div class="pr" onclick="fill('What time is it in Tokyo?')"><div class="pr-bar"></div><div class="pr-txt">What time is it in Tokyo?</div></div>
+      <div class="pr" onclick="fill('Help me write a birthday message')"><div class="pr-bar"></div><div class="pr-txt">Help me write a birthday message</div></div>
+      <div class="pr" onclick="fill('Send hi to Mom on WhatsApp')"><div class="pr-bar"></div><div class="pr-txt">💬 Send hi to Mom on WhatsApp</div></div>
+    `;
+    chk();
+    return;
+  }
+
+  // Local
+  segRow.style.display='flex';
+  badge.textContent='Local AI';
+  mcards.style.display='flex';
+  hint.style.display='block';
+  arrow.style.display='block';
+  emptyS.textContent='Local AI';
+
+  if(isTask){
+    segChat.className='seg-btn';
+    segTask.className='seg-btn task-on';
+    iarea.classList.add('task');
+    inp.className='inp task';
+    inp.placeholder='Describe a phone task...';
+    qtp.classList.add('show');
+    prompts.style.display='none';
+  } else {
+    segChat.className='seg-btn on';
+    segTask.className='seg-btn';
+    iarea.classList.remove('task');
+    inp.className='inp';
+    inp.placeholder='Chat with local AI...';
+    qtp.classList.remove('show');
+    prompts.style.display='flex';
+    prompts.innerHTML=`
+      <div class="pr" onclick="fill('Tell me a joke')"><div class="pr-bar"></div><div class="pr-txt">Tell me a joke</div></div>
+      <div class="pr" onclick="fill('What can you do?')"><div class="pr-bar"></div><div class="pr-txt">What can you do?</div></div>
+      <div class="pr" onclick="fill('Help me draft an email')"><div class="pr-bar"></div><div class="pr-txt">Help me draft an email</div></div>
+    `;
+  }
+  chk();
+}
+
+function toggleQT(){
+  qtOpen=!qtOpen;
+  document.getElementById('qt').classList.toggle('collapsed',!qtOpen);
+  document.getElementById('qtt').textContent=qtOpen?'Show less':'Show more';
+  document.getElementById('qtm').classList.toggle('open',qtOpen);
+}
+
+function fill(t){document.getElementById('inp').value=t;document.getElementById('inp').focus();chk();}
+function fillTask(t){fill(t);}
+
+function chk(){
+  const v=document.getElementById('inp').value.trim();
+  const s=document.getElementById('send');
+  if(isTask&&v) s.className='btn-s task-on';
+  else if(v) s.className='btn-s on';
+  else s.className='btn-s';
+}
+
+function doSend(){
+  const inp=document.getElementById('inp'),v=inp.value.trim();
+  if(!v)return;
+  const chat=document.getElementById('chat');
+  const emp=document.getElementById('empty');if(emp)emp.style.display='none';
+  const pr=document.getElementById('prompts');if(pr)pr.style.display='none';
+
+  const u=document.createElement('div');u.className='msg msg-u';u.textContent=v;chat.appendChild(u);
+  setTimeout(()=>{
+    const a=document.createElement('div');a.className='msg msg-a';
+    if(v.toLowerCase().includes('battery'))a.textContent='Battery: 73%, not charging, 32°C';
+    else if(v.toLowerCase().includes('joke'))a.textContent="Why don't skeletons fight each other? They don't have the guts!";
+    else if(v.toLowerCase().includes('send'))a.textContent="Sent 'hi' to Mom on WhatsApp";
+    else if(v.toLowerCase().includes('wifi'))a.textContent='WiFi: connected to HomeNetwork-5G, signal strong';
+    else if(v.toLowerCase().includes('notif'))a.textContent='3 notifications: Gmail (2), YouTube (1)';
+    else a.textContent='Sure, let me help with that!';
+    chat.appendChild(a);chat.scrollTop=chat.scrollHeight;
+  },600);
+  inp.value='';chk();chat.scrollTop=chat.scrollHeight;
+}
+
+sw('local');
+</script>
+</body>
+</html>

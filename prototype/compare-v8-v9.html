@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>v8 vs v9 Comparison</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0908;color:#E0D5CC;font-family:-apple-system,sans-serif;padding:10px;}
+h1{text-align:center;font-size:16px;margin-bottom:10px;color:#E8845A;}
+.row{display:flex;gap:10px;margin-bottom:10px;}
+.col{flex:1;position:relative;}
+.label{text-align:center;font-size:12px;font-weight:600;margin-bottom:4px;padding:4px;border-radius:6px;}
+.label.old{background:#3a2020;color:#ff6b6b;}
+.label.new{background:#1a3020;color:#6bff6b;}
+iframe{width:100%;height:700px;border:2px solid #332B27;border-radius:12px;}
+.callout{
+  position:absolute;padding:4px 8px;border-radius:6px;font-size:9px;font-weight:600;
+  z-index:10;pointer-events:none;animation:flash 2s infinite;
+}
+.callout.rm{background:#ff4444;color:white;}
+.callout.add{background:#44bb44;color:white;}
+.callout.chg{background:#E8845A;color:white;}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:0.6}}
+.changes{padding:10px;font-size:11px;line-height:1.8;}
+.changes li{margin-bottom:4px;}
+.changes .tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;margin-right:4px;}
+.tag.rm{background:#ff4444;color:white;}
+.tag.add{background:#44bb44;color:white;}
+.tag.chg{background:#E8845A;color:white;}
+.tag.fix{background:#4488ff;color:white;}
+</style>
+</head>
+<body>
+<h1>PokeClaw v8 → v9 Changes</h1>
+
+<div class="row">
+  <div class="col">
+    <div class="label old">v8 (Before)</div>
+    <iframe src="dashboard-v8.html" id="f8"></iframe>
+    <!-- Callouts pointing to specific areas -->
+    <div class="callout rm" style="top:230px;left:20px;">← 7-layer empty state (cards + arrow)</div>
+    <div class="callout rm" style="bottom:170px;left:20px;">← No typing indicator</div>
+    <div class="callout rm" style="bottom:105px;left:20px;">← Toggle too small (7px)</div>
+    <div class="callout rm" style="bottom:70px;right:10px;">Send button too visible when empty →</div>
+  </div>
+  <div class="col">
+    <div class="label new">v9 (After)</div>
+    <iframe src="dashboard-v9.html" id="f9"></iframe>
+    <div class="callout add" style="top:230px;right:20px;">3-layer empty state (clean) →</div>
+    <div class="callout add" style="bottom:105px;left:20px;">← Toggle bigger (9px, 12px font)</div>
+    <div class="callout add" style="bottom:70px;right:10px;">Send button dim when empty →</div>
+  </div>
+</div>
+
+<div class="changes">
+  <h3 style="color:#E8845A;margin-bottom:6px;">All Changes:</h3>
+  <ol>
+    <li><span class="tag rm">REMOVED</span> Mode explainer cards (💬 Chat → 🤖 Task) — was 120px, replaced with 1-line hint</li>
+    <li><span class="tag rm">REMOVED</span> Bouncing ↓ arrow — unnecessary with cleaner layout</li>
+    <li><span class="tag rm">REMOVED</span> Task mode banner ("🤖 Task Mode — your input will control the phone") — redundant, 4 other signals already indicate task mode</li>
+    <li><span class="tag chg">CHANGED</span> Toggle size: padding 7px→9px, font 11px→12px, min-height 38px (bigger touch target)</li>
+    <li><span class="tag chg">CHANGED</span> Send button disabled: was #E8845A20 (visible orange) → now bg color + opacity 0.35 (nearly invisible)</li>
+    <li><span class="tag chg">CHANGED</span> Sheet handle: was dual ▲▲ centered → now left-aligned label + "12" count badge + single ▲</li>
+    <li><span class="tag chg">CHANGED</span> Text contrast: --text2 #7A6E64→#8A7E74 (lighter), --text3 #5A4F47→#4A3F37 (darker)</li>
+    <li><span class="tag chg">CHANGED</span> Demo switcher: was top-right (overlapping gear) → now top-center</li>
+    <li><span class="tag add">ADDED</span> Typing indicator (... bounce animation) after sending message</li>
+    <li><span class="tag add">ADDED</span> Message timestamps ("just now")</li>
+    <li><span class="tag add">ADDED</span> Auto-collapse sheet after first message sent (reclaims ~280px)</li>
+    <li><span class="tag add">ADDED</span> More simulated responses: battery, wifi, storage, bluetooth, dark mode, call, screenshot, apps, version, temp</li>
+    <li><span class="tag fix">FIXED</span> Cloud mode JS crash (empty-desc null reference)</li>
+    <li><span class="tag fix">FIXED</span> Cloud mode residual Local UI (no more "Switch to Task" text in Cloud)</li>
+  </ol>
+  <p style="margin-top:10px;color:#7A6E64;">Try: Type "check my battery" and send in both → v9 shows typing dots + timestamp, v8 doesn't.</p>
+</div>
+</body>
+</html>

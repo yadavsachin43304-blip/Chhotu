@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PokeClaw — Dashboard</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0d1117;
+    --card:#161b22;
+    --border:#30363d;
+    --accent:#f0883e;
+    --green:#3fb950;
+    --red:#f85149;
+    --text-primary:#e6edf3;
+    --text-secondary:#8b949e;
+    --text-muted:#484f58;
+    --chip-bg:#21262d;
+    --input-bg:#0d1117;
+    --radius:12px;
+    --radius-sm:8px;
+    --safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  html{font-size:16px}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;
+    background:var(--bg);
+    color:var(--text-primary);
+    max-width:390px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    position:relative;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
+
+  /* ===================== TOP BAR ===================== */
+  .top-bar{
+    padding:12px 16px 0;
+    flex-shrink:0;
+    position:sticky;top:0;
+    background:var(--bg);
+    z-index:20;
+  }
+  .top-bar-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    height:44px;
+  }
+  .app-title{
+    font-size:20px;
+    font-weight:700;
+    letter-spacing:-0.3px;
+    color:var(--text-primary);
+  }
+  .app-title span{color:var(--accent)}
+  .gear-btn{
+    width:36px;height:36px;
+    border:none;background:none;
+    color:var(--text-secondary);
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:50%;
+    transition:background .15s;
+  }
+  .gear-btn:active{background:var(--chip-bg)}
+  .gear-btn svg{width:22px;height:22px}
+
+  .tier-badge{
+    display:inline-flex;
+    align-items:center;gap:6px;
+    margin-top:6px;margin-bottom:12px;
+    padding:4px 10px;
+    background:var(--chip-bg);
+    border:1px solid var(--border);
+    border-radius:20px;
+    font-size:12px;
+    color:var(--text-secondary);
+    font-weight:500;
+  }
+  .tier-badge .dot{
+    width:6px;height:6px;
+    border-radius:50%;
+    background:var(--green);
+    flex-shrink:0;
+  }
+
+  /* ===================== SCROLLABLE MAIN ===================== */
+  .main-scroll{
+    flex:1;
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:140px;
+  }
+  .main-scroll::-webkit-scrollbar{display:none}
+
+  /* ===================== BACKGROUND TASKS ===================== */
+  .section{padding:0 16px;margin-bottom:4px}
+  .section-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 0;
+    cursor:pointer;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .section-header-left{
+    display:flex;align-items:center;gap:8px;
+  }
+  .section-title{
+    font-size:14px;
+    font-weight:600;
+    color:var(--text-secondary);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  .count-badge{
+    background:var(--accent);
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    min-width:18px;height:18px;
+    border-radius:9px;
+    display:flex;align-items:center;justify-content:center;
+    padding:0 5px;
+  }
+  .chevron{
+    color:var(--text-muted);
+    transition:transform .25s ease;
+    width:18px;height:18px;
+    flex-shrink:0;
+  }
+  .section-header[aria-expanded="true"] .chevron{
+    transform:rotate(180deg);
+  }
+
+  .section-body{
+    overflow:hidden;
+    transition:max-height .3s ease, opacity .25s ease;
+    max-height:0;
+    opacity:0;
+  }
+  .section-body.open{
+    max-height:500px;
+    opacity:1;
+  }
+
+  .task-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px;
+    margin-bottom:10px;
+  }
+  .task-card-title{
+    font-size:15px;
+    font-weight:600;
+    margin-bottom:10px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .task-card-title .icon{font-size:16px}
+
+  .task-form{display:flex;flex-direction:column;gap:8px}
+  .task-row{display:flex;gap:8px;align-items:center}
+  .task-select{
+    flex:1;
+    background:var(--input-bg);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    color:var(--text-primary);
+    padding:8px 10px;
+    font-size:13px;
+    appearance:none;
+    -webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b949e' viewBox='0 0 16 16'%3E%3Cpath d='M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 10px center;
+    padding-right:28px;
+    cursor:pointer;
+  }
+  .task-select:focus{
+    outline:none;
+    border-color:var(--accent);
+  }
+
+  .tone-pills{display:flex;gap:6px}
+  .tone-pill{
+    padding:6px 12px;
+    border-radius:20px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--text-secondary);
+    font-size:12px;
+    font-weight:500;
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .tone-pill.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  .tone-pill:active{transform:scale(0.95)}
+
+  .start-btn{
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:var(--radius-sm);
+    background:var(--accent);
+    color:#fff;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .15s;
+    margin-top:4px;
+  }
+  .start-btn:active{transform:scale(0.98);opacity:0.9}
+  .start-btn.running{background:var(--green)}
+  .stop-btn{
+    width:100%;
+    padding:10px;
+    border:1px solid var(--red);
+    border-radius:var(--radius-sm);
+    background:transparent;
+    color:var(--red);
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .15s;
+    margin-top:4px;
+  }
+  .stop-btn:active{transform:scale(0.98)}
+
+  .task-status{
+    display:flex;
+    align-items:center;gap:8px;
+    margin-bottom:8px;
+    font-size:13px;
+    color:var(--text-secondary);
+  }
+  .pulse-dot{
+    width:8px;height:8px;
+    border-radius:50%;
+    background:var(--green);
+    animation:pulse 2s infinite;
+    flex-shrink:0;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:0.4;transform:scale(0.8)}
+  }
+
+  /* ===================== ACTIVITY FEED ===================== */
+  .activity-section{padding:0 16px}
+  .activity-header{
+    font-size:14px;
+    font-weight:600;
+    color:var(--text-secondary);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    padding:10px 0;
+  }
+
+  .activity-item{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:12px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    transition:background .15s;
+    position:relative;
+  }
+  .activity-item:active{background:var(--card)}
+  .activity-item+.activity-item{
+    border-top:1px solid #1c2128;
+  }
+  .activity-icon{
+    font-size:18px;
+    flex-shrink:0;
+    width:28px;
+    text-align:center;
+    line-height:1.4;
+  }
+  .activity-content{flex:1;min-width:0}
+  .activity-text{
+    font-size:14px;
+    line-height:1.45;
+    color:var(--text-primary);
+    word-wrap:break-word;
+  }
+  .activity-text .highlight{color:var(--accent);font-weight:500}
+  .activity-meta{
+    font-size:12px;
+    color:var(--text-muted);
+    margin-top:3px;
+  }
+  .activity-arrow{
+    color:var(--text-muted);
+    flex-shrink:0;
+    align-self:center;
+  }
+  .activity-arrow svg{width:14px;height:14px}
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--text-muted);
+  }
+  .empty-state p{font-size:14px;margin-bottom:16px}
+  .empty-state .arrow{
+    font-size:28px;
+    animation:bounce 1.5s infinite;
+  }
+  @keyframes bounce{
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(8px)}
+  }
+
+  /* ===================== BOTTOM BAR ===================== */
+  .bottom-bar{
+    position:fixed;
+    bottom:0;left:50%;
+    transform:translateX(-50%);
+    width:100%;
+    max-width:390px;
+    background:var(--bg);
+    border-top:1px solid var(--border);
+    z-index:30;
+    padding-bottom:var(--safe-bottom);
+  }
+
+  .chips-row{
+    display:flex;
+    gap:8px;
+    padding:10px 16px 6px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scroll-snap-type:x proximity;
+    scrollbar-width:none;
+  }
+  .chips-row::-webkit-scrollbar{display:none}
+  .chip{
+    flex-shrink:0;
+    display:flex;
+    align-items:center;gap:5px;
+    padding:7px 12px;
+    background:var(--chip-bg);
+    border:1px solid var(--border);
+    border-radius:20px;
+    color:var(--text-secondary);
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    transition:all .15s;
+    white-space:nowrap;
+    scroll-snap-align:start;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .chip:active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+    transform:scale(0.95);
+  }
+  .chip .chip-icon{font-size:14px}
+
+  .input-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 12px 10px;
+  }
+  .chat-input-wrap{
+    flex:1;
+    position:relative;
+    display:flex;
+    align-items:center;
+  }
+  .chat-input{
+    width:100%;
+    padding:10px 14px;
+    background:var(--input-bg);
+    border:1.5px solid var(--border);
+    border-radius:22px;
+    color:var(--text-primary);
+    font-size:15px;
+    outline:none;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .chat-input::placeholder{color:var(--text-muted)}
+  .chat-input:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(240,136,62,0.15);
+  }
+  .send-btn{
+    width:40px;height:40px;
+    border-radius:50%;
+    border:none;
+    background:var(--accent);
+    color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:all .15s;
+    opacity:0.4;
+    pointer-events:none;
+  }
+  .send-btn.active{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .send-btn:active{transform:scale(0.9)}
+  .send-btn svg{width:18px;height:18px}
+
+  /* ===================== MISC ===================== */
+  .divider{
+    height:1px;
+    background:var(--border);
+    margin:0 16px;
+  }
+
+  /* Ripple for chips */
+  @keyframes chip-tap{
+    0%{transform:scale(0.95)}
+    50%{transform:scale(1.02)}
+    100%{transform:scale(1)}
+  }
+  .chip.tapped{animation:chip-tap .25s ease}
+
+  /* Toast notification */
+  .toast{
+    position:fixed;
+    top:60px;left:50%;
+    transform:translateX(-50%) translateY(-20px);
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:10px 18px;
+    font-size:13px;
+    color:var(--text-primary);
+    opacity:0;
+    transition:all .3s ease;
+    z-index:100;
+    pointer-events:none;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    max-width:340px;
+    text-align:center;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  /* Fade-in for activity items */
+  .activity-item{
+    animation:fadeSlideIn .35s ease both;
+  }
+  .activity-item:nth-child(1){animation-delay:0s}
+  .activity-item:nth-child(2){animation-delay:.05s}
+  .activity-item:nth-child(3){animation-delay:.1s}
+  .activity-item:nth-child(4){animation-delay:.15s}
+  @keyframes fadeSlideIn{
+    from{opacity:0;transform:translateY(8px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+</style>
+</head>
+<body>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Top Bar -->
+<div class="top-bar">
+  <div class="top-bar-row">
+    <div class="app-title">Poke<span>Claw</span></div>
+    <button class="gear-btn" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+  <div class="tier-badge">
+    <span class="dot"></span>
+    Free + Local AI
+  </div>
+</div>
+
+<!-- Scrollable Main Content -->
+<div class="main-scroll" id="mainScroll">
+
+  <!-- Background Tasks Section -->
+  <div class="section">
+    <div class="section-header" id="bgTasksHeader" role="button" aria-expanded="false" tabindex="0">
+      <div class="section-header-left">
+        <span class="section-title">Background Tasks</span>
+        <span class="count-badge">0</span>
+      </div>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </div>
+    <div class="section-body" id="bgTasksBody">
+
+      <!-- Auto-Reply Card: Setup Mode -->
+      <div class="task-card" id="autoReplyCard">
+        <div class="task-card-title">
+          <span class="icon">&#x1F916;</span>
+          Monitor &amp; Auto-Reply
+        </div>
+
+        <!-- Setup form (visible when not running) -->
+        <div class="task-form" id="autoReplySetup">
+          <div class="task-row">
+            <select class="task-select" id="contactSelect">
+              <option value="" disabled selected>Contact...</option>
+              <option>Girlfriend</option>
+              <option>Mom</option>
+              <option>Boss</option>
+              <option>Nicole</option>
+            </select>
+            <select class="task-select" id="appSelect">
+              <option value="" disabled selected>App...</option>
+              <option>WhatsApp</option>
+              <option>LINE</option>
+              <option>Telegram</option>
+            </select>
+          </div>
+          <div class="tone-pills" id="tonePills">
+            <button class="tone-pill active" data-tone="casual">Casual</button>
+            <button class="tone-pill" data-tone="formal">Formal</button>
+            <button class="tone-pill" data-tone="funny">Funny</button>
+          </div>
+          <button class="start-btn" id="startMonitorBtn">Start Monitoring</button>
+        </div>
+
+        <!-- Running state (hidden initially) -->
+        <div id="autoReplyRunning" style="display:none">
+          <div class="task-status">
+            <span class="pulse-dot"></span>
+            <span id="runningLabel">Monitoring Girlfriend on WhatsApp &bull; 2h active</span>
+          </div>
+          <button class="stop-btn" id="stopMonitorBtn">Stop</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Activity Feed -->
+  <div class="activity-section">
+    <div class="activity-header">Recent Activity</div>
+
+    <div id="activityFeed">
+      <div class="activity-item">
+        <div class="activity-icon">&#x1F50B;</div>
+        <div class="activity-content">
+          <div class="activity-text">Battery: <span class="highlight">73%</span>, not charging</div>
+          <div class="activity-meta">2 min ago</div>
+        </div>
+        <div class="activity-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="activity-item">
+        <div class="activity-icon">&#x1F4AC;</div>
+        <div class="activity-content">
+          <div class="activity-text">Sent <span class="highlight">'hi'</span> to Mom on WhatsApp</div>
+          <div class="activity-meta">15 min ago</div>
+        </div>
+        <div class="activity-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="activity-item">
+        <div class="activity-icon">&#x1F4DE;</div>
+        <div class="activity-content">
+          <div class="activity-text">Called <span class="highlight">Nicole</span> (6229 5329)</div>
+          <div class="activity-meta">1 hour ago</div>
+        </div>
+        <div class="activity-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="activity-item">
+        <div class="activity-icon">&#x1F50D;</div>
+        <div class="activity-content">
+          <div class="activity-text">Searched YouTube for <span class="highlight">'lofi beats'</span> &mdash; top result: Lofi Girl, 53M views</div>
+          <div class="activity-meta">2 hours ago</div>
+        </div>
+        <div class="activity-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom Bar (sticky) -->
+<div class="bottom-bar">
+  <div class="chips-row" id="chipsRow">
+    <button class="chip" data-cmd="Check battery status"><span class="chip-icon">&#x1F50B;</span>Battery</button>
+    <button class="chip" data-cmd="Check WiFi status"><span class="chip-icon">&#x1F4F6;</span>WiFi</button>
+    <button class="chip" data-cmd="Check storage usage"><span class="chip-icon">&#x1F4BE;</span>Storage</button>
+    <button class="chip" data-cmd="Show notifications"><span class="chip-icon">&#x1F514;</span>Notifications</button>
+    <button class="chip" data-cmd="Call "><span class="chip-icon">&#x1F4DE;</span>Call</button>
+    <button class="chip" data-cmd="Send message to "><span class="chip-icon">&#x1F4AC;</span>Send message</button>
+    <button class="chip" data-cmd="Toggle dark mode"><span class="chip-icon">&#x1F319;</span>Dark mode</button>
+    <button class="chip" data-cmd="List installed apps"><span class="chip-icon">&#x1F4F1;</span>My apps</button>
+    <button class="chip" data-cmd="Check phone temperature"><span class="chip-icon">&#x1F321;&#xFE0F;</span>Phone temp</button>
+    <button class="chip" data-cmd="Check Bluetooth status"><span class="chip-icon">&#x1F535;</span>Bluetooth</button>
+    <button class="chip" data-cmd="Show Android version"><span class="chip-icon">&#x1F4F2;</span>Android version</button>
+  </div>
+  <div class="input-row">
+    <div class="chat-input-wrap">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Ask me anything..." autocomplete="off">
+    </div>
+    <button class="send-btn" id="sendBtn" aria-label="Send">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var chatInput = document.getElementById('chatInput');
+  var sendBtn = document.getElementById('sendBtn');
+  var bgTasksHeader = document.getElementById('bgTasksHeader');
+  var bgTasksBody = document.getElementById('bgTasksBody');
+  var startBtn = document.getElementById('startMonitorBtn');
+  var stopBtn = document.getElementById('stopMonitorBtn');
+  var setupDiv = document.getElementById('autoReplySetup');
+  var runningDiv = document.getElementById('autoReplyRunning');
+  var runningLabel = document.getElementById('runningLabel');
+  var countBadge = document.querySelector('.count-badge');
+  var contactSelect = document.getElementById('contactSelect');
+  var appSelect = document.getElementById('appSelect');
+  var tonePills = document.querySelectorAll('.tone-pill');
+  var activityFeed = document.getElementById('activityFeed');
+  var toast = document.getElementById('toast');
+  var chipsRow = document.getElementById('chipsRow');
+
+  // Chips: tap to fill input
+  var chips = document.querySelectorAll('.chip');
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      var cmd = this.getAttribute('data-cmd');
+      chatInput.value = cmd;
+      chatInput.focus();
+      // If the command ends with a space, place cursor at end for user to type more
+      // Otherwise it's a complete command
+      updateSendBtn();
+      // Tap animation
+      this.classList.add('tapped');
+      var self = this;
+      setTimeout(function(){ self.classList.remove('tapped'); }, 250);
+    });
+  });
+
+  // Send button active state
+  chatInput.addEventListener('input', updateSendBtn);
+  function updateSendBtn(){
+    if(chatInput.value.trim().length > 0){
+      sendBtn.classList.add('active');
+    } else {
+      sendBtn.classList.remove('active');
+    }
+  }
+
+  // Send message simulation
+  sendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && chatInput.value.trim()){
+      sendMessage();
+    }
+  });
+
+  function sendMessage(){
+    var text = chatInput.value.trim();
+    if(!text) return;
+
+    // Add to activity feed
+    var icon = '&#x1F4AC;';
+    if(text.toLowerCase().indexOf('battery') !== -1) icon = '&#x1F50B;';
+    else if(text.toLowerCase().indexOf('wifi') !== -1) icon = '&#x1F4F6;';
+    else if(text.toLowerCase().indexOf('call') !== -1) icon = '&#x1F4DE;';
+    else if(text.toLowerCase().indexOf('bluetooth') !== -1) icon = '&#x1F535;';
+    else if(text.toLowerCase().indexOf('storage') !== -1) icon = '&#x1F4BE;';
+    else if(text.toLowerCase().indexOf('notification') !== -1) icon = '&#x1F514;';
+    else if(text.toLowerCase().indexOf('dark mode') !== -1) icon = '&#x1F319;';
+    else if(text.toLowerCase().indexOf('app') !== -1) icon = '&#x1F4F1;';
+    else if(text.toLowerCase().indexOf('temp') !== -1) icon = '&#x1F321;&#xFE0F;';
+    else if(text.toLowerCase().indexOf('android') !== -1) icon = '&#x1F4F2;';
+    else if(text.toLowerCase().indexOf('search') !== -1) icon = '&#x1F50D;';
+
+    var newItem = document.createElement('div');
+    newItem.className = 'activity-item';
+    newItem.style.animation = 'none';
+    newItem.innerHTML =
+      '<div class="activity-icon">' + icon + '</div>' +
+      '<div class="activity-content">' +
+        '<div class="activity-text">Sent: <span class="highlight">' + escapeHtml(text) + '</span></div>' +
+        '<div class="activity-meta">Just now</div>' +
+      '</div>' +
+      '<div class="activity-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>';
+
+    activityFeed.insertBefore(newItem, activityFeed.firstChild);
+
+    // Trigger animation
+    requestAnimationFrame(function(){
+      newItem.style.animation = 'fadeSlideIn .35s ease both';
+    });
+
+    chatInput.value = '';
+    updateSendBtn();
+    showToast('Processing: ' + text);
+
+    // Scroll to top of feed
+    document.getElementById('mainScroll').scrollTop = 0;
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s));
+    return d.innerHTML;
+  }
+
+  // Toast
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(function(){ toast.classList.remove('show'); }, 2200);
+  }
+
+  // Toggle background tasks section
+  bgTasksHeader.addEventListener('click', toggleBgTasks);
+  bgTasksHeader.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleBgTasks(); }
+  });
+
+  function toggleBgTasks(){
+    var expanded = bgTasksHeader.getAttribute('aria-expanded') === 'true';
+    bgTasksHeader.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    if(expanded){
+      bgTasksBody.classList.remove('open');
+    } else {
+      bgTasksBody.classList.add('open');
+    }
+  }
+
+  // Tone pills
+  tonePills.forEach(function(pill){
+    pill.addEventListener('click', function(){
+      tonePills.forEach(function(p){ p.classList.remove('active'); });
+      this.classList.add('active');
+    });
+  });
+
+  // Start monitoring
+  startBtn.addEventListener('click', function(){
+    var contact = contactSelect.value;
+    var app = appSelect.value;
+    if(!contact || !app){
+      showToast('Select a contact and app first');
+      return;
+    }
+    var tone = document.querySelector('.tone-pill.active');
+    var toneText = tone ? tone.getAttribute('data-tone') : 'casual';
+
+    setupDiv.style.display = 'none';
+    runningDiv.style.display = 'block';
+    runningLabel.innerHTML = 'Monitoring <strong>' + escapeHtml(contact) + '</strong> on ' + escapeHtml(app) + ' &bull; Just started';
+
+    countBadge.textContent = '1';
+
+    // Auto-expand if collapsed
+    if(bgTasksHeader.getAttribute('aria-expanded') !== 'true'){
+      toggleBgTasks();
+    }
+
+    showToast('Auto-reply started for ' + contact + ' on ' + app);
+
+    // Simulate time ticking
+    var minutes = 0;
+    var interval = setInterval(function(){
+      minutes++;
+      if(minutes < 60){
+        runningLabel.innerHTML = 'Monitoring <strong>' + escapeHtml(contact) + '</strong> on ' + escapeHtml(app) + ' &bull; ' + minutes + 'm active';
+      } else {
+        var h = Math.floor(minutes/60);
+        var m = minutes%60;
+        runningLabel.innerHTML = 'Monitoring <strong>' + escapeHtml(contact) + '</strong> on ' + escapeHtml(app) + ' &bull; ' + h + 'h ' + m + 'm active';
+      }
+    }, 60000);
+    startBtn._interval = interval;
+  });
+
+  // Stop monitoring
+  stopBtn.addEventListener('click', function(){
+    if(startBtn._interval) clearInterval(startBtn._interval);
+    runningDiv.style.display = 'none';
+    setupDiv.style.display = 'flex';
+    countBadge.textContent = '0';
+    contactSelect.selectedIndex = 0;
+    appSelect.selectedIndex = 0;
+    showToast('Monitoring stopped');
+  });
+
+  // Horizontal chip scroll: add drag-to-scroll for desktop
+  var isDown = false, startX, scrollLeft;
+  chipsRow.addEventListener('mousedown', function(e){
+    isDown = true;
+    startX = e.pageX - chipsRow.offsetLeft;
+    scrollLeft = chipsRow.scrollLeft;
+    chipsRow.style.cursor = 'grabbing';
+  });
+  chipsRow.addEventListener('mouseleave', function(){ isDown = false; chipsRow.style.cursor = ''; });
+  chipsRow.addEventListener('mouseup', function(){ isDown = false; chipsRow.style.cursor = ''; });
+  chipsRow.addEventListener('mousemove', function(e){
+    if(!isDown) return;
+    e.preventDefault();
+    var x = e.pageX - chipsRow.offsetLeft;
+    var walk = (x - startX) * 1.5;
+    chipsRow.scrollLeft = scrollLeft - walk;
+  });
+
+})();
+</script>
+</body>
+</html>

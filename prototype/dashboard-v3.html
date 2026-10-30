@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PokeClaw — v3</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0C111B; color: #ECECF1; max-width: 390px; margin: 0 auto;
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ===== TOOLBAR ===== */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; background: #151D2E; border-bottom: 1px solid #1A2234;
+}
+.toolbar-left { display: flex; align-items: center; gap: 10px; }
+.toolbar-title { font-size: 18px; font-weight: 700; }
+.toolbar-title span { color: #60A5FA; }
+.badge {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  border: 1px solid #2A3D5A;
+}
+.badge-local { background: #1E2D45; color: #60A5FA; border-color: #2A3D5A; }
+.badge-cloud { background: #2A1F1A; color: #F0883E; border-color: #F0883E40; }
+
+/* ===== CONTENT ===== */
+.content { flex: 1; overflow-y: auto; }
+
+/* ===== CLOUD: CHAT AREA ===== */
+.chat-area {
+  flex: 1; display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 12px 16px; min-height: 200px;
+}
+.chat-msg {
+  max-width: 80%; padding: 10px 14px; border-radius: 16px;
+  font-size: 13px; line-height: 1.5; margin-bottom: 8px;
+}
+.chat-user { background: #2563EB; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+.chat-ai { background: #1E2D45; color: #D0DAE8; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #2A3D5A; }
+.chat-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 20px; text-align: center; flex: 1;
+}
+.chat-empty-icon { font-size: 40px; margin-bottom: 10px; }
+.chat-empty-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.chat-empty-sub { font-size: 12px; color: #52526E; max-width: 260px; line-height: 1.5; }
+
+/* ===== BOTTOM PANEL (expandable) ===== */
+.bottom-panel {
+  background: #151D2E; border-top: 1px solid #1A2234;
+  transition: max-height 0.3s ease; overflow: hidden;
+}
+.panel-handle {
+  display: flex; align-items: center; justify-content: center;
+  padding: 6px; cursor: pointer;
+}
+.panel-handle-bar {
+  width: 32px; height: 3px; border-radius: 2px; background: #2A3D5A;
+}
+.panel-content { padding: 0 12px; }
+
+/* ===== CHIPS GRID ===== */
+.section-label {
+  font-size: 11px; font-weight: 600; color: #52526E; padding: 4px 4px 6px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.chip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.chip-grid.collapsed { max-height: 148px; overflow: hidden; }
+.chip-grid.expanded { max-height: none; }
+.chip {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 11px; border-radius: 10px;
+  background: #0C111B; border: 1px solid #1E293B;
+  cursor: pointer; transition: all 0.12s;
+  font-size: 12px; color: #D0DAE8;
+}
+.chip:active { transform: scale(0.97); background: #1E2D45; border-color: #60A5FA40; }
+.chip-icon { font-size: 13px; }
+
+.expand-btn {
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  padding: 6px; color: #60A5FA; font-size: 11px; cursor: pointer;
+}
+.expand-btn svg { width: 12px; height: 12px; fill: #60A5FA; transition: transform 0.3s; }
+.expand-btn.open svg { transform: rotate(180deg); }
+
+/* ===== BACKGROUND TASK BAR ===== */
+.bg-task-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; margin: 4px 0;
+  background: #0C111B; border: 1px solid #1E293B; border-radius: 10px;
+  cursor: pointer;
+}
+.bg-task-bar:active { border-color: #2A3D5A; }
+.bg-label { font-size: 12px; color: #A3A3B5; display: flex; align-items: center; gap: 6px; }
+.bg-arrow { font-size: 10px; color: #52526E; }
+
+/* Running state */
+.bg-task-bar.running { border-color: #3FB95030; }
+.bg-running-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #3FB950;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ===== MONITOR SHEET ===== */
+.sheet-overlay {
+  position: fixed; inset: 0; background: #00000080; z-index: 50;
+  display: none; align-items: flex-end; justify-content: center;
+}
+.sheet-overlay.show { display: flex; }
+.sheet {
+  background: #151D2E; border-radius: 16px 16px 0 0; width: 390px;
+  padding: 16px; max-height: 70vh; overflow-y: auto;
+  animation: sheetUp 0.3s ease;
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-handle { width: 32px; height: 3px; border-radius: 2px; background: #2A3D5A; margin: 0 auto 14px; }
+.sheet-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+.form-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.form-label { font-size: 11px; color: #A3A3B5; width: 50px; }
+.form-input {
+  flex: 1; padding: 8px 10px; border-radius: 8px; font-size: 13px;
+  background: #0C111B; border: 1px solid #1E293B; color: #ECECF1; outline: none;
+}
+.form-input:focus { border-color: #60A5FA40; }
+.tone-row { display: flex; gap: 6px; flex: 1; }
+.tone-pill {
+  padding: 5px 10px; border-radius: 14px; font-size: 11px;
+  background: #0C111B; border: 1px solid #1E293B; color: #A3A3B5;
+  cursor: pointer; transition: all 0.12s;
+}
+.tone-pill.on { background: #2563EB18; border-color: #2563EB; color: #60A5FA; }
+.btn-primary {
+  width: 100%; padding: 11px; border-radius: 10px; border: none;
+  background: #2563EB; color: white; font-size: 14px; font-weight: 600;
+  cursor: pointer; margin-top: 6px;
+}
+.btn-primary:active { opacity: 0.9; }
+
+/* ===== INPUT BAR ===== */
+.input-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px 12px; background: #151D2E;
+}
+.input-field {
+  flex: 1; padding: 10px 14px; border-radius: 20px;
+  background: #0C111B; border: 1px solid #1E293B;
+  color: #ECECF1; font-size: 14px; outline: none;
+}
+.input-field:focus { border-color: #60A5FA50; box-shadow: 0 0 0 2px #60A5FA10; }
+.input-field::placeholder { color: #52526E; }
+.btn-circle {
+  width: 36px; height: 36px; border-radius: 50%; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.12s; flex-shrink: 0;
+}
+.btn-send { background: #60A5FA25; }
+.btn-send.active { background: #2563EB; }
+.btn-send svg { width: 16px; height: 16px; fill: white; }
+.btn-task {
+  background: #F0883E20; border: 1.5px solid #F0883E50;
+}
+.btn-task.active { background: #F0883E; border-color: #F0883E; }
+.btn-task svg { width: 16px; height: 16px; fill: #F0883E; }
+.btn-task.active svg { fill: white; }
+
+/* ===== MODE SWITCHER (demo only) ===== */
+.mode-sw {
+  position: fixed; top: 10px; right: 12px; display: flex; gap: 3px; z-index: 100;
+}
+.mode-sw button {
+  padding: 3px 8px; border-radius: 5px; font-size: 9px; cursor: pointer;
+  border: 1px solid #1E293B; background: transparent; color: #52526E;
+}
+.mode-sw button.on { background: #1E2D45; color: #60A5FA; border-color: #2A3D5A; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+  padding: 8px 18px; background: #2563EB; color: white; border-radius: 8px;
+  font-size: 12px; z-index: 200; animation: fadeUp 0.3s ease;
+}
+@keyframes fadeUp { from { opacity:0; transform: translateX(-50%) translateY(10px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+</style>
+</head>
+<body>
+
+<!-- Demo mode switcher -->
+<div class="mode-sw">
+  <button class="on" id="sw-local" onclick="setMode('local')">Local</button>
+  <button id="sw-cloud" onclick="setMode('cloud')">Cloud</button>
+</div>
+
+<!-- ===== TOOLBAR ===== -->
+<div class="toolbar">
+  <div class="toolbar-left">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="#A3A3B5"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    <div class="toolbar-title">Poke<span>Claw</span></div>
+  </div>
+  <div class="badge badge-local" id="badge">Local AI</div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="content" id="content">
+
+  <!-- ===== LOCAL VIEW ===== -->
+  <div id="local-view">
+    <div style="padding:10px 12px 0;">
+      <div class="section-label">Quick Tasks</div>
+      <div class="chip-grid" id="local-chips">
+        <div class="chip" onclick="fillTask('How much battery left?')"><span class="chip-icon">🔋</span>Battery</div>
+        <div class="chip" onclick="fillTask('What WiFi am I on?')"><span class="chip-icon">📶</span>WiFi</div>
+        <div class="chip" onclick="fillTask('How much storage?')"><span class="chip-icon">💾</span>Storage</div>
+        <div class="chip" onclick="fillTask('Read my notifications')"><span class="chip-icon">🔔</span>Notifications</div>
+        <div class="chip" onclick="fillTask('Call ')"><span class="chip-icon">📞</span>Call someone</div>
+        <div class="chip" onclick="fillTask('Send _ to _ on WhatsApp')"><span class="chip-icon">💬</span>Send message</div>
+        <!-- Expanded -->
+        <div class="chip" onclick="fillTask('Turn on dark mode')"><span class="chip-icon">🌙</span>Dark mode</div>
+        <div class="chip" onclick="fillTask('What apps do I have?')"><span class="chip-icon">📱</span>My apps</div>
+        <div class="chip" onclick="fillTask('How hot is my phone?')"><span class="chip-icon">🌡️</span>Phone temp</div>
+        <div class="chip" onclick="fillTask('Is bluetooth on?')"><span class="chip-icon">🔵</span>Bluetooth</div>
+        <div class="chip" onclick="fillTask('What Android version?')"><span class="chip-icon">📲</span>Version</div>
+        <div class="chip" onclick="fillTask('Take a screenshot')"><span class="chip-icon">📸</span>Screenshot</div>
+      </div>
+      <div class="expand-btn" id="local-expand" onclick="toggleLocalChips()">
+        <span id="local-expand-text">Show more</span>
+        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+      </div>
+    </div>
+
+    <div style="padding:4px 12px 8px;">
+      <div class="section-label">Background</div>
+      <div class="bg-task-bar" id="bg-bar" onclick="openMonitorSheet()">
+        <div class="bg-label">
+          <span>👁️</span>
+          <span id="bg-bar-text">Monitor & Auto-Reply</span>
+        </div>
+        <div class="bg-arrow">▸</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CLOUD VIEW ===== -->
+  <div id="cloud-view" style="display:none; display:flex; flex-direction:column; height:100%;">
+    <!-- Chat area -->
+    <div class="chat-area" id="cloud-chat">
+      <div class="chat-empty">
+        <div class="chat-empty-icon">🦞</div>
+        <div class="chat-empty-title">PokeClaw</div>
+        <div class="chat-empty-sub">Chat or give tasks — all in one place. Type anything below.</div>
+      </div>
+    </div>
+
+    <!-- Expandable bottom panel -->
+    <div class="bottom-panel" id="cloud-panel">
+      <div class="panel-handle" onclick="toggleCloudPanel()">
+        <div class="panel-handle-bar"></div>
+      </div>
+      <div class="panel-content" id="cloud-panel-content">
+        <div class="section-label">Quick Tasks</div>
+        <div class="chip-grid expanded" id="cloud-chips">
+          <div class="chip" onclick="fillSend('How much battery left?')"><span class="chip-icon">🔋</span>Battery</div>
+          <div class="chip" onclick="fillSend('What WiFi am I on?')"><span class="chip-icon">📶</span>WiFi</div>
+          <div class="chip" onclick="fillSend('Call Mom')"><span class="chip-icon">📞</span>Call</div>
+          <div class="chip" onclick="fillSend('Send hi to Mom on WhatsApp')"><span class="chip-icon">💬</span>Send msg</div>
+          <div class="chip" onclick="fillSend('Search YouTube for cat videos')"><span class="chip-icon">🔍</span>YouTube</div>
+          <div class="chip" onclick="fillSend('Open Chrome and search for weather')"><span class="chip-icon">🌐</span>Web search</div>
+          <div class="chip" onclick="fillSend('Compose email to test@example.com')"><span class="chip-icon">📧</span>Email</div>
+          <div class="chip" onclick="fillSend('Turn on do not disturb')"><span class="chip-icon">🔇</span>DND</div>
+          <div class="chip" onclick="fillSend('Read my notifications')"><span class="chip-icon">🔔</span>Notifications</div>
+          <div class="chip" onclick="fillSend('Take a screenshot')"><span class="chip-icon">📸</span>Screenshot</div>
+        </div>
+        <div style="height:4px;"></div>
+        <div class="section-label">Background</div>
+        <div class="bg-task-bar" onclick="openMonitorSheet()">
+          <div class="bg-label"><span>👁️</span><span>Monitor & Auto-Reply</span></div>
+          <div class="bg-arrow">▸</div>
+        </div>
+        <div style="height:8px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== INPUT BAR ===== -->
+<div class="input-bar" id="input-bar">
+  <input class="input-field" id="input" placeholder="Chat with local AI..." oninput="onInput()">
+  <!-- Local: two buttons (Send=chat, Task=task) -->
+  <div id="local-buttons" style="display:flex;gap:4px;">
+    <button class="btn-circle btn-send" id="btn-send" onclick="doSend('chat')">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+    <button class="btn-circle btn-task" id="btn-task" onclick="doSend('task')" title="Send as Task">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    </button>
+  </div>
+  <!-- Cloud: one button (send = both chat+task) -->
+  <div id="cloud-buttons" style="display:none;">
+    <button class="btn-circle btn-send" id="btn-send-cloud" onclick="doSend('auto')">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ===== MONITOR BOTTOM SHEET ===== -->
+<div class="sheet-overlay" id="monitor-sheet" onclick="closeMonitorSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">👁️ Monitor & Auto-Reply</div>
+    <div class="form-row">
+      <span class="form-label">Contact</span>
+      <input class="form-input" placeholder="e.g. Mom, Girlfriend" id="m-contact">
+    </div>
+    <div class="form-row">
+      <span class="form-label">App</span>
+      <select class="form-input" style="appearance:auto;">
+        <option>WhatsApp</option><option>LINE</option><option>Telegram</option><option>WeChat</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <span class="form-label">Tone</span>
+      <div class="tone-row">
+        <div class="tone-pill on" onclick="pickTone(this)">Casual</div>
+        <div class="tone-pill" onclick="pickTone(this)">Formal</div>
+        <div class="tone-pill" onclick="pickTone(this)">Funny</div>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="startMonitor()">Start Monitoring</button>
+  </div>
+</div>
+
+<script>
+let mode = 'local';
+let localChipsOpen = false;
+let cloudPanelOpen = false;
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('local-view').style.display = m === 'local' ? 'block' : 'none';
+  document.getElementById('cloud-view').style.display = m === 'cloud' ? 'flex' : 'none';
+  document.getElementById('local-buttons').style.display = m === 'local' ? 'flex' : 'none';
+  document.getElementById('cloud-buttons').style.display = m === 'cloud' ? 'flex' : 'none';
+
+  const badge = document.getElementById('badge');
+  const input = document.getElementById('input');
+  if (m === 'cloud') {
+    badge.textContent = 'Cloud AI';
+    badge.className = 'badge badge-cloud';
+    input.placeholder = 'Chat or give a task...';
+    document.getElementById('sw-cloud').classList.add('on');
+    document.getElementById('sw-local').classList.remove('on');
+  } else {
+    badge.textContent = 'Local AI';
+    badge.className = 'badge badge-local';
+    input.placeholder = 'Chat with local AI...';
+    document.getElementById('sw-local').classList.add('on');
+    document.getElementById('sw-cloud').classList.remove('on');
+  }
+}
+
+function toggleLocalChips() {
+  localChipsOpen = !localChipsOpen;
+  const grid = document.getElementById('local-chips');
+  const btn = document.getElementById('local-expand');
+  const txt = document.getElementById('local-expand-text');
+  grid.classList.toggle('collapsed', !localChipsOpen);
+  grid.classList.toggle('expanded', localChipsOpen);
+  txt.textContent = localChipsOpen ? 'Show less' : 'Show more';
+  btn.classList.toggle('open', localChipsOpen);
+}
+
+// Start collapsed
+document.getElementById('local-chips').classList.add('collapsed');
+
+function toggleCloudPanel() {
+  cloudPanelOpen = !cloudPanelOpen;
+  const content = document.getElementById('cloud-panel-content');
+  content.style.display = cloudPanelOpen ? 'block' : 'none';
+}
+// Cloud panel starts open
+document.getElementById('cloud-panel-content').style.display = 'block';
+
+function fillTask(text) {
+  const input = document.getElementById('input');
+  input.value = text;
+  input.focus();
+  input.placeholder = 'Describe a phone task...';
+  onInput();
+  // Highlight task button
+  document.getElementById('btn-task').classList.add('active');
+  document.getElementById('btn-send').classList.remove('active');
+  // Select placeholder
+  const u = text.indexOf('_');
+  if (u >= 0) setTimeout(() => input.setSelectionRange(u, u+1), 50);
+}
+
+function fillSend(text) {
+  const input = document.getElementById('input');
+  input.value = text;
+  input.focus();
+  onInput();
+  document.getElementById('btn-send-cloud').classList.add('active');
+}
+
+function onInput() {
+  const val = document.getElementById('input').value.trim();
+  document.getElementById('btn-send').classList.toggle('active', val.length > 0 && mode === 'local');
+  document.getElementById('btn-task').classList.toggle('active', val.length > 0 && mode === 'local');
+  if (mode === 'cloud') document.getElementById('btn-send-cloud').classList.toggle('active', val.length > 0);
+}
+
+function doSend(type) {
+  const input = document.getElementById('input');
+  const val = input.value.trim();
+  if (!val) return;
+
+  let label = type === 'task' ? 'Task' : type === 'chat' ? 'Chat' : 'Sent';
+  showToast(label + ': ' + val);
+
+  // Cloud: add to chat
+  if (mode === 'cloud') {
+    const chat = document.getElementById('cloud-chat');
+    const empty = chat.querySelector('.chat-empty');
+    if (empty) empty.remove();
+
+    const userMsg = document.createElement('div');
+    userMsg.className = 'chat-msg chat-user';
+    userMsg.textContent = val;
+    chat.appendChild(userMsg);
+
+    setTimeout(() => {
+      const aiMsg = document.createElement('div');
+      aiMsg.className = 'chat-msg chat-ai';
+      aiMsg.textContent = type === 'auto'
+        ? 'Battery: 73%, not charging, 32°C'
+        : 'Sure, I can help with that!';
+      chat.appendChild(aiMsg);
+      chat.scrollTop = chat.scrollHeight;
+    }, 1000);
+  }
+
+  input.value = '';
+  input.placeholder = mode === 'local' ? 'Chat with local AI...' : 'Chat or give a task...';
+  onInput();
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+
+function openMonitorSheet() { document.getElementById('monitor-sheet').classList.add('show'); }
+function closeMonitorSheet(e) { if (e.target.classList.contains('sheet-overlay')) document.getElementById('monitor-sheet').classList.remove('show'); }
+
+function pickTone(el) {
+  el.parentElement.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function startMonitor() {
+  const contact = document.getElementById('m-contact').value || 'Girlfriend';
+  document.getElementById('monitor-sheet').classList.remove('show');
+  document.getElementById('bg-bar').classList.add('running');
+  document.getElementById('bg-bar-text').innerHTML = '<span class="bg-running-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3FB950;animation:pulse 2s infinite;margin-right:4px;vertical-align:middle;"></span>Monitoring ' + contact;
+  showToast('Monitoring ' + contact + ' started');
+}
+
+// Init
+setMode('local');
+</script>
+</body>
+</html>

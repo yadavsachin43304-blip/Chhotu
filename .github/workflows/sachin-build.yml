@@ -1,0 +1,51 @@
+name: PokeClaw build + test (for Sachin)
+on:
+  push:
+    branches: [ 'pokeclaw-src' ]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { java-version: '17', distribution: 'temurin' }
+      - uses: android-actions/setup-android@v3
+      - name: Build debug APK
+        run: chmod +x gradlew && ./gradlew assembleDebug --stacktrace --no-daemon
+      - name: Collect APK
+        run: mkdir -p out && cp $(ls app/build/outputs/apk/debug/*.apk | head -1) out/PokeClaw-sachin-${{ github.run_number }}.apk && ls -la out
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Smoke test on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          ram-size: 4096M
+          disk-size: 8G
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb install -r -g out/*.apk
+            adb logcat -c
+            adb shell monkey -p io.agents.pokeclaw -c android.intent.category.LAUNCHER 1
+            sleep 25
+            adb shell pidof io.agents.pokeclaw > pid.txt || true
+            adb exec-out screencap -p > out/screen1.png
+            adb logcat -d -b crash > crash.txt || true
+            cat pid.txt; cat crash.txt
+            test -s pid.txt && echo "SMOKE: RUNNING" || (echo "SMOKE: NOT RUNNING"; exit 1)
+            ! grep -q "io.agents.pokeclaw" crash.txt && echo "SMOKE: NO CRASH"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: pokeclaw-test, path: out/*.png }
+      - name: Release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: gh release create pokeclaw-${{ github.run_number }} out/*.apk --target ${{ github.sha }} --title "PokeClaw (built from source) #${{ github.run_number }}" --notes "Built from agents-io/PokeClaw (Apache-2.0) source. Smoke-tested on Android 14 emulator."

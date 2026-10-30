@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PokeClaw — Local Mode Variations</title>
+<style>
+:root{--bg:#151211;--surface:#1F1A18;--accent:#E8845A;--user:#D45A30;--ai:#342C28;--aib:#3D332C;--t1:#E0D5CC;--t2:#7A6E64;--t3:#5A4F47;--border:#332B27;--div:#2A2220;--taskbg:#1A1410;--taskborder:#E8845A40;--taskglow:#E8845A20;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0908;color:var(--t1);}
+
+/* Version selector */
+.ver-bar{display:flex;gap:4px;padding:10px;justify-content:center;position:sticky;top:0;background:#0a0908;z-index:10;}
+.ver-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--t2);font-size:12px;cursor:pointer;font-weight:500;}
+.ver-btn.on{background:var(--ai);color:var(--accent);border-color:var(--aib);}
+
+.phone{width:360px;height:700px;margin:10px auto;border-radius:24px;border:2px solid var(--border);background:var(--bg);display:none;flex-direction:column;overflow:hidden;position:relative;}
+.phone.show{display:flex;}
+
+/* Shared */
+.tb{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--div);}
+.tb-t{font-size:16px;font-weight:700;}.tb-t b{color:var(--accent);}
+.tb-b{font-size:9px;padding:2px 7px;border-radius:8px;background:var(--ai);color:var(--accent);border:1px solid var(--aib);}
+.content{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:20px;}
+.empty-i{font-size:32px;margin-bottom:6px;}.empty-t{font-size:15px;font-weight:600;}.empty-s{font-size:12px;color:var(--accent);margin:2px 0 8px;}
+
+/* Prompts */
+.pr{display:flex;align-items:center;border-radius:10px;background:var(--surface);border:0.5px solid var(--border);cursor:pointer;overflow:hidden;margin:0 20px 5px;}
+.pr:active{border-color:var(--accent);}
+.pr-bar{width:3px;min-height:32px;background:var(--accent);border-radius:10px 0 0 10px;flex-shrink:0;}
+.pr-txt{padding:8px 12px;font-size:12px;color:var(--t2);}
+
+/* Quick tasks in sheet */
+.sl{font-size:9px;font-weight:600;color:var(--t3);padding:8px 4px 4px;text-transform:uppercase;letter-spacing:0.5px;}
+.qt{display:flex;flex-direction:column;gap:3px;}
+.qt-i{display:flex;align-items:center;border-radius:8px;background:var(--bg);border:0.5px solid var(--border);cursor:pointer;overflow:hidden;}
+.qt-i:active{border-color:var(--accent);}
+.qt-bar{width:3px;min-height:28px;background:var(--accent);border-radius:8px 0 0 8px;flex-shrink:0;}
+.qt-txt{padding:7px 10px;font-size:11px;color:var(--t2);}
+
+/* Bottom sheet */
+.sheet{background:var(--surface);border-top:1px solid var(--div);padding:0 10px;}
+.sh-handle{display:flex;align-items:center;justify-content:center;gap:4px;padding:6px;cursor:pointer;}
+.sh-handle svg{width:12px;height:12px;fill:var(--accent);}
+.sh-label{font-size:10px;color:var(--accent);font-weight:500;}
+
+/* Background card */
+.bgc{border-radius:10px;background:var(--bg);border:0.5px solid var(--border);cursor:pointer;margin-bottom:6px;}
+.bgc-row{display:flex;align-items:center;padding:10px;gap:8px;}
+.bgc-icon{width:32px;height:32px;border-radius:8px;background:#E8845A15;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.bgc-info{flex:1;}.bgc-t{font-size:12px;font-weight:600;}.bgc-d{font-size:9px;color:var(--t3);}
+.bgc-arr{color:var(--t3);font-size:14px;}
+
+/* Input */
+.ibar{display:flex;align-items:center;gap:5px;padding:6px 8px 8px;background:var(--surface);border-top:1px solid var(--div);}
+.inp{flex:1;padding:8px 12px;border-radius:18px;background:var(--bg);border:1px solid var(--border);color:var(--t1);font-size:13px;outline:none;}
+.inp::placeholder{color:var(--t3);}
+.inp.task{border-color:var(--accent);background:var(--taskbg);box-shadow:0 0 0 2px var(--taskglow);}
+.inp.task::placeholder{color:#E8845A70;}
+.btn-s{width:30px;height:30px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:#E8845A20;}
+.btn-s svg{width:13px;height:13px;fill:white;}
+.btn-s.task{background:var(--accent);}
+
+/* Segment */
+.seg{display:flex;border-radius:14px;background:var(--bg);border:1px solid var(--border);flex-shrink:0;overflow:hidden;}
+.seg-b{padding:6px 10px;font-size:10px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--t3);user-select:none;}
+.seg-b.on{background:var(--ai);color:var(--t1);border-radius:12px;}
+.seg-b.task-on{background:var(--accent);color:white;border-radius:12px;}
+
+/* Banner */
+.banner{display:none;padding:5px 10px;text-align:center;font-size:9px;color:var(--accent);background:var(--taskbg);border-bottom:1px solid var(--taskborder);}
+.banner.show{display:block;}
+
+/* Mode cards */
+.mcards{display:flex;gap:6px;padding:0 20px;margin-bottom:8px;}
+.mcard{flex:1;padding:10px;border-radius:10px;text-align:center;cursor:pointer;}
+.mcard-chat{background:var(--surface);border:0.5px solid var(--border);}
+.mcard-task{background:var(--taskbg);border:1px solid var(--taskborder);}
+.mcard-icon{font-size:18px;margin-bottom:2px;}
+.mcard-label{font-size:11px;font-weight:600;}
+.mcard-desc{font-size:9px;color:var(--t3);line-height:1.3;margin-top:2px;}
+.mcard-task .mcard-label{color:var(--accent);}
+.mcard-task .mcard-desc{color:var(--accent);}
+.mcard-arrow{color:var(--t3);display:flex;align-items:center;font-size:14px;padding:0 2px;}
+
+/* Floating pill */
+.fab-task{
+  position:absolute;bottom:52px;right:12px;
+  padding:8px 16px;border-radius:20px;
+  background:var(--accent);color:white;font-size:12px;font-weight:600;
+  cursor:pointer;box-shadow:0 4px 12px #00000040;display:flex;align-items:center;gap:4px;
+  border:none;
+}
+.fab-task svg{width:14px;height:14px;fill:white;}
+
+/* Full width tabs */
+.ftabs{display:flex;background:var(--surface);border-bottom:1px solid var(--div);}
+.ftab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:500;cursor:pointer;color:var(--t3);border-bottom:2px solid transparent;transition:all 0.2s;}
+.ftab.on{color:var(--t1);border-bottom-color:var(--accent);}
+.ftab.task-on{color:var(--accent);border-bottom-color:var(--accent);background:var(--taskbg);}
+
+/* Swipe hint */
+.swipe-hint{text-align:center;font-size:9px;color:var(--t3);padding:2px 0;}
+
+/* Version label */
+.vlabel{position:absolute;top:8px;right:12px;font-size:9px;color:var(--t3);background:var(--ai);padding:2px 6px;border-radius:4px;z-index:5;}
+</style>
+</head>
+<body>
+
+<div class="ver-bar">
+  <button class="ver-btn on" onclick="showVer('a')">A: Segment</button>
+  <button class="ver-btn" onclick="showVer('b')">B: Top Tabs</button>
+  <button class="ver-btn" onclick="showVer('c')">C: FAB</button>
+  <button class="ver-btn" onclick="showVer('d')">D: Swipe</button>
+</div>
+
+<!-- ===== VERSION A: Segmented toggle beside input ===== -->
+<div class="phone show" id="ver-a">
+  <div class="vlabel">A: Segment Toggle</div>
+  <div class="tb"><div class="tb-t">Poke<b>Claw</b></div><div class="tb-b">Local AI</div></div>
+  <div class="banner" id="a-banner">🤖 Task Mode — your input will control the phone</div>
+  <div class="content">
+    <div class="empty">
+      <div class="empty-i">🦞</div><div class="empty-t">PokeClaw</div><div class="empty-s">Local AI</div>
+      <div class="mcards">
+        <div class="mcard mcard-chat"><div class="mcard-icon">💬</div><div class="mcard-label">Chat</div><div class="mcard-desc">Ask questions,<br>have a conversation</div></div>
+        <div class="mcard-arrow">→</div>
+        <div class="mcard mcard-task" onclick="aTask(true)"><div class="mcard-icon">🤖</div><div class="mcard-label">Task</div><div class="mcard-desc">Control your phone,<br>run commands</div></div>
+      </div>
+      <div style="font-size:10px;color:var(--t3);margin-bottom:12px;">Switch to <b style="color:var(--accent);">🤖 Task</b> below to control your phone</div>
+    </div>
+    <div class="pr" style="margin-bottom:4px;"><div class="pr-bar"></div><div class="pr-txt">Tell me a joke</div></div>
+    <div class="pr" style="margin-bottom:4px;"><div class="pr-bar"></div><div class="pr-txt">What can you do?</div></div>
+    <div class="pr"><div class="pr-bar"></div><div class="pr-txt">Help me draft an email</div></div>
+  </div>
+  <div class="sheet">
+    <div class="sh-handle"><svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg><span class="sh-label">Quick Tasks</span><svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg></div>
+    <div><div class="sl">Quick Tasks</div>
+    <div class="qt">
+      <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">🔋 How much battery left?</div></div>
+      <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">📶 What WiFi am I on?</div></div>
+      <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">🔔 Read my notifications</div></div>
+      <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">📞 Call someone</div></div>
+      <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">💬 Send hi to Mom on WhatsApp</div></div>
+    </div>
+    <div class="sl" style="margin-top:4px;">Background</div>
+    <div class="bgc"><div class="bgc-row"><div class="bgc-icon">👁️</div><div class="bgc-info"><div class="bgc-t">Monitor & Auto-Reply</div><div class="bgc-d">Watch messages and reply automatically</div></div><div class="bgc-arr">›</div></div></div>
+    </div>
+  </div>
+  <div class="ibar">
+    <div class="seg" id="a-seg">
+      <button class="seg-b on" id="a-chat" onclick="aTask(false)">💬 Chat</button>
+      <button class="seg-b" id="a-task" onclick="aTask(true)">🤖 Task</button>
+    </div>
+    <input class="inp" id="a-inp" placeholder="Chat with local AI...">
+    <button class="btn-s" id="a-send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+  </div>
+</div>
+
+<!-- ===== VERSION B: Full-width top tabs ===== -->
+<div class="phone" id="ver-b">
+  <div class="vlabel">B: Top Tabs</div>
+  <div class="tb"><div class="tb-t">Poke<b>Claw</b></div><div class="tb-b">Local AI</div></div>
+  <div class="ftabs" id="b-tabs">
+    <div class="ftab on" id="b-tab-chat" onclick="bSwitch('chat')">💬 Chat</div>
+    <div class="ftab" id="b-tab-task" onclick="bSwitch('task')">🤖 Task</div>
+  </div>
+  <div class="content" id="b-content">
+    <div class="empty" id="b-empty">
+      <div class="empty-i">🦞</div><div class="empty-t">PokeClaw</div><div class="empty-s">Local AI — Chat Mode</div>
+      <div style="font-size:11px;color:var(--t3);max-width:240px;line-height:1.5;">Have a conversation here.<br>Switch to <b style="color:var(--accent);">🤖 Task</b> tab to control your phone.</div>
+    </div>
+    <div id="b-prompts">
+      <div class="pr" style="margin-bottom:4px;"><div class="pr-bar"></div><div class="pr-txt">Tell me a joke</div></div>
+      <div class="pr" style="margin-bottom:4px;"><div class="pr-bar"></div><div class="pr-txt">What can you do?</div></div>
+      <div class="pr"><div class="pr-bar"></div><div class="pr-txt">Help me draft an email</div></div>
+    </div>
+    <!-- Task view (hidden) -->
+    <div id="b-task-view" style="display:none;padding:10px;">
+      <div class="sl">Quick Tasks</div>
+      <div class="qt">
+        <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">🔋 How much battery left?</div></div>
+        <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">📶 What WiFi am I on?</div></div>
+        <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">🔔 Read my notifications</div></div>
+        <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">📞 Call someone</div></div>
+        <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">💬 Send hi to Mom on WhatsApp</div></div>
+        <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">🌙 Turn on dark mode</div></div>
+      </div>
+      <div class="sl" style="margin-top:8px;">Background</div>
+      <div class="bgc"><div class="bgc-row"><div class="bgc-icon">👁️</div><div class="bgc-info"><div class="bgc-t">Monitor & Auto-Reply</div><div class="bgc-d">Watch messages and reply automatically</div></div><div class="bgc-arr">›</div></div></div>
+    </div>
+  </div>
+  <div class="ibar" id="b-ibar">
+    <input class="inp" id="b-inp" placeholder="Chat with local AI...">
+    <button class="btn-s"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+  </div>
+</div>
+
+<!-- ===== VERSION C: FAB button ===== -->
+<div class="phone" id="ver-c">
+  <div class="vlabel">C: FAB Button</div>
+  <div class="tb"><div class="tb-t">Poke<b>Claw</b></div><div class="tb-b">Local AI</div></div>
+  <div class="banner" id="c-banner">🤖 Task Mode — your input will control the phone</div>
+  <div class="content">
+    <div class="empty">
+      <div class="empty-i">🦞</div><div class="empty-t">PokeClaw</div><div class="empty-s">Local AI</div>
+      <div style="font-size:11px;color:var(--t3);max-width:240px;line-height:1.5;margin-top:8px;">Chat with on-device AI here.<br>Tap the <b style="color:var(--accent);">🤖 Task</b> button to control your phone.</div>
+    </div>
+    <div class="pr" style="margin-bottom:4px;"><div class="pr-bar"></div><div class="pr-txt">Tell me a joke</div></div>
+    <div class="pr" style="margin-bottom:4px;"><div class="pr-bar"></div><div class="pr-txt">What can you do?</div></div>
+    <div class="pr"><div class="pr-bar"></div><div class="pr-txt">Help me draft an email</div></div>
+  </div>
+  <button class="fab-task" id="c-fab" onclick="cToggle()">
+    <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/></svg>
+    <span id="c-fab-text">Task Mode</span>
+  </button>
+  <div class="ibar">
+    <input class="inp" id="c-inp" placeholder="Chat with local AI...">
+    <button class="btn-s" id="c-send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+  </div>
+</div>
+
+<!-- ===== VERSION D: Long-press send = task ===== -->
+<div class="phone" id="ver-d">
+  <div class="vlabel">D: Hold to Task</div>
+  <div class="tb"><div class="tb-t">Poke<b>Claw</b></div><div class="tb-b">Local AI</div></div>
+  <div class="content">
+    <div class="empty">
+      <div class="empty-i">🦞</div><div class="empty-t">PokeClaw</div><div class="empty-s">Local AI</div>
+      <div class="mcards" style="max-width:280px;">
+        <div class="mcard mcard-chat" style="padding:8px;"><div class="mcard-icon">💬</div><div class="mcard-label">Tap Send</div><div class="mcard-desc">Chat with AI</div></div>
+        <div class="mcard mcard-task" style="padding:8px;"><div class="mcard-icon">🤖</div><div class="mcard-label">Hold Send</div><div class="mcard-desc">Run as Task</div></div>
+      </div>
+      <div style="font-size:10px;color:var(--t3);max-width:240px;line-height:1.5;margin-top:4px;">Type anything below.<br><b>Tap</b> send = chat · <b>Hold</b> send = phone task</div>
+    </div>
+    <div class="pr" style="margin-bottom:4px;"><div class="pr-bar"></div><div class="pr-txt">Tell me a joke</div></div>
+    <div class="pr" style="margin-bottom:4px;"><div class="pr-bar"></div><div class="pr-txt">🔋 How much battery left?</div></div>
+    <div class="pr"><div class="pr-bar"></div><div class="pr-txt">💬 Send hi to Mom on WhatsApp</div></div>
+  </div>
+  <div class="sheet">
+    <div class="sh-handle"><svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg><span class="sh-label">Quick Tasks</span><svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg></div>
+    <div>
+    <div class="qt">
+      <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">🔋 How much battery left?</div></div>
+      <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">📶 What WiFi am I on?</div></div>
+      <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">🔔 Read my notifications</div></div>
+      <div class="qt-i"><div class="qt-bar"></div><div class="qt-txt">📞 Call someone</div></div>
+    </div>
+    <div class="sl" style="margin-top:4px;">Background</div>
+    <div class="bgc"><div class="bgc-row"><div class="bgc-icon">👁️</div><div class="bgc-info"><div class="bgc-t">Monitor & Auto-Reply</div><div class="bgc-d">Watch messages and reply automatically</div></div><div class="bgc-arr">›</div></div></div>
+    </div>
+  </div>
+  <div class="ibar">
+    <input class="inp" placeholder="Type anything...">
+    <button class="btn-s" id="d-send" style="width:60px;border-radius:18px;font-size:10px;font-weight:600;color:white;background:var(--user);position:relative;" onmousedown="dDown()" onmouseup="dUp()" ontouchstart="dDown()" ontouchend="dUp()">
+      <span id="d-send-text">Send</span>
+    </button>
+  </div>
+  <div style="text-align:center;padding:0 0 4px;font-size:9px;color:var(--t3);background:var(--surface);">Tap = chat · Hold = task</div>
+</div>
+
+<script>
+// Version switcher
+function showVer(v){
+  document.querySelectorAll('.phone').forEach(p=>p.classList.remove('show'));
+  document.getElementById('ver-'+v).classList.add('show');
+  document.querySelectorAll('.ver-btn').forEach(b=>b.classList.remove('on'));
+  event.target.classList.add('on');
+}
+
+// Version A: Segment toggle
+let aIsTask=false;
+function aTask(on){
+  aIsTask=on;
+  document.getElementById('a-chat').className='seg-b'+(on?'':' on');
+  document.getElementById('a-task').className='seg-b'+(on?' on task-on':'');
+  document.getElementById('a-inp').className='inp'+(on?' task':'');
+  document.getElementById('a-inp').placeholder=on?'Describe a phone task...':'Chat with local AI...';
+  document.getElementById('a-send').className='btn-s'+(on?' task':'');
+  document.getElementById('a-banner').classList.toggle('show',on);
+}
+
+// Version B: Top tabs
+function bSwitch(tab){
+  const isTask=tab==='task';
+  document.getElementById('b-tab-chat').className='ftab'+(isTask?'':' on');
+  document.getElementById('b-tab-task').className='ftab'+(isTask?' on task-on':'');
+  document.getElementById('b-empty').style.display=isTask?'none':'flex';
+  document.getElementById('b-prompts').style.display=isTask?'none':'block';
+  document.getElementById('b-task-view').style.display=isTask?'block':'none';
+  document.getElementById('b-inp').className='inp'+(isTask?' task':'');
+  document.getElementById('b-inp').placeholder=isTask?'Describe a phone task...':'Chat with local AI...';
+  if(isTask) document.getElementById('b-empty').querySelector('.empty-s').textContent='Local AI — Task Mode';
+}
+
+// Version C: FAB
+let cIsTask=false;
+function cToggle(){
+  cIsTask=!cIsTask;
+  document.getElementById('c-inp').className='inp'+(cIsTask?' task':'');
+  document.getElementById('c-inp').placeholder=cIsTask?'Describe a phone task...':'Chat with local AI...';
+  document.getElementById('c-send').className='btn-s'+(cIsTask?' task':'');
+  document.getElementById('c-banner').classList.toggle('show',cIsTask);
+  document.getElementById('c-fab').style.background=cIsTask?'var(--t3)':'var(--accent)';
+  document.getElementById('c-fab-text').textContent=cIsTask?'Back to Chat':'Task Mode';
+}
+
+// Version D: Long press
+let dTimer=null;
+function dDown(){
+  const btn=document.getElementById('d-send');
+  dTimer=setTimeout(()=>{
+    btn.style.background='var(--accent)';
+    document.getElementById('d-send-text').textContent='Task!';
+    setTimeout(()=>{
+      btn.style.background='var(--user)';
+      document.getElementById('d-send-text').textContent='Send';
+    },1500);
+  },500);
+}
+function dUp(){
+  clearTimeout(dTimer);
+}
+</script>
+</body>
+</html>

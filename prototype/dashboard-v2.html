@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PokeClaw — Dashboard v2</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0C111B; color: #ECECF1; max-width: 390px; margin: 0 auto;
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ===== TOOLBAR ===== */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; background: #151D2E; border-bottom: 1px solid #1A2234;
+}
+.toolbar-left { display: flex; align-items: center; gap: 10px; }
+.toolbar-title { font-size: 18px; font-weight: 700; }
+.toolbar-title span { color: #60A5FA; }
+.toolbar-badge {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px;
+  background: #1E2D45; color: #60A5FA; border: 1px solid #2A3D5A;
+}
+.toolbar-icons { display: flex; gap: 16px; }
+.toolbar-icons svg { width: 20px; height: 20px; fill: #A3A3B5; cursor: pointer; }
+
+/* ===== MODE TABS ===== */
+.mode-tabs {
+  display: flex; gap: 6px; padding: 8px 12px; background: #0C111B;
+}
+.mode-tab {
+  flex: 1; padding: 8px; border-radius: 10px; text-align: center;
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+  border: 1px solid transparent; color: #52526E;
+}
+.mode-tab.active { background: #151D2E; color: #ECECF1; border-color: #1E293B; }
+.mode-tab:hover:not(.active) { background: #151D2E40; }
+
+/* ===== SCROLLABLE CONTENT ===== */
+.content { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+
+/* ===== QUICK TASKS GRID ===== */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 4px 8px;
+}
+.section-title { font-size: 14px; font-weight: 600; color: #A3A3B5; }
+
+.chip-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  overflow: hidden; transition: max-height 0.3s ease;
+}
+.chip-grid.collapsed { max-height: 200px; }
+.chip-grid.expanded { max-height: 600px; }
+
+.chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-radius: 10px;
+  background: #151D2E; border: 1px solid #1E293B;
+  cursor: pointer; transition: all 0.15s;
+  font-size: 13px; color: #D0DAE8;
+}
+.chip:active { transform: scale(0.97); background: #1E2D45; border-color: #60A5FA40; }
+.chip .chip-icon { font-size: 15px; flex-shrink: 0; }
+.chip .chip-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.show-more {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 8px; color: #60A5FA; font-size: 12px; cursor: pointer;
+  border-radius: 8px; transition: background 0.15s;
+}
+.show-more:hover { background: #151D2E; }
+.show-more svg { width: 14px; height: 14px; fill: #60A5FA; transition: transform 0.3s; }
+.show-more.expanded svg { transform: rotate(180deg); }
+
+/* ===== BACKGROUND TASKS ===== */
+.bg-card {
+  background: #151D2E; border: 1px solid #1E293B; border-radius: 12px;
+  padding: 14px; margin-top: 4px;
+}
+.bg-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.bg-card-icon {
+  width: 34px; height: 34px; border-radius: 8px; background: #1E2D45;
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.bg-card-title { font-size: 14px; font-weight: 600; }
+.bg-card-desc { font-size: 11px; color: #52526E; }
+
+.bg-card-form { display: flex; flex-direction: column; gap: 8px; }
+.form-row { display: flex; gap: 8px; align-items: center; }
+.form-label { font-size: 11px; color: #A3A3B5; width: 55px; flex-shrink: 0; }
+.form-input {
+  flex: 1; padding: 7px 10px; border-radius: 8px; font-size: 12px;
+  background: #0C111B; border: 1px solid #1E293B; color: #ECECF1;
+  outline: none;
+}
+.form-input:focus { border-color: #60A5FA40; }
+
+.tone-pills { display: flex; gap: 6px; flex: 1; }
+.tone-pill {
+  padding: 5px 10px; border-radius: 14px; font-size: 11px;
+  background: #0C111B; border: 1px solid #1E293B; color: #A3A3B5;
+  cursor: pointer; transition: all 0.15s;
+}
+.tone-pill.active { background: #2563EB20; border-color: #2563EB; color: #60A5FA; }
+
+.btn-start {
+  width: 100%; padding: 10px; border-radius: 10px; border: none;
+  background: #2563EB; color: white; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; margin-top: 4px;
+}
+.btn-start:active { transform: scale(0.98); }
+
+/* Running state */
+.bg-card.running { border-color: #3FB95040; }
+.bg-running-status {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0 4px;
+}
+.running-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #3FB950;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.running-info { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #3FB950; }
+.btn-stop {
+  padding: 5px 14px; border-radius: 8px; border: 1px solid #F4433640;
+  background: transparent; color: #F44336; font-size: 12px; cursor: pointer;
+}
+
+/* ===== ACTIVITY FEED ===== */
+.activity-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 4px; border-bottom: 1px solid #1A223440;
+}
+.activity-icon { font-size: 14px; margin-top: 2px; }
+.activity-body { flex: 1; }
+.activity-text { font-size: 13px; color: #D0DAE8; line-height: 1.4; }
+.activity-time { font-size: 10px; color: #52526E; margin-top: 2px; }
+
+/* ===== INPUT BAR ===== */
+.input-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px 12px; background: #151D2E;
+  border-top: 1px solid #1A2234;
+}
+.input-field {
+  flex: 1; padding: 10px 14px; border-radius: 20px;
+  background: #0C111B; border: 1px solid #1E293B;
+  color: #ECECF1; font-size: 14px; outline: none;
+  transition: border-color 0.2s;
+}
+.input-field:focus { border-color: #60A5FA60; box-shadow: 0 0 0 2px #60A5FA15; }
+.input-field::placeholder { color: #52526E; }
+.btn-send {
+  width: 36px; height: 36px; border-radius: 50%; border: none;
+  background: #60A5FA30; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; transition: all 0.15s;
+}
+.btn-send.active { background: #2563EB; }
+.btn-send svg { width: 16px; height: 16px; fill: white; }
+
+/* ===== MODE HINTS ===== */
+.mode-hint {
+  text-align: center; font-size: 10px; color: #52526E;
+  padding: 0 12px 6px; letter-spacing: 0.3px;
+}
+.cloud-mode-hint {
+  text-align: center; font-size: 11px; color: #60A5FA80;
+  padding: 6px 12px 8px; letter-spacing: 0.3px;
+}
+
+/* ===== NUDGE BANNER ===== */
+.nudge {
+  display: none; align-items: center; justify-content: space-between;
+  padding: 8px 14px; margin: 0 12px 6px; border-radius: 10px;
+  background: #2563EB15; border: 1px solid #2563EB30;
+  font-size: 12px; color: #60A5FA; animation: nudgeIn 0.3s ease;
+}
+.nudge button {
+  padding: 4px 12px; border-radius: 6px; border: 1px solid #2563EB;
+  background: #2563EB; color: white; font-size: 11px; cursor: pointer;
+}
+.nudge .dismiss { background: transparent; border-color: transparent; color: #52526E; }
+@keyframes nudgeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== CLOUD MODE (no tabs) ===== */
+.cloud-hint {
+  padding: 6px 12px; text-align: center;
+  font-size: 11px; color: #52526E;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 40px 20px; text-align: center;
+}
+.empty-avatar { width: 56px; height: 56px; border-radius: 14px; background: #1E2D45;
+  display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 12px; }
+.empty-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.empty-subtitle { font-size: 13px; color: #60A5FA; margin-bottom: 6px; }
+.empty-desc { font-size: 12px; color: #52526E; max-width: 280px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- ===== SCREEN 1: LOCAL LLM — TASK TAB ===== -->
+<div id="screen-local-task" class="screen" style="display:flex; flex-direction:column; height:100vh;">
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="#A3A3B5"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+      <div>
+        <div class="toolbar-title">Poke<span>Claw</span></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="toolbar-badge" id="tier-badge">Free + Local AI</div>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="#A3A3B5" style="cursor:pointer"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+    </div>
+  </div>
+
+  <!-- Mode tabs (LOCAL only) -->
+  <div class="mode-tabs" id="mode-tabs">
+    <div class="mode-tab" id="tab-chat" onclick="switchTab('chat')">💬 Chat</div>
+    <div class="mode-tab active" id="tab-task" onclick="switchTab('task')">🤖 Task</div>
+  </div>
+  <div class="mode-hint" id="mode-hint">Chat = conversation &nbsp;·&nbsp; Task = control your phone</div>
+
+  <!-- Cloud mode hint (hidden by default) -->
+  <div class="cloud-mode-hint" id="cloud-hint" style="display:none;">Chat and tasks work together — just type</div>
+
+  <!-- Scrollable content -->
+  <div class="content" id="main-content">
+
+    <!-- ===== TASK VIEW ===== -->
+    <div id="view-task">
+      <!-- Quick Tasks -->
+      <div class="section-header">
+        <div class="section-title">Quick Tasks</div>
+      </div>
+
+      <div class="chip-grid collapsed" id="chip-grid">
+        <div class="chip" onclick="fillInput('How much battery left?')">
+          <span class="chip-icon">🔋</span><span class="chip-label">Battery</span>
+        </div>
+        <div class="chip" onclick="fillInput('What WiFi am I on?')">
+          <span class="chip-icon">📶</span><span class="chip-label">WiFi status</span>
+        </div>
+        <div class="chip" onclick="fillInput('How much storage?')">
+          <span class="chip-icon">💾</span><span class="chip-label">Storage</span>
+        </div>
+        <div class="chip" onclick="fillInput('Read my notifications')">
+          <span class="chip-icon">🔔</span><span class="chip-label">Notifications</span>
+        </div>
+        <div class="chip" onclick="fillInput('Call ')">
+          <span class="chip-icon">📞</span><span class="chip-label">Call someone</span>
+        </div>
+        <div class="chip" onclick="fillInput('Send hi to _ on WhatsApp')">
+          <span class="chip-icon">💬</span><span class="chip-label">Send message</span>
+        </div>
+        <!-- Hidden by default -->
+        <div class="chip" onclick="fillInput('Turn on dark mode')">
+          <span class="chip-icon">🌙</span><span class="chip-label">Dark mode</span>
+        </div>
+        <div class="chip" onclick="fillInput('What apps do I have?')">
+          <span class="chip-icon">📱</span><span class="chip-label">My apps</span>
+        </div>
+        <div class="chip" onclick="fillInput('How hot is my phone?')">
+          <span class="chip-icon">🌡️</span><span class="chip-label">Phone temp</span>
+        </div>
+        <div class="chip" onclick="fillInput('Is bluetooth on?')">
+          <span class="chip-icon">🔵</span><span class="chip-label">Bluetooth</span>
+        </div>
+        <div class="chip" onclick="fillInput('What Android version?')">
+          <span class="chip-icon">📲</span><span class="chip-label">Android version</span>
+        </div>
+        <div class="chip" onclick="fillInput('Take a screenshot')">
+          <span class="chip-icon">📸</span><span class="chip-label">Screenshot</span>
+        </div>
+      </div>
+
+      <div class="show-more" id="show-more-btn" onclick="toggleChips()">
+        <span id="show-more-text">Show more</span>
+        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+      </div>
+
+      <!-- Background Tasks -->
+      <div class="section-header" style="margin-top:4px;">
+        <div class="section-title">Background Tasks</div>
+      </div>
+
+      <!-- Monitor card (idle) -->
+      <div class="bg-card" id="monitor-card">
+        <div class="bg-card-header">
+          <div class="bg-card-icon">👁️</div>
+          <div>
+            <div class="bg-card-title">Monitor & Auto-Reply</div>
+            <div class="bg-card-desc">Watch messages and reply automatically</div>
+          </div>
+        </div>
+        <div class="bg-card-form" id="monitor-form">
+          <div class="form-row">
+            <span class="form-label">Contact</span>
+            <input class="form-input" placeholder="e.g. Mom, Girlfriend" id="monitor-contact">
+          </div>
+          <div class="form-row">
+            <span class="form-label">App</span>
+            <select class="form-input" id="monitor-app" style="appearance:auto;">
+              <option>WhatsApp</option>
+              <option>LINE</option>
+              <option>Telegram</option>
+              <option>WeChat</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <span class="form-label">Tone</span>
+            <div class="tone-pills">
+              <div class="tone-pill active" onclick="selectTone(this)">Casual</div>
+              <div class="tone-pill" onclick="selectTone(this)">Formal</div>
+              <div class="tone-pill" onclick="selectTone(this)">Funny</div>
+            </div>
+          </div>
+          <button class="btn-start" onclick="startMonitor()">Start Monitoring</button>
+        </div>
+
+        <!-- Running state (hidden) -->
+        <div class="bg-running-status" id="monitor-running" style="display:none;">
+          <div class="running-info">
+            <div class="running-dot"></div>
+            <span id="monitor-status-text">Monitoring Girlfriend on WhatsApp</span>
+          </div>
+          <button class="btn-stop" onclick="stopMonitor()">Stop</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CHAT VIEW ===== -->
+    <div id="view-chat" style="display:none;">
+      <!-- Nudge banner (hidden, shown when user types task-like text) -->
+      <div class="nudge" id="task-nudge">
+        <span>This looks like a phone task</span>
+        <div style="display:flex;gap:6px;">
+          <button onclick="switchTab('task')">Go to Task</button>
+          <button class="dismiss" onclick="dismissNudge()">Dismiss</button>
+        </div>
+      </div>
+
+      <div class="empty-state">
+        <div class="empty-avatar">🦞</div>
+        <div class="empty-title">PokeClaw</div>
+        <div class="empty-subtitle">Local AI — Chat Mode</div>
+        <div class="empty-desc">Have a conversation with on-device AI.<br>To control your phone, use the <b>Task</b> tab.</div>
+      </div>
+
+      <div style="padding: 0 20px;">
+        <div class="chip" onclick="fillInput('Tell me a joke')" style="margin-bottom:6px;">
+          <span class="chip-icon">😄</span><span class="chip-label">Tell me a joke</span>
+        </div>
+        <div class="chip" onclick="fillInput('What can you do?')" style="margin-bottom:6px;">
+          <span class="chip-icon">❓</span><span class="chip-label">What can you do?</span>
+        </div>
+        <div class="chip" onclick="fillInput('Help me draft an email')">
+          <span class="chip-icon">✍️</span><span class="chip-label">Help me draft an email</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CLOUD VIEW (no tabs, mixed) ===== -->
+    <div id="view-cloud" style="display:none;">
+      <!-- Activity feed -->
+      <div class="section-header">
+        <div class="section-title">Quick Tasks</div>
+      </div>
+
+      <div class="chip-grid expanded" id="cloud-chip-grid">
+        <div class="chip" onclick="fillInput('How much battery left?')">
+          <span class="chip-icon">🔋</span><span class="chip-label">Battery</span>
+        </div>
+        <div class="chip" onclick="fillInput('What WiFi am I on?')">
+          <span class="chip-icon">📶</span><span class="chip-label">WiFi status</span>
+        </div>
+        <div class="chip" onclick="fillInput('Call Mom')">
+          <span class="chip-icon">📞</span><span class="chip-label">Call someone</span>
+        </div>
+        <div class="chip" onclick="fillInput('Send hi to Mom on WhatsApp')">
+          <span class="chip-icon">💬</span><span class="chip-label">Send message</span>
+        </div>
+        <div class="chip" onclick="fillInput('Search YouTube for cat videos')">
+          <span class="chip-icon">🔍</span><span class="chip-label">Search YouTube</span>
+        </div>
+        <div class="chip" onclick="fillInput('Open Chrome and search for weather')">
+          <span class="chip-icon">🌐</span><span class="chip-label">Web search</span>
+        </div>
+        <div class="chip" onclick="fillInput('Compose email to test@example.com')">
+          <span class="chip-icon">📧</span><span class="chip-label">Compose email</span>
+        </div>
+        <div class="chip" onclick="fillInput('Install Telegram from Play Store')">
+          <span class="chip-icon">📦</span><span class="chip-label">Install app</span>
+        </div>
+        <div class="chip" onclick="fillInput('Turn on do not disturb')">
+          <span class="chip-icon">🔇</span><span class="chip-label">Do not disturb</span>
+        </div>
+        <div class="chip" onclick="fillInput('Read my notifications')">
+          <span class="chip-icon">🔔</span><span class="chip-label">Notifications</span>
+        </div>
+        <div class="chip" onclick="fillInput('Take a screenshot')">
+          <span class="chip-icon">📸</span><span class="chip-label">Screenshot</span>
+        </div>
+        <div class="chip" onclick="fillInput('Turn on dark mode')">
+          <span class="chip-icon">🌙</span><span class="chip-label">Dark mode</span>
+        </div>
+      </div>
+
+      <div class="section-header" style="margin-top:8px;">
+        <div class="section-title">Recent Activity</div>
+      </div>
+      <div class="activity-item">
+        <span class="activity-icon">🔋</span>
+        <div class="activity-body">
+          <div class="activity-text">Battery: 73%, not charging, 32°C</div>
+          <div class="activity-time">2 min ago</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <span class="activity-icon">💬</span>
+        <div class="activity-body">
+          <div class="activity-text">Sent "hi" to Mom on WhatsApp</div>
+          <div class="activity-time">15 min ago</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <span class="activity-icon">🔍</span>
+        <div class="activity-body">
+          <div class="activity-text">Searched YouTube for "lofi beats" — top result: Lofi Girl, 53M views</div>
+          <div class="activity-time">1 hour ago</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input bar (ALWAYS visible) -->
+  <div class="input-bar">
+    <input class="input-field" id="input-field" placeholder="Ask anything..." onfocus="onInputFocus()" oninput="onInputChange()">
+    <button class="btn-send" id="btn-send" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Mode switcher (floating) -->
+<div style="position:fixed;top:12px;right:60px;display:flex;gap:4px;z-index:100;">
+  <button onclick="setMode('local')" id="sw-local" style="padding:4px 8px;border-radius:6px;border:1px solid #2A3D5A;background:#1E2D45;color:#60A5FA;font-size:10px;cursor:pointer;">Local</button>
+  <button onclick="setMode('cloud')" id="sw-cloud" style="padding:4px 8px;border-radius:6px;border:1px solid #1E293B;background:transparent;color:#52526E;font-size:10px;cursor:pointer;">Cloud</button>
+</div>
+
+<script>
+let currentMode = 'local'; // 'local' or 'cloud'
+let currentTab = 'task';   // 'chat' or 'task' (local only)
+let chipsExpanded = false;
+
+function setMode(mode) {
+  currentMode = mode;
+  const tabs = document.getElementById('mode-tabs');
+  const hint = document.getElementById('mode-hint');
+  const cloudHint = document.getElementById('cloud-hint');
+  const viewTask = document.getElementById('view-task');
+  const viewChat = document.getElementById('view-chat');
+  const viewCloud = document.getElementById('view-cloud');
+  const badge = document.getElementById('tier-badge');
+  const input = document.getElementById('input-field');
+  const swLocal = document.getElementById('sw-local');
+  const swCloud = document.getElementById('sw-cloud');
+
+  if (mode === 'cloud') {
+    tabs.style.display = 'none';
+    hint.style.display = 'none';
+    cloudHint.style.display = 'block';
+    viewTask.style.display = 'none';
+    viewChat.style.display = 'none';
+    viewCloud.style.display = 'block';
+    badge.textContent = 'Cloud AI (Plus)';
+    badge.style.borderColor = '#F0883E';
+    badge.style.color = '#F0883E';
+    input.placeholder = 'Chat or give a task — all in one ✨';
+    swCloud.style.background = '#1E2D45'; swCloud.style.color = '#60A5FA'; swCloud.style.borderColor = '#2A3D5A';
+    swLocal.style.background = 'transparent'; swLocal.style.color = '#52526E'; swLocal.style.borderColor = '#1E293B';
+  } else {
+    tabs.style.display = 'flex';
+    hint.style.display = 'block';
+    cloudHint.style.display = 'none';
+    viewCloud.style.display = 'none';
+    badge.textContent = 'Free + Local AI';
+    badge.style.borderColor = '#2A3D5A';
+    badge.style.color = '#60A5FA';
+    switchTab(currentTab);
+    swLocal.style.background = '#1E2D45'; swLocal.style.color = '#60A5FA'; swLocal.style.borderColor = '#2A3D5A';
+    swCloud.style.background = 'transparent'; swCloud.style.color = '#52526E'; swCloud.style.borderColor = '#1E293B';
+  }
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  const tabChat = document.getElementById('tab-chat');
+  const tabTask = document.getElementById('tab-task');
+  const viewTask = document.getElementById('view-task');
+  const viewChat = document.getElementById('view-chat');
+  const input = document.getElementById('input-field');
+
+  if (tab === 'task') {
+    tabTask.classList.add('active'); tabChat.classList.remove('active');
+    viewTask.style.display = 'block'; viewChat.style.display = 'none';
+    input.placeholder = 'Describe a phone task...';
+  } else {
+    tabChat.classList.add('active'); tabTask.classList.remove('active');
+    viewTask.style.display = 'none'; viewChat.style.display = 'block';
+    input.placeholder = 'Chat with local AI...';
+    document.getElementById('task-nudge').style.display = 'none';
+  }
+}
+
+function toggleChips() {
+  const grid = document.getElementById('chip-grid');
+  const btn = document.getElementById('show-more-btn');
+  const text = document.getElementById('show-more-text');
+  chipsExpanded = !chipsExpanded;
+  grid.classList.toggle('collapsed', !chipsExpanded);
+  grid.classList.toggle('expanded', chipsExpanded);
+  text.textContent = chipsExpanded ? 'Show less' : 'Show more';
+  btn.classList.toggle('expanded', chipsExpanded);
+}
+
+function fillInput(text) {
+  const input = document.getElementById('input-field');
+  input.value = text;
+  input.focus();
+  // Set cursor at end or at placeholder
+  const underscorePos = text.indexOf('_');
+  if (underscorePos >= 0) {
+    setTimeout(() => { input.setSelectionRange(underscorePos, underscorePos + 1); }, 50);
+  }
+  onInputChange();
+}
+
+const TASK_KEYWORDS = ['open','send','call','search','turn on','turn off','check','battery','wifi','storage','bluetooth','notification','screenshot','lock','dark mode','install','compose'];
+
+function onInputChange() {
+  const input = document.getElementById('input-field');
+  const btn = document.getElementById('btn-send');
+  btn.classList.toggle('active', input.value.trim().length > 0);
+
+  // Nudge: if Local Chat mode and user types task-like text
+  if (currentMode === 'local' && currentTab === 'chat') {
+    const lower = input.value.toLowerCase();
+    const looksLikeTask = TASK_KEYWORDS.some(kw => lower.includes(kw));
+    const nudge = document.getElementById('task-nudge');
+    if (looksLikeTask && lower.length > 5) {
+      nudge.style.display = 'flex';
+    } else {
+      nudge.style.display = 'none';
+    }
+  }
+}
+
+function dismissNudge() {
+  document.getElementById('task-nudge').style.display = 'none';
+}
+
+function onInputFocus() {}
+
+function sendMessage() {
+  const input = document.getElementById('input-field');
+  if (input.value.trim()) {
+    const msg = input.value.trim();
+    input.value = '';
+    onInputChange();
+    // Simulate toast
+    const toast = document.createElement('div');
+    toast.textContent = 'Running: ' + msg;
+    toast.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);padding:8px 16px;background:#2563EB;color:white;border-radius:8px;font-size:12px;z-index:200;';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+  }
+}
+
+function selectTone(el) {
+  el.parentElement.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function startMonitor() {
+  const contact = document.getElementById('monitor-contact').value || 'Girlfriend';
+  const app = document.getElementById('monitor-app').value;
+  document.getElementById('monitor-form').style.display = 'none';
+  document.getElementById('monitor-running').style.display = 'flex';
+  document.getElementById('monitor-status-text').textContent = 'Monitoring ' + contact + ' on ' + app;
+  document.getElementById('monitor-card').classList.add('running');
+}
+
+function stopMonitor() {
+  document.getElementById('monitor-form').style.display = 'flex';
+  document.getElementById('monitor-running').style.display = 'none';
+  document.getElementById('monitor-card').classList.remove('running');
+}
+</script>
+</body>
+</html>

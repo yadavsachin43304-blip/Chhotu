@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PokeClaw (PocketClaw) — Local-First AI Phone Automation for Android</title>
+  <meta name="description" content="PokeClaw (PocketClaw) is an open-source Android app for AI phone automation. Run Gemma 4 on-device in Local mode or connect optional cloud models for harder tasks." />
+  <meta name="keywords" content="PokeClaw, PocketClaw, Poke Claw, Pocket Claw, on-device AI, Android automation, Gemma 4, local LLM, phone agent, AI phone control app, offline AI assistant Android, run LLM on phone, private AI Android, AI auto reply WhatsApp, open source phone automation" />
+  <link rel="canonical" href="https://agents-io.github.io/PokeClaw/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="PokeClaw (PocketClaw) — Local-First AI Phone Automation for Android" />
+  <meta property="og:description" content="PokeClaw (PocketClaw) is an open-source Android app for AI phone automation with Local mode and optional cloud models." />
+  <meta property="og:image" content="https://agents-io.github.io/PokeClaw/og-image.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://agents-io.github.io/PokeClaw/" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="PokeClaw (PocketClaw) — Local-First AI Phone Automation for Android" />
+  <meta name="twitter:description" content="PokeClaw / PocketClaw — open-source Android phone automation with Local mode and optional cloud models." />
+  <meta name="twitter:image" content="https://agents-io.github.io/PokeClaw/og-image.png" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "PokeClaw (PocketClaw)",
+    "alternateName": "PocketClaw",
+    "operatingSystem": "Android 9+",
+    "applicationCategory": "UtilitiesApplication",
+    "description": "Open-source Android AI phone automation with Local mode via Gemma 4 and optional cloud models.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "downloadUrl": "https://github.com/agents-io/PokeClaw/releases/latest",
+    "softwareVersion": "0.5.1",
+    "license": "https://opensource.org/licenses/Apache-2.0",
+    "author": { "@type": "Person", "name": "ithiria894", "url": "https://github.com/ithiria894" }
+  }
+  </script>
+
+  <!-- FAQPage Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What phones are supported?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Android 9+ with arm64 architecture. The 2B model needs about 4 GB free RAM. Budget phones work but expect ~45 second warmup on CPU. Flagships with ML chips (Pixel 8+, Galaxy S24, Dimensity 9200+) are significantly faster with GPU acceleration."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is it really free? What's the catch?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The current public build is open-source under Apache 2.0 and available on GitHub. Local mode does not require an account or API key. Packaging, features, and distribution may evolve over time."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How is this different from Google Assistant?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Google Assistant works with a limited set of Google-integrated apps and needs internet. PokeClaw controls ANY app on your phone through Accessibility Services and works completely offline. It reads the actual UI elements on screen and figures out the taps itself."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does it work offline?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. After the one-time model download, Local mode runs on your device. Some features can also use optional cloud models when you enable them."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is my data safe?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "In Local mode, model execution stays on your device. If you enable cloud models, requests go to the provider you configure. The public build is open-source, so you can inspect how it works."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use cloud models too?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. PokeClaw supports any OpenAI-compatible API (GPT-4o, Claude, Gemini, etc). Bring your own API key in Settings. Cloud mode is smarter for complex tasks. You can switch between local and cloud mid-conversation."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Samsung says it's malware?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "That's a common sideloading warning. Samsung flags many APKs installed outside the Play Store. The current public build is distributed as a direct APK and source is available on GitHub for inspection."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface1: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #484f58;
+      --accent: #f0622e;
+      --accent-hover: #d4541f;
+      --accent-glow: rgba(240, 98, 46, 0.15);
+      --green: #3fb950;
+      --blue: #388bfd;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: sticky; top: 0; z-index: 100; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(13, 17, 23, 0.85);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-brand {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px;
+      color: var(--text-primary); text-decoration: none;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-actions { display: flex; align-items: center; gap: 10px; }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 6px;
+      font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500;
+      text-decoration: none; cursor: pointer; transition: all 0.15s ease; white-space: nowrap;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #f0622e, #c94a1a);
+      color: #1a0d07; border: none;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #d4541f, #b03d10);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(240, 98, 46, 0.3);
+    }
+    .btn-outline {
+      background: transparent; color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover {
+      background: var(--surface2); border-color: var(--text-secondary);
+      transform: translateY(-1px);
+    }
+    .btn-star {
+      background: transparent; color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .btn-star:hover {
+      background: rgba(255, 208, 0, 0.08); border-color: #ffd000;
+      color: #ffd000; transform: translateY(-1px);
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      position: relative; padding: 100px 24px 60px; text-align: center; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 400px;
+      background: radial-gradient(ellipse 600px 400px at 50% 0%, rgba(240, 98, 46, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-inner { position: relative; max-width: 720px; margin: 0 auto; }
+    .hero h1 {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: 56px; line-height: 1.1; letter-spacing: -0.02em;
+      color: var(--text-primary); margin-bottom: 24px;
+    }
+    .hero-sub {
+      font-size: 18px; color: var(--text-secondary); line-height: 1.7;
+      margin-bottom: 32px; text-align: center;
+    }
+    .hero-actions {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .hero-actions .btn { padding: 12px 24px; font-size: 15px; }
+    .hero-note { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
+    /* ─── SOCIAL PROOF BAR ─── */
+    .social-proof {
+      display: flex; align-items: center; justify-content: center;
+      gap: 20px; flex-wrap: wrap;
+    }
+    .social-proof img { vertical-align: middle; }
+    .social-proof-text {
+      font-size: 13px; color: var(--text-muted);
+    }
+
+    /* ─── SECTION COMMON ─── */
+    section { padding: 80px 24px; }
+    .section-header { text-align: center; margin-bottom: 48px; }
+    .section-header h2 {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: 32px; color: var(--text-primary); letter-spacing: -0.01em;
+    }
+    .section-header p {
+      font-size: 16px; color: var(--text-secondary); margin-top: 12px; max-width: 600px; margin-left: auto; margin-right: auto;
+    }
+
+    /* ─── HOW IT WORKS ─── */
+    .how-it-works { background: var(--surface1); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .steps-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+      max-width: 900px; margin: 0 auto; text-align: center;
+    }
+    .step-number {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--accent-glow); border: 2px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px;
+      color: var(--accent); margin: 0 auto 16px;
+    }
+    .step-title {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 17px;
+      color: var(--text-primary); margin-bottom: 8px;
+    }
+    .step-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+    /* ─── USE CASE CARDS ─── */
+    .usecases-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+      max-width: 900px; margin: 0 auto;
+    }
+    .usecase-card {
+      background: var(--surface1); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; transition: all 0.2s ease;
+    }
+    .usecase-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(240, 98, 46, 0.2), 0 8px 24px var(--accent-glow);
+    }
+    .usecase-icon { font-size: 28px; margin-bottom: 12px; }
+    .usecase-card h3 {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 17px;
+      color: var(--text-primary); margin-bottom: 8px;
+    }
+    .usecase-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+    .usecase-tag {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      padding: 3px 8px; border-radius: 4px; margin-top: 10px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .tag-local { background: rgba(63, 185, 80, 0.12); color: var(--green); }
+    .tag-cloud { background: rgba(56, 139, 253, 0.12); color: var(--blue); }
+    .tag-both { background: rgba(240, 98, 46, 0.12); color: var(--accent); }
+
+    /* ─── DEMO SECTION ─── */
+    .demo-section { background: var(--surface1); }
+    .demo-inner { max-width: 1100px; margin: 0 auto; }
+    .demo-hardware-note {
+      background: rgba(56, 139, 253, 0.08); border: 1px solid rgba(56, 139, 253, 0.3);
+      border-radius: 8px; padding: 16px 20px; margin-bottom: 40px;
+      font-size: 14px; color: var(--text-secondary); line-height: 1.6; text-align: left;
+    }
+    .demo-hardware-note strong { color: var(--blue); font-weight: 600; }
+    .demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .demo-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+    }
+    .demo-card video { width: 100%; display: block; background: #000; }
+    .demo-card-title {
+      padding: 14px 16px; font-family: 'Space Grotesk', sans-serif;
+      font-weight: 500; font-size: 15px; color: var(--text-primary);
+      border-top: 1px solid var(--border);
+    }
+
+    /* ─── SCREENSHOTS ─── */
+    .screenshots-section { overflow: hidden; }
+    .screenshots-inner { max-width: 1100px; margin: 0 auto; }
+    .screenshots-scroll {
+      display: flex; gap: 16px; overflow-x: auto; padding-bottom: 12px;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    .screenshots-scroll::-webkit-scrollbar { height: 6px; }
+    .screenshots-scroll::-webkit-scrollbar-track { background: transparent; }
+    .screenshots-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .screenshot-card {
+      flex: 0 0 220px; text-decoration: none; display: block;
+      border-radius: 16px; border: 1px solid var(--border);
+      overflow: hidden; transition: all 0.2s ease;
+    }
+    .screenshot-card:hover {
+      border-color: var(--accent); transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(240, 98, 46, 0.15);
+    }
+    .screenshot-card img { width: 100%; display: block; background: var(--surface2); }
+    .screenshot-caption {
+      padding: 10px 12px; font-size: 13px; font-weight: 500;
+      color: var(--text-secondary); background: var(--surface1); text-align: center;
+    }
+
+    /* ─── INTERACTIVE DEMO ─── */
+    .demo-interactive-section { background: var(--surface1); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .demo-interactive-wrap {
+      display: flex; justify-content: center; align-items: center;
+    }
+    .demo-iframe {
+      width: 440px; height: 920px; border: none; border-radius: 16px;
+      background: #080808; overflow: hidden;
+    }
+    @media (max-width: 767px) {
+      .demo-iframe { width: 100%; height: 80vh; border-radius: 8px; }
+    }
+
+    /* ─── TESTIMONIALS ─── */
+    .testimonials-section { background: var(--surface1); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .testimonials-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+      max-width: 1100px; margin: 0 auto;
+    }
+    .testimonial-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px;
+    }
+    .testimonial-text {
+      font-size: 15px; color: var(--text-primary); line-height: 1.6;
+      font-style: italic; margin-bottom: 16px;
+    }
+    .testimonial-author {
+      font-size: 13px; color: var(--text-muted);
+    }
+    .testimonial-source {
+      font-size: 12px; color: var(--accent); font-weight: 500;
+    }
+
+    /* ─── COMPARISON TABLE ─── */
+    .comparison-section { }
+    .comparison-table {
+      max-width: 900px; margin: 0 auto;
+      border-collapse: collapse; width: 100%;
+    }
+    .comparison-table th, .comparison-table td {
+      padding: 14px 16px; text-align: center;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .comparison-table th {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      color: var(--text-primary); background: var(--surface1);
+      position: sticky; top: 56px;
+    }
+    .comparison-table th:first-child, .comparison-table td:first-child {
+      text-align: left; font-weight: 500; color: var(--text-primary);
+    }
+    .comparison-table td { color: var(--text-secondary); }
+    .comparison-table tr:hover td { background: var(--surface1); }
+    .check { color: var(--green); font-weight: 700; }
+    .cross { color: #f85149; }
+    .highlight-col { background: rgba(240, 98, 46, 0.04); }
+
+    /* ─── STORY ─── */
+    .story-section { }
+    .story-inner {
+      max-width: 700px; margin: 0 auto; text-align: center;
+    }
+    .story-inner p {
+      font-size: 16px; color: var(--text-secondary); line-height: 1.8;
+      margin-bottom: 16px; text-align: left;
+    }
+    .story-inner p strong { color: var(--text-primary); }
+    .story-link {
+      color: var(--accent); text-decoration: none; font-weight: 500;
+    }
+    .story-link:hover { text-decoration: underline; }
+
+    /* ─── TECH SPEC STRIP ─── */
+    .tech-strip {
+      background: var(--surface1);
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 60px 24px;
+    }
+    .tech-strip-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+      max-width: 900px; margin: 0 auto; text-align: center;
+    }
+    .tech-stat-number {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 36px;
+      color: var(--accent); display: block; margin-bottom: 8px;
+    }
+    .tech-stat-label {
+      font-size: 13px; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+
+    /* ─── FAQ ─── */
+    .faq-section { }
+    .faq-list { max-width: 700px; margin: 0 auto; }
+    .faq-item {
+      border-bottom: 1px solid var(--border); padding: 20px 0;
+    }
+    .faq-question {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      font-size: 16px; color: var(--text-primary); cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
+      list-style: none; width: 100%;
+    }
+    .faq-question::after { content: '+'; font-size: 20px; color: var(--accent); transition: transform 0.2s; }
+    details[open] .faq-question::after { content: '\2212'; }
+    .faq-answer {
+      font-size: 15px; color: var(--text-secondary); line-height: 1.7;
+      padding-top: 12px;
+    }
+
+    /* ─── FINAL CTA ─── */
+    .final-cta {
+      background: linear-gradient(180deg, var(--bg) 0%, rgba(240, 98, 46, 0.06) 100%);
+      padding: 80px 24px; text-align: center;
+      border-top: 1px solid var(--border);
+    }
+    .final-cta h2 {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: 32px; color: var(--text-primary); margin-bottom: 16px;
+    }
+    .final-cta p {
+      font-size: 16px; color: var(--text-secondary); margin-bottom: 32px;
+      max-width: 500px; margin-left: auto; margin-right: auto;
+    }
+    .final-cta-actions {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    }
+    .final-cta-actions .btn { padding: 14px 28px; font-size: 16px; }
+
+    /* ─── FOOTER ─── */
+    footer { border-top: 1px solid var(--surface2); padding: 28px 24px; }
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-left { font-size: 13px; color: var(--text-muted); }
+    .footer-center { font-size: 13px; color: var(--text-muted); text-align: center; }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a {
+      font-size: 13px; color: var(--text-secondary); text-decoration: none;
+      display: flex; align-items: center; gap: 5px; transition: color 0.15s ease;
+    }
+    .footer-links a:hover { color: var(--accent); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 1023px) {
+      .usecases-grid { grid-template-columns: repeat(2, 1fr); }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .tech-strip-grid { grid-template-columns: repeat(2, 1fr); }
+      .comparison-table { font-size: 13px; }
+      .comparison-table th, .comparison-table td { padding: 10px 8px; }
+    }
+
+    @media (max-width: 767px) {
+      .hero { padding: 64px 16px 50px; }
+      .hero h1 { font-size: 36px; }
+      .hero-sub { font-size: 16px; }
+      nav { padding: 0 16px; }
+      .nav-brand span { display: none; }
+      .steps-grid { grid-template-columns: 1fr; gap: 24px; }
+      .usecases-grid { grid-template-columns: 1fr; }
+      .demo-grid { grid-template-columns: 1fr; }
+      .tech-strip-grid { grid-template-columns: repeat(2, 1fr); }
+      .tech-stat-number { font-size: 28px; }
+      .section-header h2 { font-size: 26px; }
+      .screenshot-card { flex: 0 0 180px; }
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+      .comparison-table { font-size: 12px; }
+      .final-cta h2 { font-size: 26px; }
+    }
+
+    /* ─── LANGUAGE SWITCHER ─── */
+    .lang-bar {
+      background: var(--surface1);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 6px 24px;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .lang-btn {
+      color: var(--text-secondary);
+      background: none;
+      border: none;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      transition: color 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+    .lang-btn:hover {
+      color: var(--text-primary);
+      background: var(--surface2);
+    }
+    .lang-btn.active {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .lang-sep {
+      color: var(--text-muted);
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── NAV ─── -->
+  <nav id="navbar">
+    <a href="#" class="nav-brand">
+      <img src="pokeclaw.png" alt="PokeClaw" style="width:28px;height:28px;border-radius:6px;" /> <span>PokeClaw</span>
+    </a>
+    <div class="nav-actions">
+      <a href="https://github.com/agents-io/PokeClaw/releases/latest" class="btn btn-primary" target="_blank" rel="noopener" data-goatcounter-click="nav-download" data-i18n="nav_download">
+        Download APK
+      </a>
+      <a href="https://github.com/agents-io/PokeClaw" class="btn btn-star" target="_blank" rel="noopener" data-goatcounter-click="nav-star" data-i18n="nav_star">
+        &#11088; Star on GitHub
+      </a>
+    </div>
+  </nav>
+
+  <!-- ─── LANGUAGE SWITCHER ─── -->
+  <div class="lang-bar">
+    <button class="lang-btn active" data-lang="en" onclick="switchLang('en')">EN</button>
+    <span class="lang-sep">|</span>
+    <button class="lang-btn" data-lang="hi" onclick="switchLang('hi')">&#2361;&#2367;&#2344;&#2381;&#2342;&#2368;</button>
+    <span class="lang-sep">|</span>
+    <button class="lang-btn" data-lang="ja" onclick="switchLang('ja')">&#26085;&#26412;&#35486;</button>
+    <span class="lang-sep">|</span>
+    <button class="lang-btn" data-lang="de" onclick="switchLang('de')">Deutsch</button>
+    <span class="lang-sep">|</span>
+    <button class="lang-btn" data-lang="zh" onclick="switchLang('zh')">&#32321;&#20013;</button>
+  </div>
+
+  <!-- ─── HERO ─── -->
+  <div class="hero">
+    <div class="hero-inner">
+      <h1 data-i18n="hero_title">Your Phone. Your AI.<br>No Cloud Required.</h1>
+      <p class="hero-sub" data-i18n="hero_sub">
+        AI that can auto-reply to WhatsApp, search YouTube, open email, and handle phone tasks. Run it locally on your phone, or connect optional cloud models for harder tasks.
+      </p>
+      <div class="hero-actions">
+        <a href="https://github.com/agents-io/PokeClaw/releases/latest" class="btn btn-primary" target="_blank" rel="noopener" data-goatcounter-click="hero-download" data-i18n="hero_download">
+          Download APK
+        </a>
+        <a href="https://github.com/agents-io/PokeClaw" class="btn btn-star" target="_blank" rel="noopener" data-goatcounter-click="hero-star" data-i18n="hero_star">
+          &#11088; Star on GitHub
+        </a>
+      </div>
+      <p class="hero-note" data-i18n="hero_note">Apache 2.0 &bull; Direct APK &bull; Android 9+ &bull; Local mode available</p>
+      <div class="social-proof">
+        <a href="https://github.com/agents-io/PokeClaw" target="_blank" rel="noopener">
+          <img src="https://img.shields.io/github/stars/agents-io/PokeClaw?style=social" alt="GitHub stars" />
+        </a>
+        <span class="social-proof-text" data-i18n="social_proof">335 upvotes on r/LocalLLaMA</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── INTERACTIVE DEMO ─── -->
+  <section class="demo-interactive-section">
+    <div class="section-header">
+      <h2 data-i18n="demo_interactive_title">Try the App &mdash; No Download Needed</h2>
+      <p data-i18n="demo_interactive_sub">Click through the real UI. This is what PokeClaw looks like on your phone.</p>
+    </div>
+    <div class="demo-interactive-wrap">
+      <iframe src="demo.html" class="demo-iframe" title="PokeClaw interactive UI demo" loading="lazy" sandbox="allow-scripts"></iframe>
+    </div>
+    <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--text-muted);" data-i18n="demo_interactive_hint">Interactive prototype &mdash; tap buttons, switch tabs, explore screens</p>
+  </section>
+
+  <!-- ─── DEMO VIDEOS ─── -->
+  <section class="demo-section">
+    <div class="demo-inner">
+      <div class="section-header">
+        <h2 data-i18n="demo_video_title">See Gemma 4 Control a Phone</h2>
+      </div>
+      <div class="demo-hardware-note" data-i18n="demo_hardware_note">
+        <strong>Note:</strong> These demos were recorded on a CPU-only phone with no GPU acceleration. On phones with GPU (Pixel 8+, Galaxy S24, Dimensity 9200+), performance is significantly faster. First inference warmup is ~45s on CPU, much less on GPU.
+      </div>
+      <div class="demo-grid">
+        <div class="demo-card">
+          <video src="hi-demo.mp4" autoplay muted loop playsinline controls preload="metadata"></video>
+          <div class="demo-card-title" data-i18n="demo_card1_title">Send a WhatsApp Message via AI</div>
+        </div>
+        <div class="demo-card">
+          <video src="monitor-demo.mp4" autoplay muted loop playsinline controls preload="metadata"></video>
+          <div class="demo-card-title" data-i18n="demo_card2_title">Automatic Reply Mode</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── HOW IT WORKS ─── -->
+  <section class="how-it-works">
+    <div class="section-header">
+      <h2 data-i18n="how_title">How It Works</h2>
+    </div>
+    <div class="steps-grid">
+      <div>
+        <div class="step-number">1</div>
+        <div class="step-title" data-i18n="step1_title">Install the APK</div>
+        <p class="step-desc" data-i18n="step1_desc">Install the APK once. Local mode downloads a 2.6 GB model on first launch. No account is needed for Local mode.</p>
+      </div>
+      <div>
+        <div class="step-number">2</div>
+        <div class="step-title" data-i18n="step2_title">Grant Accessibility</div>
+        <p class="step-desc" data-i18n="step2_desc">One permission. PokeClaw reads what's on screen and controls taps, swipes, and typing.</p>
+      </div>
+      <div>
+        <div class="step-number">3</div>
+        <div class="step-title" data-i18n="step3_title">Tell Your Phone What to Do</div>
+        <p class="step-desc" data-i18n="step3_desc">Type in plain English. The AI figures out the taps, opens the right app, and does it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── USE CASES ─── -->
+  <section>
+    <div class="section-header">
+      <h2 data-i18n="usecases_title">What Can It Actually Do</h2>
+      <p data-i18n="usecases_sub">Real tasks, not demos. These work today.</p>
+    </div>
+    <div class="usecases-grid">
+      <div class="usecase-card">
+        <div class="usecase-icon">&#128172;</div>
+        <h3 data-i18n="uc1_title">Auto-Reply on WhatsApp</h3>
+        <p data-i18n="uc1_desc">Monitor a contact's messages and reply automatically using Gemma 4. The AI reads the conversation context, generates a reply, and sends it. All on-device.</p>
+        <span class="usecase-tag tag-local" data-i18n="tag_offline">Works Offline</span>
+      </div>
+      <div class="usecase-card">
+        <div class="usecase-icon">&#128231;</div>
+        <h3 data-i18n="uc2_title">Write and Send Emails</h3>
+        <p data-i18n="uc2_desc">"Write an email saying I'll be late today." PokeClaw opens your mail app, fills in the composer, and types your message.</p>
+        <span class="usecase-tag tag-both" data-i18n="tag_both">Local + Cloud</span>
+      </div>
+      <div class="usecase-card">
+        <div class="usecase-icon">&#128269;</div>
+        <h3 data-i18n="uc3_title">Search Anything in Any App</h3>
+        <p data-i18n="uc3_desc">"Search for funny cat videos on YouTube." The AI opens the app, finds the search bar, types your query, and hits search.</p>
+        <span class="usecase-tag tag-both" data-i18n="tag_both2">Local + Cloud</span>
+      </div>
+      <div class="usecase-card">
+        <div class="usecase-icon">&#128241;</div>
+        <h3 data-i18n="uc4_title">Control Any App</h3>
+        <p data-i18n="uc4_desc">Send messages, open settings, navigate tabs, dismiss popups. If you can tap it, PokeClaw can tap it. Uses real Android Accessibility, not screenshots.</p>
+        <span class="usecase-tag tag-both" data-i18n="tag_both3">Local + Cloud</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── TESTIMONIALS ─── -->
+  <section class="testimonials-section">
+    <div class="section-header">
+      <h2 data-i18n="testimonials_title">What People Are Saying</h2>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <p class="testimonial-text">"Using the accessibility service instead of screenshots is the right call. It's way more reliable for knowing what's actually tappable vs just pixels on screen."</p>
+        <p class="testimonial-author">u/Deep_Ad1959</p>
+        <p class="testimonial-source">r/LocalLLaMA</p>
+      </div>
+      <div class="testimonial-card">
+        <p class="testimonial-text">"This is exactly the future of AI agents. Autonomous device control, fully on-device. Local-first AI is becoming the real differentiator."</p>
+        <p class="testimonial-author">u/Efficient_State_9574</p>
+        <p class="testimonial-source">r/LocalLLaMA</p>
+      </div>
+      <div class="testimonial-card">
+        <p class="testimonial-text">"Awesome. Was thinking of replacing my Google Assistant with Gemma and allowing it a set of actions it could do on certain apps. This might be a great base for it!"</p>
+        <p class="testimonial-author">u/Migraine_7</p>
+        <p class="testimonial-source">r/LocalLLaMA</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── COMPARISON TABLE ─── -->
+  <section class="comparison-section">
+    <div class="section-header">
+      <h2 data-i18n="compare_title">Why Local-First Matters</h2>
+      <p data-i18n="compare_sub">PokeClaw combines on-device execution, optional cloud models, and an open-source public build.</p>
+    </div>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th class="highlight-col">PokeClaw</th>
+          <th>DroidRun</th>
+          <th>Google Assistant</th>
+          <th>Tasker</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-i18n="cmp_offline">Works offline</td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td data-i18n="cmp_ai">AI-powered</td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+          <td><span class="check">&#10003;</span></td>
+          <td><span class="check">&#10003;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+        </tr>
+        <tr>
+          <td data-i18n="cmp_anyapp">Controls any app</td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+          <td><span class="check">&#10003;</span></td>
+          <td data-i18n="cmp_limited">Limited</td>
+          <td data-i18n="cmp_limited2">Limited</td>
+        </tr>
+        <tr>
+          <td>Open source</td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+          <td><span class="check">&#10003;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+        </tr>
+        <tr>
+          <td data-i18n="cmp_free">Free</td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+          <td>Freemium</td>
+          <td><span class="check">&#10003;</span></td>
+          <td>$3.99</td>
+        </tr>
+        <tr>
+          <td data-i18n="cmp_noaccount">No account needed</td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td data-i18n="cmp_data">Data stays on device</td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td data-i18n="cmp_natlang">Natural language input</td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+          <td><span class="check">&#10003;</span></td>
+          <td><span class="check">&#10003;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─── TECH SPEC STRIP ─── -->
+  <div class="tech-strip">
+    <div class="tech-strip-grid">
+      <div>
+        <span class="tech-stat-number" id="star-count">411+</span>
+        <span class="tech-stat-label" data-i18n="stat_stars">GitHub Stars</span>
+      </div>
+      <div>
+        <span class="tech-stat-number" id="fork-count">55+</span>
+        <span class="tech-stat-label" data-i18n="stat_forks">Forks</span>
+      </div>
+      <div>
+        <span class="tech-stat-number">100%</span>
+        <span class="tech-stat-label" data-i18n="stat_offline">Offline Capable</span>
+      </div>
+      <div>
+        <span class="tech-stat-number">21</span>
+        <span class="tech-stat-label" data-i18n="stat_tools">Built-in Tools</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── THE STORY ─── -->
+  <section class="story-section">
+    <div class="section-header">
+      <h2 data-i18n="story_title">The Story Behind PokeClaw</h2>
+    </div>
+    <div class="story-inner">
+      <p data-i18n="story_p1">Gemma 4 launched on a Tuesday. By Thursday I had a working app that uses it to control a phone. Two all-nighters, one person, and a lot of Claude Code.</p>
+      <p data-i18n="story_p2">I searched for months before building this. Most open-source phone automation projects I found either depend on cloud LLMs, rely heavily on screenshot vision, or are harder to install and ship. PokeClaw focuses on local-first execution against the live accessibility tree, with optional cloud support when needed.</p>
+      <p data-i18n="story_p3">PokeClaw is a prototype built from scratch by a solo developer. It's not a polished consumer app. If it works on your device, amazing. If it breaks, <a href="https://github.com/agents-io/PokeClaw/issues" class="story-link">issues are welcome</a>.</p>
+      <p data-i18n="story_p4">The entire codebase is open. Read it, fork it, build on it. That's the point.</p>
+    </div>
+  </section>
+
+  <!-- ─── FAQ ─── -->
+  <section class="faq-section">
+    <div class="section-header">
+      <h2 data-i18n="faq_title">Frequently Asked Questions</h2>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item">
+        <summary class="faq-question" data-i18n="faq1_q">What phones are supported?</summary>
+        <p class="faq-answer" data-i18n="faq1_a">Android 9+ with arm64 architecture. The 2B model needs about 4 GB free RAM. Budget phones work but expect ~45 second warmup on CPU. Flagships with ML chips (Pixel 8+, Galaxy S24, Dimensity 9200+) are significantly faster with GPU acceleration.</p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question" data-i18n="faq2_q">Is it really free? What's the catch?</summary>
+        <p class="faq-answer" data-i18n="faq2_a">The current public build is open-source under Apache 2.0 and available on GitHub. Local mode does not require an account or API key. Packaging, hosted services, and commercial features may evolve over time.</p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question" data-i18n="faq3_q">How is this different from Google Assistant?</summary>
+        <p class="faq-answer" data-i18n="faq3_a">Google Assistant works with a limited set of Google-integrated apps and needs internet. PokeClaw controls ANY app on your phone through Accessibility Services and works completely offline. It reads the actual UI elements on screen and figures out the taps itself.</p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question" data-i18n="faq4_q">Does it work offline?</summary>
+        <p class="faq-answer" data-i18n="faq4_a">Yes. Local mode works on-device after the one-time model download. Some features can also use optional cloud models if you enable them.</p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question" data-i18n="faq5_q">Is my data safe?</summary>
+        <p class="faq-answer" data-i18n="faq5_a">In Local mode, model execution stays on your device. If you enable cloud models, requests go to the provider you configure. The source code is available on GitHub for inspection.</p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question" data-i18n="faq6_q">Can I use cloud models too?</summary>
+        <p class="faq-answer" data-i18n="faq6_a">Yes. PokeClaw supports any OpenAI-compatible API (GPT-4o, Claude, Gemini, etc). Bring your own API key in Settings. Cloud mode is smarter for complex tasks. You can switch between local and cloud mid-conversation.</p>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-question" data-i18n="faq7_q">Samsung says it's malware?</summary>
+        <p class="faq-answer" data-i18n="faq7_a">That is a common sideloading warning. Samsung often flags unsigned APKs installed outside the Play Store. The current public build is distributed as a direct APK and the source is available on GitHub.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- ─── FINAL CTA ─── -->
+  <div class="final-cta">
+    <h2 data-i18n="cta_title">Ready to Try AI on Your Phone?</h2>
+    <p data-i18n="cta_sub">Download the APK and try the current public build. Local mode needs no account or API key; cloud mode is optional.</p>
+    <div class="final-cta-actions">
+      <a href="https://github.com/agents-io/PokeClaw/releases/latest" class="btn btn-primary" target="_blank" rel="noopener" data-goatcounter-click="final-download" data-i18n="cta_download">
+        Download PokeClaw
+      </a>
+      <a href="https://github.com/agents-io/PokeClaw" class="btn btn-star" target="_blank" rel="noopener" data-goatcounter-click="final-star" data-i18n="cta_star">
+        &#11088; Star on GitHub
+      </a>
+    </div>
+  </div>
+
+  <!-- ─── FOOTER ─── -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-left">&copy; 2026 agents.io &bull; Apache 2.0 License</div>
+      <div class="footer-center">
+        Made with &#10084;&#65039; by <a href="https://github.com/ithiria894" style="color:var(--text-secondary);text-decoration:none;">ithiria894</a>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/agents-io/PokeClaw" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          GitHub
+        </a>
+        <a href="https://github.com/agents-io/PokeClaw/releases/latest" target="_blank" rel="noopener" data-i18n="footer_releases">Releases</a>
+        <a href="https://github.com/agents-io/PokeClaw/blob/main/LICENSE" target="_blank" rel="noopener" data-i18n="footer_license">License</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ─── TRANSLATIONS ───
+    var translations = {
+      en: {
+        nav_download: "Download APK",
+        nav_star: "\u2B50 Star on GitHub",
+        hero_title: "Your Phone. Your AI.<br>No Cloud Required.",
+        hero_sub: "AI that can auto-reply to WhatsApp, search YouTube, open email, and handle phone tasks. Run it locally on your phone, or connect optional cloud models for harder tasks.",
+        hero_download: "Download APK",
+        hero_star: "\u2B50 Star on GitHub",
+        hero_note: "Apache 2.0 \u2022 Direct APK \u2022 Android 9+ \u2022 Local mode available",
+        social_proof: "335 upvotes on r/LocalLLaMA",
+        demo_interactive_title: "Try the App \u2014 No Download Needed",
+        demo_interactive_sub: "Click through the real UI. This is what PokeClaw looks like on your phone.",
+        demo_interactive_hint: "Interactive prototype \u2014 tap buttons, switch tabs, explore screens",
+        demo_video_title: "See Gemma 4 Control a Phone",
+        demo_hardware_note: "<strong>Note:</strong> These demos were recorded on a CPU-only phone with no GPU acceleration. On phones with GPU (Pixel 8+, Galaxy S24, Dimensity 9200+), performance is significantly faster. First inference warmup is ~45s on CPU, much less on GPU.",
+        demo_card1_title: "Send a WhatsApp Message via AI",
+        demo_card2_title: "Automatic Reply Mode",
+        how_title: "How It Works",
+        step1_title: "Install the APK",
+        step1_desc: "Install the APK once. Local mode downloads a 2.6 GB model on first launch. No account is needed for Local mode.",
+        step2_title: "Grant Accessibility",
+        step2_desc: "One permission. PokeClaw reads what\u2019s on screen and controls taps, swipes, and typing.",
+        step3_title: "Tell Your Phone What to Do",
+        step3_desc: "Type in plain English. The AI figures out the taps, opens the right app, and does it.",
+        usecases_title: "What Can It Actually Do",
+        usecases_sub: "Real tasks, not demos. These work today.",
+        uc1_title: "Auto-Reply on WhatsApp",
+        uc1_desc: "Monitor a contact\u2019s messages and reply automatically using Gemma 4. The AI reads the conversation context, generates a reply, and sends it. All on-device.",
+        tag_offline: "Works Offline",
+        uc2_title: "Write and Send Emails",
+        uc2_desc: "\u201CWrite an email saying I\u2019ll be late today.\u201D PokeClaw opens your mail app, fills in the composer, and types your message.",
+        tag_both: "Local + Cloud",
+        uc3_title: "Search Anything in Any App",
+        uc3_desc: "\u201CSearch for funny cat videos on YouTube.\u201D The AI opens the app, finds the search bar, types your query, and hits search.",
+        tag_both2: "Local + Cloud",
+        uc4_title: "Control Any App",
+        uc4_desc: "Send messages, open settings, navigate tabs, dismiss popups. If you can tap it, PokeClaw can tap it. Uses real Android Accessibility, not screenshots.",
+        tag_both3: "Local + Cloud",
+        testimonials_title: "What People Are Saying",
+        compare_title: "Why Local-First Matters",
+        compare_sub: "PokeClaw combines on-device execution, optional cloud models, and an open-source public build.",
+        cmp_offline: "Works offline",
+        cmp_ai: "AI-powered",
+        cmp_anyapp: "Controls any app",
+        cmp_limited: "Limited",
+        cmp_limited2: "Limited",
+        cmp_free: "Free",
+        cmp_noaccount: "No account needed",
+        cmp_data: "Data stays on device",
+        cmp_natlang: "Natural language input",
+        stat_stars: "GitHub Stars",
+        stat_forks: "Forks",
+        stat_offline: "Offline Capable",
+        stat_tools: "Built-in Tools",
+        story_title: "The Story Behind PokeClaw",
+        story_p1: "Gemma 4 launched on a Tuesday. By Thursday I had a working app that uses it to control a phone. Two all-nighters, one person, and a lot of Claude Code.",
+        story_p2: "I searched for months before building this. Most open-source phone automation projects I found either depend on cloud LLMs, rely heavily on screenshot vision, or are harder to install and ship. PokeClaw focuses on local-first execution against the live accessibility tree, with optional cloud support when needed.",
+        story_p3: "PokeClaw is a prototype built from scratch by a solo developer. It\u2019s not a polished consumer app. If it works on your device, amazing. If it breaks, <a href=\"https://github.com/agents-io/PokeClaw/issues\" class=\"story-link\">issues are welcome</a>.",
+        story_p4: "The entire codebase is open. Read it, fork it, build on it. That\u2019s the point.",
+        faq_title: "Frequently Asked Questions",
+        faq1_q: "What phones are supported?",
+        faq1_a: "Android 9+ with arm64 architecture. The 2B model needs about 4 GB free RAM. Budget phones work but expect ~45 second warmup on CPU. Flagships with ML chips (Pixel 8+, Galaxy S24, Dimensity 9200+) are significantly faster with GPU acceleration.",
+        faq2_q: "Is it really free? What\u2019s the catch?",
+        faq2_a: "The current public build is open-source under Apache 2.0 and available on GitHub. Local mode does not require an account or API key. Packaging, hosted services, and commercial features may evolve over time.",
+        faq3_q: "How is this different from Google Assistant?",
+        faq3_a: "Google Assistant works with a limited set of Google-integrated apps and needs internet. PokeClaw controls ANY app on your phone through Accessibility Services and works completely offline. It reads the actual UI elements on screen and figures out the taps itself.",
+        faq4_q: "Does it work offline?",
+        faq4_a: "Yes. Local mode works on-device after the one-time model download. Some features can also use optional cloud models if you enable them.",
+        faq5_q: "Is my data safe?",
+        faq5_a: "In Local mode, model execution stays on your device. If you enable cloud models, requests go to the provider you configure. The source code is available on GitHub for inspection.",
+        faq6_q: "Can I use cloud models too?",
+        faq6_a: "Yes. PokeClaw supports any OpenAI-compatible API (GPT-4o, Claude, Gemini, etc). Bring your own API key in Settings. Cloud mode is smarter for complex tasks. You can switch between local and cloud mid-conversation.",
+        faq7_q: "Samsung says it\u2019s malware?",
+        faq7_a: "That is a common sideloading warning. Samsung often flags unsigned APKs installed outside the Play Store. The current public build is distributed as a direct APK and the source is available on GitHub.",
+        cta_title: "Ready to Try AI on Your Phone?",
+        cta_sub: "Download the APK and try the current public build. Local mode needs no account or API key; cloud mode is optional.",
+        cta_download: "Download PokeClaw",
+        cta_star: "\u2B50 Star on GitHub",
+        footer_releases: "Releases",
+        footer_license: "License"
+      },
+      hi: {
+        nav_download: "APK \u0921\u093E\u0909\u0928\u0932\u094B\u0921 \u0915\u0930\u0947\u0902",
+        nav_star: "\u2B50 GitHub \u092A\u0930 Star \u0915\u0930\u0947\u0902",
+        hero_title: "\u0906\u092A\u0915\u093E \u092B\u093C\u094B\u0928\u0964 \u0906\u092A\u0915\u093E AI\u0964<br>Cloud \u0915\u0940 \u091C\u093C\u0930\u0942\u0930\u0924 \u0928\u0939\u0940\u0902\u0964",
+        hero_sub: "\u0935\u0939 AI \u091C\u094B WhatsApp auto-reply \u0915\u0930\u0947, YouTube search \u0915\u0930\u0947, email \u0916\u094B\u0932\u0947, aur phone tasks handle \u0915\u0930\u0947\u0964 Aap ise local mode \u092E\u0947\u0902 phone \u092A\u0930 \u091A\u0932\u093E \u0938\u0915\u0924\u0947 \u0939\u0948\u0902, aur harder tasks \u0915\u0947 \u0932\u093F\u090F optional cloud models connect \u0915\u0930 \u0938\u0915\u0924\u0947 \u0939\u0948\u0902\u0964",
+        hero_download: "APK \u0921\u093E\u0909\u0928\u0932\u094B\u0921 \u0915\u0930\u0947\u0902",
+        hero_star: "\u2B50 GitHub \u092A\u0930 Star \u0915\u0930\u0947\u0902",
+        hero_note: "Apache 2.0 \u2022 Direct APK \u2022 Android 9+ \u2022 Local mode available",
+        social_proof: "r/LocalLLaMA \u092A\u0930 335 upvotes",
+        demo_interactive_title: "App \u0906\u091C\u093C\u092E\u093E\u090F\u0902 \u2014 Download \u0915\u0940 \u091C\u093C\u0930\u0942\u0930\u0924 \u0928\u0939\u0940\u0902",
+        demo_interactive_sub: "\u0905\u0938\u0932\u0940 UI \u0915\u094B click \u0915\u0930\u0915\u0947 \u0926\u0947\u0916\u0947\u0902\u0964 \u092F\u0939\u0940 PokeClaw \u0906\u092A\u0915\u0947 \u092B\u093C\u094B\u0928 \u092A\u0930 \u0926\u093F\u0916\u0924\u093E \u0939\u0948\u0964",
+        demo_interactive_hint: "Interactive prototype \u2014 buttons \u0926\u092C\u093E\u090F\u0902, tabs \u092C\u0926\u0932\u0947\u0902, screens explore \u0915\u0930\u0947\u0902",
+        demo_video_title: "\u0926\u0947\u0916\u0947\u0902 Gemma 4 \u092B\u093C\u094B\u0928 \u0915\u094B \u0915\u0948\u0938\u0947 control \u0915\u0930\u0924\u093E \u0939\u0948",
+        demo_hardware_note: "<strong>\u0928\u094B\u091F:</strong> \u092F\u0947 demos \u090F\u0915 CPU-only \u092B\u093C\u094B\u0928 \u092A\u0930 record \u0915\u093F\u090F \u0917\u090F \u0939\u0948\u0902 \u091C\u093F\u0938\u092E\u0947\u0902 \u0915\u094B\u0908 GPU acceleration \u0928\u0939\u0940\u0902 \u0925\u093E\u0964 GPU \u0935\u093E\u0932\u0947 \u092B\u093C\u094B\u0928 (Pixel 8+, Galaxy S24, Dimensity 9200+) \u092A\u0930 performance \u0915\u093E\u092B\u093C\u0940 \u0924\u0947\u091C\u093C \u0939\u094B\u0924\u0940 \u0939\u0948\u0964 CPU \u092A\u0930 \u092A\u0939\u0932\u0940 \u092C\u093E\u0930 inference warmup \u092E\u0947\u0902 ~45 \u0938\u0947\u0915\u0902\u0921 \u0932\u0917\u0924\u0947 \u0939\u0948\u0902, GPU \u092A\u0930 \u092C\u0939\u0941\u0924 \u0915\u092E\u0964",
+        demo_card1_title: "AI \u0938\u0947 WhatsApp Message \u092D\u0947\u091C\u0947\u0902",
+        demo_card2_title: "Automatic Reply Mode",
+        how_title: "\u092F\u0939 \u0915\u0948\u0938\u0947 \u0915\u093E\u092E \u0915\u0930\u0924\u093E \u0939\u0948",
+        step1_title: "APK Install \u0915\u0930\u0947\u0902",
+        step1_desc: "APK install \u0915\u0930\u0947\u0902\u0964 Local mode \u092A\u0939\u0932\u0947 launch \u092A\u0930 2.6 GB model download \u0915\u0930\u0947\u0917\u093E\u0964 Local mode \u0915\u0947 \u0932\u093F\u090F account \u0915\u0940 \u091C\u093C\u0930\u0942\u0930\u0924 \u0928\u0939\u0940\u0902 \u0939\u0948\u0964",
+        step2_title: "Accessibility Permission \u0926\u0947\u0902",
+        step2_desc: "\u092C\u0938 \u090F\u0915 permission\u0964 PokeClaw screen \u092A\u0930 \u091C\u094B \u0926\u093F\u0916\u0924\u093E \u0939\u0948 \u0935\u094B \u092A\u0922\u093C\u0924\u093E \u0939\u0948 \u0914\u0930 taps, swipes, typing control \u0915\u0930\u0924\u093E \u0939\u0948\u0964",
+        step3_title: "\u092B\u093C\u094B\u0928 \u0915\u094B \u092C\u0924\u093E\u090F\u0902 \u0915\u094D\u092F\u093E \u0915\u0930\u0928\u093E \u0939\u0948",
+        step3_desc: "\u0938\u0940\u0927\u0940 \u0939\u093F\u0902\u0926\u0940 \u092F\u093E \u0905\u0902\u0917\u094D\u0930\u0947\u091C\u093C\u0940 \u092E\u0947\u0902 \u0932\u093F\u0916\u0947\u0902\u0964 AI \u0916\u0941\u0926 \u0938\u092E\u091D\u0947\u0917\u093E, \u0938\u0939\u0940 app \u0916\u094B\u0932\u0947\u0917\u093E, \u0914\u0930 \u0915\u093E\u092E \u0915\u0930 \u0926\u0947\u0917\u093E\u0964",
+        usecases_title: "\u0905\u0938\u0932 \u092E\u0947\u0902 \u0915\u094D\u092F\u093E-\u0915\u094D\u092F\u093E \u0915\u0930 \u0938\u0915\u0924\u093E \u0939\u0948",
+        usecases_sub: "Real tasks, demos \u0928\u0939\u0940\u0902\u0964 \u092F\u0947 \u0938\u092C \u0906\u091C \u0939\u0940 \u0915\u093E\u092E \u0915\u0930\u0924\u093E \u0939\u0948\u0964",
+        uc1_title: "WhatsApp \u092A\u0930 Auto-Reply",
+        uc1_desc: "\u0915\u093F\u0938\u0940 contact \u0915\u0947 messages monitor \u0915\u0930\u0947\u0902 \u0914\u0930 Gemma 4 \u0938\u0947 automatically reply \u0915\u0930\u0935\u093E\u090F\u0902\u0964 AI \u092C\u093E\u0924\u091A\u0940\u0924 \u0915\u093E context \u092A\u0922\u093C\u0924\u093E \u0939\u0948, reply \u092C\u0928\u093E\u0924\u093E \u0939\u0948, \u0914\u0930 \u092D\u0947\u091C \u0926\u0947\u0924\u093E \u0939\u0948\u0964 \u0938\u092C on-device\u0964",
+        tag_offline: "Offline \u0915\u093E\u092E \u0915\u0930\u0924\u093E \u0939\u0948",
+        uc2_title: "Email \u0932\u093F\u0916\u0947\u0902 \u0914\u0930 \u092D\u0947\u091C\u0947\u0902",
+        uc2_desc: "\u201C\u090F\u0915 email \u0932\u093F\u0916\u094B \u0915\u093F \u0906\u091C \u092E\u0941\u091D\u0947 \u0926\u0947\u0930 \u0939\u094B \u091C\u093E\u090F\u0917\u0940\u0964\u201D PokeClaw mail app \u0916\u094B\u0932\u0947\u0917\u093E, composer fill \u0915\u0930\u0947\u0917\u093E, \u0914\u0930 message type \u0915\u0930 \u0926\u0947\u0917\u093E\u0964",
+        tag_both: "Local + Cloud",
+        uc3_title: "\u0915\u093F\u0938\u0940 \u092D\u0940 App \u092E\u0947\u0902 Search \u0915\u0930\u0947\u0902",
+        uc3_desc: "\u201CYouTube \u092A\u0930 funny cat videos search \u0915\u0930\u094B\u0964\u201D AI app \u0916\u094B\u0932\u0947\u0917\u093E, search bar \u0922\u0942\u0902\u0922\u0947\u0917\u093E, query type \u0915\u0930\u0947\u0917\u093E, \u0914\u0930 search \u0915\u0930 \u0926\u0947\u0917\u093E\u0964",
+        tag_both2: "Local + Cloud",
+        uc4_title: "\u0915\u094B\u0908 \u092D\u0940 App Control \u0915\u0930\u0947\u0902",
+        uc4_desc: "Messages \u092D\u0947\u091C\u0947\u0902, settings \u0916\u094B\u0932\u0947\u0902, tabs navigate \u0915\u0930\u0947\u0902, popups dismiss \u0915\u0930\u0947\u0902\u0964 \u091C\u094B \u0906\u092A tap \u0915\u0930 \u0938\u0915\u0924\u0947 \u0939\u0948\u0902, PokeClaw \u092D\u0940 \u0915\u0930 \u0938\u0915\u0924\u093E \u0939\u0948\u0964 Real Android Accessibility use \u0939\u094B\u0924\u0940 \u0939\u0948, screenshots \u0928\u0939\u0940\u0902\u0964",
+        tag_both3: "Local + Cloud",
+        testimonials_title: "\u0932\u094B\u0917 \u0915\u094D\u092F\u093E \u0915\u0939 \u0930\u0939\u0947 \u0939\u0948\u0902",
+        compare_title: "Local-First \u0915\u094D\u092F\u094B\u0902 matter \u0915\u0930\u0924\u093E \u0939\u0948",
+        compare_sub: "PokeClaw on-device execution, optional cloud models, aur open-source public build \u0915\u094B combine \u0915\u0930\u0924\u093E \u0939\u0948\u0964",
+        cmp_offline: "Offline \u0915\u093E\u092E \u0915\u0930\u0924\u093E \u0939\u0948",
+        cmp_ai: "AI-powered",
+        cmp_anyapp: "\u0915\u094B\u0908 \u092D\u0940 app control \u0915\u0930\u0947",
+        cmp_limited: "\u0938\u0940\u092E\u093F\u0924",
+        cmp_limited2: "\u0938\u0940\u092E\u093F\u0924",
+        cmp_free: "\u092E\u0941\u092B\u093C\u094D\u0924",
+        cmp_noaccount: "\u0915\u094B\u0908 account \u0928\u0939\u0940\u0902 \u091A\u093E\u0939\u093F\u090F",
+        cmp_data: "Data device \u092A\u0930 \u0939\u0940 \u0930\u0939\u0924\u093E \u0939\u0948",
+        cmp_natlang: "Natural language input",
+        stat_stars: "GitHub Stars",
+        stat_forks: "Forks",
+        stat_offline: "Offline Capable",
+        stat_tools: "Built-in Tools",
+        story_title: "PokeClaw \u0915\u0940 \u0915\u0939\u093E\u0928\u0940",
+        story_p1: "Gemma 4 \u092E\u0902\u0917\u0932\u0935\u093E\u0930 \u0915\u094B launch \u0939\u0941\u0906\u0964 \u0917\u0941\u0930\u0941\u0935\u093E\u0930 \u0924\u0915 \u092E\u0947\u0930\u0947 \u092A\u093E\u0938 \u090F\u0915 working app \u0925\u093E \u091C\u094B \u0909\u0938\u0938\u0947 \u092B\u093C\u094B\u0928 control \u0915\u0930\u0924\u093E \u0925\u093E\u0964 \u0926\u094B \u0930\u093E\u0924\u0947\u0902 \u091C\u093E\u0917\u0915\u0930, \u090F\u0915 \u0905\u0915\u0947\u0932\u093E developer, \u0914\u0930 \u092D\u0930\u092A\u0942\u0930 Claude Code\u0964",
+        story_p2: "\u092C\u0928\u093E\u0928\u0947 \u0938\u0947 \u092A\u0939\u0932\u0947 \u092E\u0948\u0902\u0928\u0947 \u092E\u0939\u0940\u0928\u094B\u0902 \u0924\u0915 research \u0915\u0940\u0964 \u091C\u094D\u092F\u093E\u0926\u093E\u0924\u0930 open-source phone automation projects ya to cloud LLM \u092A\u0930 depend \u0915\u0930\u0924\u0947 \u0925\u0947, ya screenshot vision \u092A\u0930 heavy \u0925\u0947, ya install \u0914\u0930 ship \u0915\u0930\u0928\u0947 \u092E\u0947\u0902 \u092E\u0941\u0936\u094D\u0915\u093F\u0932 \u0925\u0947\u0964 PokeClaw local-first execution \u092A\u0930 focus \u0915\u0930\u0924\u093E \u0939\u0948, live accessibility tree \u0915\u0947 \u0938\u093E\u0925, aur zarurat padne par optional cloud support bhi deta hai.",
+        story_p3: "PokeClaw \u090F\u0915 \u0905\u0915\u0947\u0932\u0947 developer \u0915\u093E \u092C\u0928\u093E\u092F\u093E prototype \u0939\u0948\u0964 \u092F\u0939 polished consumer app \u0928\u0939\u0940\u0902 \u0939\u0948\u0964 \u0906\u092A\u0915\u0947 device \u092A\u0930 \u0915\u093E\u092E \u0915\u0930\u0947 \u0924\u094B \u092C\u0922\u093C\u093F\u092F\u093E\u0964 \u091F\u0942\u091F\u0947 \u0924\u094B <a href=\"https://github.com/agents-io/PokeClaw/issues\" class=\"story-link\">issues welcome \u0939\u0948\u0902</a>\u0964",
+        story_p4: "\u092A\u0942\u0930\u093E codebase open \u0939\u0948\u0964 \u092A\u0922\u093C\u0947\u0902, fork \u0915\u0930\u0947\u0902, \u0907\u0938\u0915\u0947 \u090A\u092A\u0930 \u092C\u0928\u093E\u090F\u0902\u0964 \u092F\u0939\u0940 \u092E\u0915\u0938\u0926 \u0939\u0948\u0964",
+        faq_title: "\u0905\u0915\u094D\u0938\u0930 \u092A\u0942\u091B\u0947 \u091C\u093E\u0928\u0947 \u0935\u093E\u0932\u0947 \u0938\u0935\u093E\u0932",
+        faq1_q: "\u0915\u094C\u0928 \u0938\u0947 \u092B\u093C\u094B\u0928 support \u0939\u094B\u0924\u0947 \u0939\u0948\u0902?",
+        faq1_a: "Android 9+ \u0914\u0930 arm64 architecture\u0964 2B model \u0915\u0947 \u0932\u093F\u090F \u0932\u0917\u092D\u0917 4 GB free RAM \u091A\u093E\u0939\u093F\u090F\u0964 Budget phones \u092A\u0930 \u091A\u0932\u0947\u0917\u093E \u092A\u0930 CPU \u092A\u0930 ~45 \u0938\u0947\u0915\u0902\u0921 warmup \u0906\u090F\u0917\u093E\u0964 ML chip \u0935\u093E\u0932\u0947 flagship (Pixel 8+, Galaxy S24, Dimensity 9200+) GPU acceleration \u0938\u0947 \u0915\u093E\u092B\u093C\u0940 \u0924\u0947\u091C\u093C \u0939\u094B\u0924\u0947 \u0939\u0948\u0902\u0964",
+        faq2_q: "\u0915\u094D\u092F\u093E \u0938\u091A \u092E\u0947\u0902 \u092E\u0941\u092B\u093C\u094D\u0924 \u0939\u0948? \u0915\u094B\u0908 hidden catch?",
+        faq2_a: "Current public build Apache 2.0 \u0915\u0947 under open-source \u0939\u0948 aur GitHub \u092A\u0930 available \u0939\u0948\u0964 Local mode \u0915\u0947 \u0932\u093F\u090F account ya API key \u0915\u0940 \u091C\u093C\u0930\u0942\u0930\u0924 \u0928\u0939\u0940\u0902 \u0939\u0948\u0964 Packaging, hosted services, aur commercial features \u0906\u0917\u0947 \u091C\u093E\u0915\u0930 badal \u0938\u0915\u0924\u0947 \u0939\u0948\u0902\u0964",
+        faq3_q: "Google Assistant \u0938\u0947 \u092F\u0939 \u0905\u0932\u0917 \u0915\u0948\u0938\u0947 \u0939\u0948?",
+        faq3_a: "Google Assistant \u0938\u093F\u0930\u094D\u092B\u093C \u0915\u0941\u091B Google-integrated apps \u0924\u0915 \u0915\u093E\u092E \u0915\u0930\u0924\u093E \u0939\u0948 \u0914\u0930 internet \u091A\u093E\u0939\u093F\u090F\u0964 PokeClaw Accessibility Services \u0938\u0947 \u0906\u092A\u0915\u0947 \u092B\u093C\u094B\u0928 \u0915\u093E \u0915\u094B\u0908 \u092D\u0940 app control \u0915\u0930\u0924\u093E \u0939\u0948 \u0914\u0930 \u092A\u0942\u0930\u0940 \u0924\u0930\u0939 offline \u0915\u093E\u092E \u0915\u0930\u0924\u093E \u0939\u0948\u0964 \u092F\u0939 screen \u092A\u0930 actual UI elements \u092A\u0922\u093C\u0924\u093E \u0939\u0948 \u0914\u0930 \u0916\u0941\u0926 taps decide \u0915\u0930\u0924\u093E \u0939\u0948\u0964",
+        faq4_q: "\u0915\u094D\u092F\u093E offline \u0915\u093E\u092E \u0915\u0930\u0924\u093E \u0939\u0948?",
+        faq4_a: "Haan. Local mode one-time model download \u0915\u0947 \u092C\u093E\u0926 device \u092A\u0930 chalta hai. Agar aap cloud models enable karte hain to kuch features cloud bhi use kar sakte hain.",
+        faq5_q: "\u092E\u0947\u0930\u093E data safe \u0939\u0948?",
+        faq5_a: "Local mode \u092E\u0947\u0902 model execution aapke device \u092A\u0930 rehta hai. Agar aap cloud models enable karte hain, requests us provider \u0915\u094B jati hain jo aap configure karte hain. Source code GitHub \u092A\u0930 available \u0939\u0948.",
+        faq6_q: "\u0915\u094D\u092F\u093E cloud models \u092D\u0940 use \u0915\u0930 \u0938\u0915\u0924\u0947 \u0939\u0948\u0902?",
+        faq6_a: "\u0939\u093E\u0902\u0964 PokeClaw \u0915\u093F\u0938\u0940 \u092D\u0940 OpenAI-compatible API (GPT-4o, Claude, Gemini, \u0906\u0926\u093F) \u0915\u094B support \u0915\u0930\u0924\u093E \u0939\u0948\u0964 Settings \u092E\u0947\u0902 \u0905\u092A\u0928\u0940 API key \u0921\u093E\u0932\u0947\u0902\u0964 Complex tasks \u0915\u0947 \u0932\u093F\u090F cloud mode \u091C\u093C\u094D\u092F\u093E\u0926\u093E smart \u0939\u0948\u0964 Local \u0914\u0930 cloud \u0915\u0947 \u092C\u0940\u091A \u092C\u093E\u0924\u091A\u0940\u0924 \u0915\u0947 \u092C\u0940\u091A \u092E\u0947\u0902 \u092D\u0940 switch \u0915\u0930 \u0938\u0915\u0924\u0947 \u0939\u0948\u0902\u0964",
+        faq7_q: "Samsung \u0915\u0939 \u0930\u0939\u093E \u0939\u0948 \u092F\u0939 malware \u0939\u0948?",
+        faq7_a: "Yeh sideloading warning ka common false positive hai. Samsung Play Store ke bahar install hue unsigned APKs ko aksar flag karta hai. Current public build direct APK ke roop mein diya gaya hai aur source GitHub par available hai.",
+        cta_title: "\u0905\u092A\u0928\u0947 \u092B\u093C\u094B\u0928 \u092A\u0930 AI \u0906\u091C\u093C\u092E\u093E\u0928\u0947 \u0915\u0947 \u0932\u093F\u090F \u0924\u0948\u092F\u093E\u0930 \u0939\u0948\u0902?",
+        cta_sub: "APK download karke current public build try \u0915\u0930\u0947\u0902\u0964 Local mode \u0915\u0947 \u0932\u093F\u090F account ya API key \u0915\u0940 zarurat nahin hai; cloud mode optional hai.",
+        cta_download: "PokeClaw Download \u0915\u0930\u0947\u0902",
+        cta_star: "\u2B50 GitHub \u092A\u0930 Star \u0915\u0930\u0947\u0902",
+        footer_releases: "Releases",
+        footer_license: "License"
+      },
+      ja: {
+        nav_download: "APK \u3092\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9",
+        nav_star: "\u2B50 GitHub \u3067\u30B9\u30BF\u30FC\u3092\u4ED8\u3051\u308B",
+        hero_title: "\u3042\u306A\u305F\u306E\u30B9\u30DE\u30DB\u3002\u3042\u306A\u305F\u306EAI\u3002<br>\u30AF\u30E9\u30A6\u30C9\u4E0D\u8981\u3002",
+        hero_sub: "WhatsApp \u306E\u81EA\u52D5\u8FD4\u4FE1\u3001YouTube \u691C\u7D22\u3001\u30E1\u30FC\u30EB\u64CD\u4F5C\u306A\u3069\u306E\u30B9\u30DE\u30DB\u30BF\u30B9\u30AF\u3092 AI \u304C\u624B\u4F1D\u3044\u307E\u3059\u3002\u30ED\u30FC\u30AB\u30EB\u30E2\u30FC\u30C9\u3067\u30B9\u30DE\u30DB\u4E0A\u3067\u5B9F\u884C\u3057\u3001\u96E3\u3057\u3044\u30BF\u30B9\u30AF\u306B\u306F optional cloud models \u3082\u4F7F\u3048\u307E\u3059\u3002",
+        hero_download: "APK \u3092\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9",
+        hero_star: "\u2B50 GitHub \u3067\u30B9\u30BF\u30FC\u3092\u4ED8\u3051\u308B",
+        hero_note: "Apache 2.0 \u2022 APK \u76F4\u63A5\u914D\u5E03 \u2022 Android 9+ \u2022 \u30ED\u30FC\u30AB\u30EB\u30E2\u30FC\u30C9\u3042\u308A",
+        social_proof: "r/LocalLLaMA \u3067 335 \u30A2\u30C3\u30D7\u30DC\u30FC\u30C8",
+        demo_interactive_title: "\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u4E0D\u8981\u3067\u30A2\u30D7\u30EA\u3092\u8A66\u3059",
+        demo_interactive_sub: "\u5B9F\u969B\u306E UI \u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u4F53\u9A13\u3067\u304D\u307E\u3059\u3002\u3053\u308C\u304C\u30B9\u30DE\u30DB\u4E0A\u306E PokeClaw \u306E\u753B\u9762\u3067\u3059\u3002",
+        demo_interactive_hint: "\u30A4\u30F3\u30BF\u30E9\u30AF\u30C6\u30A3\u30D6\u30D7\u30ED\u30C8\u30BF\u30A4\u30D7 \u2014 \u30DC\u30BF\u30F3\u3092\u30BF\u30C3\u30D7\u3057\u3066\u30BF\u30D6\u3092\u5207\u308A\u66FF\u3048\u3001\u5404\u753B\u9762\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059",
+        demo_video_title: "Gemma 4 \u304C\u30B9\u30DE\u30DB\u3092\u64CD\u4F5C\u3059\u308B\u69D8\u5B50",
+        demo_hardware_note: "<strong>\u6CE8\u610F\uFF1A</strong>\u3053\u306E\u30C7\u30E2\u306F GPU \u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306A\u3057\u306E CPU \u306E\u307F\u306E\u30B9\u30DE\u30DB\u3067\u9332\u753B\u3055\u308C\u307E\u3057\u305F\u3002GPU \u642D\u8F09\u30B9\u30DE\u30DB\uFF08Pixel 8+\u3001Galaxy S24\u3001Dimensity 9200+\uFF09\u3067\u306F\u52D5\u4F5C\u304C\u5927\u5E45\u306B\u901F\u304F\u306A\u308A\u307E\u3059\u3002CPU \u3067\u306E\u6700\u521D\u306E\u63A8\u8AD6\u30A6\u30A9\u30FC\u30E0\u30A2\u30C3\u30D7\u306F\u7D04 45 \u79D2\u304B\u304B\u308A\u307E\u3059\u304C\u3001GPU \u3067\u306F\u3082\u3063\u3068\u77ED\u304F\u306A\u308A\u307E\u3059\u3002",
+        demo_card1_title: "AI \u7D4C\u7531\u3067 WhatsApp \u30E1\u30C3\u30BB\u30FC\u30B8\u3092\u9001\u4FE1",
+        demo_card2_title: "\u81EA\u52D5\u8FD4\u4FE1\u30E2\u30FC\u30C9",
+        how_title: "\u4F7F\u3044\u65B9",
+        step1_title: "APK \u3092\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB",
+        step1_desc: "APK \u3092\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u3059\u308B\u3068\u3001Local mode \u3067\u306F\u521D\u56DE\u8D77\u52D5\u6642\u306B 2.6 GB \u306E\u30E2\u30C7\u30EB\u3092\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u3057\u307E\u3059\u3002Local mode \u306B\u30A2\u30AB\u30A6\u30F3\u30C8\u306F\u5FC5\u8981\u3042\u308A\u307E\u305B\u3093\u3002",
+        step2_title: "\u30A2\u30AF\u30BB\u30B7\u30D3\u30EA\u30C6\u30A3\u3092\u8A31\u53EF",
+        step2_desc: "\u5FC5\u8981\u306A\u6A29\u9650\u306F\u4E00\u3064\u3060\u3051\u3002PokeClaw \u306F\u753B\u9762\u306E\u5185\u5BB9\u3092\u8AAD\u307F\u53D6\u308A\u3001\u30BF\u30C3\u30D7\u30FB\u30B9\u30EF\u30A4\u30D7\u30FB\u6587\u5B57\u5165\u529B\u3092\u884C\u3044\u307E\u3059\u3002",
+        step3_title: "\u30B9\u30DE\u30DB\u306B\u6307\u793A\u3092\u51FA\u3059",
+        step3_desc: "\u65E5\u672C\u8A9E\u3067\u8A71\u3057\u304B\u3051\u308B\u3060\u3051\u3002AI \u304C\u30BF\u30C3\u30D7\u64CD\u4F5C\u3092\u8003\u3048\u3001\u9069\u5207\u306A\u30A2\u30D7\u30EA\u3092\u958B\u304D\u3001\u5B9F\u884C\u3057\u307E\u3059\u3002",
+        usecases_title: "\u5B9F\u969B\u306B\u3067\u304D\u308B\u3053\u3068",
+        usecases_sub: "\u30C7\u30E2\u3067\u306F\u306A\u304F\u3001\u5B9F\u969B\u306E\u30BF\u30B9\u30AF\u3067\u3059\u3002\u4ECA\u65E5\u304B\u3089\u4F7F\u3048\u307E\u3059\u3002",
+        uc1_title: "WhatsApp \u306E\u81EA\u52D5\u8FD4\u4FE1",
+        uc1_desc: "\u9023\u7D61\u5148\u306E\u30E1\u30C3\u30BB\u30FC\u30B8\u3092\u76E3\u8996\u3057\u3066 Gemma 4 \u3067\u81EA\u52D5\u8FD4\u4FE1\u3057\u307E\u3059\u3002AI \u304C\u4F1A\u8A71\u306E\u6587\u8108\u3092\u8AAD\u307F\u53D6\u308A\u3001\u8FD4\u4FE1\u6587\u3092\u751F\u6210\u3057\u3066\u9001\u4FE1\u3057\u307E\u3059\u3002\u3059\u3079\u3066\u30C7\u30D0\u30A4\u30B9\u4E0A\u3067\u5B8C\u7D50\u3002",
+        tag_offline: "\u30AA\u30D5\u30E9\u30A4\u30F3\u52D5\u4F5C",
+        uc2_title: "\u30E1\u30FC\u30EB\u306E\u4F5C\u6210\u3068\u9001\u4FE1",
+        uc2_desc: "\u300C\u4ECA\u65E5\u306F\u9045\u308C\u308B\u3068\u4F1D\u3048\u308B\u30E1\u30FC\u30EB\u3092\u66F8\u3044\u3066\u300D\u3068\u6307\u793A\u3059\u308B\u3060\u3051\u3002PokeClaw \u304C\u30E1\u30FC\u30EB\u30A2\u30D7\u30EA\u3092\u958B\u3044\u3066\u3001\u672C\u6587\u3092\u5165\u529B\u3057\u9001\u4FE1\u3057\u307E\u3059\u3002",
+        tag_both: "\u30ED\u30FC\u30AB\u30EB + \u30AF\u30E9\u30A6\u30C9",
+        uc3_title: "\u3069\u306E\u30A2\u30D7\u30EA\u3067\u3082\u691C\u7D22",
+        uc3_desc: "\u300CYouTube \u3067\u9762\u767D\u3044\u732B\u306E\u52D5\u753B\u3092\u691C\u7D22\u3057\u3066\u300D\u3068\u8A00\u3048\u3070\u3001AI \u304C\u30A2\u30D7\u30EA\u3092\u958B\u3044\u3066\u691C\u7D22\u30D0\u30FC\u3092\u898B\u3064\u3051\u3001\u30AF\u30A8\u30EA\u3092\u5165\u529B\u3057\u3066\u691C\u7D22\u3057\u307E\u3059\u3002",
+        tag_both2: "\u30ED\u30FC\u30AB\u30EB + \u30AF\u30E9\u30A6\u30C9",
+        uc4_title: "\u3042\u3089\u3086\u308B\u30A2\u30D7\u30EA\u3092\u64CD\u4F5C",
+        uc4_desc: "\u30E1\u30C3\u30BB\u30FC\u30B8\u9001\u4FE1\u3001\u8A2D\u5B9A\u5909\u66F4\u3001\u30BF\u30D6\u5207\u308A\u66FF\u3048\u3001\u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\u9589\u3058\u306A\u3069\u3002\u30BF\u30C3\u30D7\u3067\u304D\u308B\u3082\u306E\u306F\u3059\u3079\u3066 PokeClaw \u304C\u64CD\u4F5C\u3067\u304D\u307E\u3059\u3002\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u3067\u306F\u306A\u304F Android Accessibility \u3092\u4F7F\u7528\u3002",
+        tag_both3: "\u30ED\u30FC\u30AB\u30EB + \u30AF\u30E9\u30A6\u30C9",
+        testimonials_title: "\u30E6\u30FC\u30B6\u30FC\u306E\u58F0",
+        compare_title: "\u30ED\u30FC\u30AB\u30EB\u30D5\u30A1\u30FC\u30B9\u30C8\u304C\u91CD\u8981\u306A\u7406\u7531",
+        compare_sub: "PokeClaw \u306F\u30C7\u30D0\u30A4\u30B9\u4E0A\u3067\u306E\u5B9F\u884C\u3001optional cloud models\u3001open-source \u306E public build \u3092\u7D44\u307F\u5408\u308F\u305B\u3066\u3044\u307E\u3059\u3002",
+        cmp_offline: "\u30AA\u30D5\u30E9\u30A4\u30F3\u52D5\u4F5C",
+        cmp_ai: "AI \u642D\u8F09",
+        cmp_anyapp: "\u3042\u3089\u3086\u308B\u30A2\u30D7\u30EA\u3092\u64CD\u4F5C",
+        cmp_limited: "\u4E00\u90E8\u306E\u307F",
+        cmp_limited2: "\u4E00\u90E8\u306E\u307F",
+        cmp_free: "\u7121\u6599",
+        cmp_noaccount: "\u30A2\u30AB\u30A6\u30F3\u30C8\u4E0D\u8981",
+        cmp_data: "\u30C7\u30FC\u30BF\u306F\u30C7\u30D0\u30A4\u30B9\u306B\u7559\u307E\u308B",
+        cmp_natlang: "\u81EA\u7136\u8A00\u8A9E\u3067\u5165\u529B",
+        stat_stars: "GitHub \u30B9\u30BF\u30FC\u6570",
+        stat_forks: "\u30D5\u30A9\u30FC\u30AF\u6570",
+        stat_offline: "\u30AA\u30D5\u30E9\u30A4\u30F3\u5BFE\u5FDC",
+        stat_tools: "\u5185\u8535\u30C4\u30FC\u30EB\u6570",
+        story_title: "PokeClaw \u304C\u3067\u304D\u308B\u307E\u3067",
+        story_p1: "Gemma 4 \u304C\u706B\u66DC\u65E5\u306B\u30EA\u30EA\u30FC\u30B9\u3055\u308C\u307E\u3057\u305F\u3002\u6728\u66DC\u65E5\u306B\u306F\u3001\u305D\u308C\u3092\u4F7F\u3063\u3066\u30B9\u30DE\u30DB\u3092\u64CD\u4F5C\u3059\u308B\u52D5\u4F5C\u3059\u308B\u30A2\u30D7\u30EA\u304C\u5B8C\u6210\u3057\u3066\u3044\u307E\u3057\u305F\u3002\u4E8C\u6669\u306E\u5FB9\u591C\u3001\u4E00\u4EBA\u306E\u958B\u767A\u8005\u3001\u305D\u3057\u3066\u5927\u91CF\u306E Claude Code \u3067\u3002",
+        story_p2: "\u4F5C\u308B\u524D\u306B\u4F55\u30F6\u6708\u3082\u8ABF\u3079\u7D9A\u3051\u307E\u3057\u305F\u3002\u591A\u304F\u306E open-source \u30B9\u30DE\u30DB\u81EA\u52D5\u5316\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306F cloud LLM \u3078\u306E\u4F9D\u5B58\u304C\u3042\u3063\u305F\u308A\u3001screenshot vision \u306B\u91CD\u304F\u4F9D\u5B58\u3057\u3066\u3044\u305F\u308A\u3001\u5C0E\u5165\u3084\u914D\u5E03\u304C\u96E3\u3057\u304B\u3063\u305F\u308A\u3057\u307E\u3057\u305F\u3002PokeClaw \u306F live accessibility tree \u3092\u4F7F\u3063\u305F local-first execution \u306B\u7126\u70B9\u3092\u5F53\u3066\u3001\u5FC5\u8981\u306A\u3068\u304D\u3060\u3051 optional cloud support \u3092\u8FFD\u52A0\u3067\u304D\u308B\u3088\u3046\u306B\u3057\u3066\u3044\u307E\u3059\u3002",
+        story_p3: "PokeClaw \u306F\u30BD\u30ED\u958B\u767A\u8005\u304C\u30BC\u30ED\u304B\u3089\u4F5C\u3063\u305F\u30D7\u30ED\u30C8\u30BF\u30A4\u30D7\u3067\u3059\u3002\u78E8\u304D\u8FBC\u307E\u308C\u305F\u6D88\u8CBB\u8005\u5411\u3051\u30A2\u30D7\u30EA\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u3042\u306A\u305F\u306E\u30C7\u30D0\u30A4\u30B9\u3067\u52D5\u3051\u3070\u6700\u9AD8\u3067\u3059\u3002\u52D5\u304B\u306A\u3051\u308C\u3070\u3001<a href=\"https://github.com/agents-io/PokeClaw/issues\" class=\"story-link\">Issue \u3092\u6B53\u8FCE\u3057\u307E\u3059</a>\u3002",
+        story_p4: "\u30B3\u30FC\u30C9\u30D9\u30FC\u30B9\u5168\u4F53\u306F\u30AA\u30FC\u30D7\u30F3\u3067\u3059\u3002\u8AAD\u3093\u3067\u3001\u30D5\u30A9\u30FC\u30AF\u3057\u3066\u3001\u305D\u306E\u4E0A\u306B\u69CB\u7BC9\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u305D\u308C\u304C\u3053\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306E\u76EE\u7684\u3067\u3059\u3002",
+        faq_title: "\u3088\u304F\u3042\u308B\u8CEA\u554F",
+        faq1_q: "\u3069\u306E\u30B9\u30DE\u30DB\u306B\u5BFE\u5FDC\u3057\u3066\u3044\u307E\u3059\u304B\uFF1F",
+        faq1_a: "arm64 \u30A2\u30FC\u30AD\u30C6\u30AF\u30C1\u30E3\u306E Android 9 \u4EE5\u964D\u306B\u5BFE\u5FDC\u3057\u3066\u3044\u307E\u3059\u30022B \u30E2\u30C7\u30EB\u306B\u306F\u7D04 4 GB \u306E\u7A7A\u304D RAM \u304C\u5FC5\u8981\u3067\u3059\u3002\u30A8\u30F3\u30C8\u30EA\u30FC\u5411\u3051\u30B9\u30DE\u30DB\u3067\u3082\u52D5\u4F5C\u3057\u307E\u3059\u304C\u3001CPU \u3067\u306F\u7D04 45 \u79D2\u306E\u30A6\u30A9\u30FC\u30E0\u30A2\u30C3\u30D7\u304C\u767A\u751F\u3057\u307E\u3059\u3002ML \u30C1\u30C3\u30D7\u642D\u8F09\u306E\u30D5\u30E9\u30C3\u30B0\u30B7\u30C3\u30D7\uFF08Pixel 8+\u3001Galaxy S24\u3001Dimensity 9200+\uFF09\u306F GPU \u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u3067\u5927\u5E45\u306B\u9AD8\u901F\u5316\u3055\u308C\u307E\u3059\u3002",
+        faq2_q: "\u672C\u5F53\u306B\u7121\u6599\u3067\u3059\u304B\uFF1F\u4F55\u304B\u88CF\u304C\u3042\u308A\u307E\u3059\u304B\uFF1F",
+        faq2_a: "\u73FE\u5728\u306E public build \u306F Apache 2.0 \u306E open-source \u3068\u3057\u3066 GitHub \u3067\u516C\u958B\u3055\u308C\u3066\u3044\u307E\u3059\u3002Local mode \u306B\u30A2\u30AB\u30A6\u30F3\u30C8\u3084 API \u30AD\u30FC\u306F\u5FC5\u8981\u3042\u308A\u307E\u305B\u3093\u3002\u5C06\u6765\u306E packaging\u3001hosted services\u3001commercial features \u306F\u5909\u66F4\u3055\u308C\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002",
+        faq3_q: "Google Assistant \u3068\u4F55\u304C\u9055\u3044\u307E\u3059\u304B\uFF1F",
+        faq3_a: "Google Assistant \u306F Google \u3068\u9023\u643A\u3057\u305F\u9650\u3089\u308C\u305F\u30A2\u30D7\u30EA\u3068\u3057\u304B\u9023\u643A\u3067\u304D\u305A\u3001\u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8\u304C\u5FC5\u8981\u3067\u3059\u3002PokeClaw \u306F\u30A2\u30AF\u30BB\u30B7\u30D3\u30EA\u30C6\u30A3\u30B5\u30FC\u30D3\u30B9\u3092\u901A\u3058\u3066\u30B9\u30DE\u30DB\u4E0A\u306E\u4EFB\u610F\u306E\u30A2\u30D7\u30EA\u3092\u64CD\u4F5C\u3067\u304D\u3001\u5B8C\u5168\u306B\u30AA\u30D5\u30E9\u30A4\u30F3\u3067\u52D5\u4F5C\u3057\u307E\u3059\u3002\u753B\u9762\u4E0A\u306E\u5B9F\u969B\u306E UI \u8981\u7D20\u3092\u8AAD\u307F\u53D6\u308A\u3001\u30BF\u30C3\u30D7\u64CD\u4F5C\u3092\u81EA\u5206\u3067\u5224\u65AD\u3057\u307E\u3059\u3002",
+        faq4_q: "\u30AA\u30D5\u30E9\u30A4\u30F3\u3067\u4F7F\u3048\u307E\u3059\u304B\uFF1F",
+        faq4_a: "\u306F\u3044\u3002Local mode \u306F\u4E00\u5EA6\u30E2\u30C7\u30EB\u3092\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u3059\u308C\u3070\u30C7\u30D0\u30A4\u30B9\u4E0A\u3067\u52D5\u4F5C\u3057\u307E\u3059\u3002cloud models \u3092\u6709\u52B9\u306B\u3057\u305F\u5834\u5408\u306F\u3001\u4E00\u90E8\u306E\u6A5F\u80FD\u3067\u30AF\u30E9\u30A6\u30C9\u3092\u4F7F\u3046\u3053\u3068\u3082\u3042\u308A\u307E\u3059\u3002",
+        faq5_q: "\u30C7\u30FC\u30BF\u306F\u5B89\u5168\u3067\u3059\u304B\uFF1F",
+        faq5_a: "Local mode \u3067\u306F\u30E2\u30C7\u30EB\u5B9F\u884C\u306F\u30C7\u30D0\u30A4\u30B9\u4E0A\u306B\u7559\u307E\u308A\u307E\u3059\u3002cloud models \u3092\u6709\u52B9\u306B\u3057\u305F\u5834\u5408\u306F\u3001\u8A2D\u5B9A\u3057\u305F provider \u3078\u30EA\u30AF\u30A8\u30B9\u30C8\u304C\u9001\u3089\u308C\u307E\u3059\u3002\u30BD\u30FC\u30B9\u30B3\u30FC\u30C9\u306F GitHub \u3067\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002",
+        faq6_q: "\u30AF\u30E9\u30A6\u30C9\u30E2\u30C7\u30EB\u3082\u4F7F\u3048\u307E\u3059\u304B\uFF1F",
+        faq6_a: "\u306F\u3044\u3002PokeClaw \u306F OpenAI \u4E92\u63DB API\uFF08GPT-4o\u3001Claude\u3001Gemini \u306A\u3069\uFF09\u306B\u5BFE\u5FDC\u3057\u3066\u3044\u307E\u3059\u3002\u8A2D\u5B9A\u753B\u9762\u3067\u3054\u81EA\u8EAB\u306E API \u30AD\u30FC\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u8907\u96D1\u306A\u30BF\u30B9\u30AF\u306B\u306F\u30AF\u30E9\u30A6\u30C9\u30E2\u30FC\u30C9\u306E\u65B9\u304C\u8CE2\u304F\u5BFE\u5FDC\u3067\u304D\u307E\u3059\u3002\u4F1A\u8A71\u306E\u9014\u4E2D\u3067\u30ED\u30FC\u30AB\u30EB\u3068\u30AF\u30E9\u30A6\u30C9\u3092\u5207\u308A\u66FF\u3048\u308B\u3053\u3068\u3082\u3067\u304D\u307E\u3059\u3002",
+        faq7_q: "Samsung \u304C\u30DE\u30EB\u30A6\u30A7\u30A2\u3068\u5224\u5B9A\u3059\u308B\u306E\u3067\u3059\u304C\uFF1F",
+        faq7_a: "\u305D\u308C\u306F\u30B5\u30A4\u30C9\u30ED\u30FC\u30C7\u30A3\u30F3\u30B0\u3067\u3088\u304F\u3042\u308B\u8B66\u544A\u3067\u3059\u3002Samsung \u306F Play \u30B9\u30C8\u30A2\u4EE5\u5916\u304B\u3089\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u3055\u308C\u305F\u672A\u7F72\u540D APK \u3092\u983B\u7E41\u306B\u30D5\u30E9\u30B0\u3057\u307E\u3059\u3002\u73FE\u5728\u306E public build \u306F direct APK \u3068\u3057\u3066\u914D\u5E03\u3055\u308C\u3001\u30BD\u30FC\u30B9\u306F GitHub \u3067\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002",
+        cta_title: "\u30B9\u30DE\u30DB\u3067 AI \u3092\u8A66\u3057\u3066\u307F\u307E\u305B\u3093\u304B\uFF1F",
+        cta_sub: "APK \u3092\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u3057\u3066 current public build \u3092\u8A66\u3057\u3066\u307F\u3066\u304F\u3060\u3055\u3044\u3002Local mode \u306B\u306F\u30A2\u30AB\u30A6\u30F3\u30C8\u3084 API \u30AD\u30FC\u306F\u4E0D\u8981\u3067\u3001cloud mode \u306F optional \u3067\u3059\u3002",
+        cta_download: "PokeClaw \u3092\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9",
+        cta_star: "\u2B50 GitHub \u3067\u30B9\u30BF\u30FC\u3092\u4ED8\u3051\u308B",
+        footer_releases: "\u30EA\u30EA\u30FC\u30B9",
+        footer_license: "\u30E9\u30A4\u30BB\u30F3\u30B9"
+      },
+      de: {
+        nav_download: "APK herunterladen",
+        nav_star: "\u2B50 Star auf GitHub",
+        hero_title: "Dein Handy. Deine KI.<br>Keine Cloud n\u00F6tig.",
+        hero_sub: "KI, die WhatsApp automatisch beantwortet, YouTube durchsucht, E-Mails \u00F6ffnet und andere Handy-Aufgaben erledigt. Du kannst sie lokal auf deinem Handy ausf\u00FChren und f\u00FCr schwierigere Aufgaben optional Cloud-Modelle verbinden.",
+        hero_download: "APK herunterladen",
+        hero_star: "\u2B50 Star auf GitHub",
+        hero_note: "Apache 2.0 \u2022 Direktes APK \u2022 Android 9+ \u2022 Lokaler Modus verf\u00FCgbar",
+        social_proof: "335 Upvotes auf r/LocalLLaMA",
+        demo_interactive_title: "App ausprobieren \u2014 kein Download n\u00F6tig",
+        demo_interactive_sub: "Klick dich durch die echte UI. So sieht PokeClaw auf deinem Handy aus.",
+        demo_interactive_hint: "Interaktiver Prototyp \u2014 Buttons tippen, Tabs wechseln, Screens erkunden",
+        demo_video_title: "Gemma 4 steuert ein Handy",
+        demo_hardware_note: "<strong>Hinweis:</strong> Diese Demos wurden auf einem Handy ohne GPU-Beschleunigung aufgenommen, rein auf CPU. Auf Handys mit GPU (Pixel 8+, Galaxy S24, Dimensity 9200+) l\u00E4uft es deutlich schneller. Der erste Inference-Start dauert auf CPU ca. 45 Sekunden, auf GPU deutlich weniger.",
+        demo_card1_title: "WhatsApp-Nachricht per KI senden",
+        demo_card2_title: "Automatischer Antwortmodus",
+        how_title: "So funktioniert es",
+        step1_title: "APK installieren",
+        step1_desc: "APK installieren. Im lokalen Modus wird beim ersten Start ein 2,6-GB-Modell geladen. F\u00FCr den lokalen Modus ist kein Account n\u00F6tig.",
+        step2_title: "Barrierefreiheit erlauben",
+        step2_desc: "Eine Berechtigung. PokeClaw liest, was auf dem Bildschirm steht, und steuert Tippen, Wischen und Eingaben.",
+        step3_title: "Sag deinem Handy, was es tun soll",
+        step3_desc: "Schreib auf Deutsch. Die KI erledigt die Tipper, \u00F6ffnet die richtige App und macht es fertig.",
+        usecases_title: "Was es wirklich kann",
+        usecases_sub: "Echte Aufgaben, keine Showdemos. Das funktioniert heute.",
+        uc1_title: "WhatsApp automatisch beantworten",
+        uc1_desc: "Nachrichten eines Kontakts \u00FCberwachen und automatisch mit Gemma 4 antworten. Die KI liest den Gespr\u00E4chsverlauf, generiert eine Antwort und sendet sie. Alles lokal auf dem Ger\u00E4t.",
+        tag_offline: "Funktioniert offline",
+        uc2_title: "E-Mails schreiben und senden",
+        uc2_desc: "\u201ESchreib eine E-Mail, dass ich heute zu sp\u00E4t komme.\u201C PokeClaw \u00F6ffnet deine Mail-App, f\u00FCllt den Composer aus und tippt deine Nachricht.",
+        tag_both: "Lokal + Cloud",
+        uc3_title: "In jeder App suchen",
+        uc3_desc: "\u201ESuche auf YouTube nach lustigen Katzenvideos.\u201C Die KI \u00F6ffnet die App, findet die Suchleiste, tippt deine Anfrage und startet die Suche.",
+        tag_both2: "Lokal + Cloud",
+        uc4_title: "Jede App steuern",
+        uc4_desc: "Nachrichten senden, Einstellungen \u00F6ffnen, Tabs navigieren, Popups schlie\u00DFen. Wenn du es antippen kannst, kann PokeClaw es antippen. Nutzt echte Android-Barrierefreiheit, keine Screenshots.",
+        tag_both3: "Lokal + Cloud",
+        testimonials_title: "Was andere sagen",
+        compare_title: "Warum Local-First wichtig ist",
+        compare_sub: "PokeClaw kombiniert Ausf\u00FChrung auf dem Ger\u00E4t, optionale Cloud-Modelle und einen Open-Source-Public-Build.",
+        cmp_offline: "Funktioniert offline",
+        cmp_ai: "KI-gesteuert",
+        cmp_anyapp: "Steuert jede App",
+        cmp_limited: "Eingeschr\u00E4nkt",
+        cmp_limited2: "Eingeschr\u00E4nkt",
+        cmp_free: "Kostenlos",
+        cmp_noaccount: "Kein Account n\u00F6tig",
+        cmp_data: "Daten bleiben auf dem Ger\u00E4t",
+        cmp_natlang: "Nat\u00FCrlichsprachliche Eingabe",
+        stat_stars: "GitHub Stars",
+        stat_forks: "Forks",
+        stat_offline: "Offline-f\u00E4hig",
+        stat_tools: "Eingebaute Tools",
+        story_title: "Die Geschichte hinter PokeClaw",
+        story_p1: "Gemma 4 erschien an einem Dienstag. Bis Donnerstag hatte ich eine funktionierende App, die es zur Handysteuerung nutzt. Zwei Nachtschichten, eine Person, viel Claude Code.",
+        story_p2: "Ich habe monatelang recherchiert, bevor ich angefangen habe zu bauen. Viele Open-Source-Projekte zur Handyautomatisierung h\u00E4ngen von Cloud-LLMs ab, verlassen sich stark auf Screenshot-Vision oder sind schwer zu installieren und zu verteilen. PokeClaw fokussiert sich auf lokale Ausf\u00FChrung gegen den live Accessibility-Tree und bietet optional Cloud-Support, wenn er gebraucht wird.",
+        story_p3: "PokeClaw ist ein Prototyp, den ein Solo-Entwickler von Grund auf gebaut hat. Es ist keine ausgefeilte Consumer-App. Wenn es auf deinem Ger\u00E4t funktioniert: super. Wenn es abst\u00FCrzt, sind <a href=\"https://github.com/agents-io/PokeClaw/issues\" class=\"story-link\">Issues willkommen</a>.",
+        story_p4: "Der gesamte Code ist offen. Lesen, forken, drauf aufbauen. Das ist der Punkt.",
+        faq_title: "H\u00E4ufig gestellte Fragen",
+        faq1_q: "Welche Handys werden unterst\u00FCtzt?",
+        faq1_a: "Android 9+ mit arm64-Architektur. Das 2B-Modell braucht ca. 4 GB freien RAM. G\u00FCnstige Handys funktionieren, aber erwarte ca. 45 Sekunden Wartezeit beim ersten Start auf CPU. Flaggschiffe mit ML-Chips (Pixel 8+, Galaxy S24, Dimensity 9200+) sind mit GPU-Beschleunigung deutlich schneller.",
+        faq2_q: "Ist es wirklich kostenlos? Was ist der Haken?",
+        faq2_a: "Der aktuelle Public-Build ist unter Apache 2.0 Open Source und auf GitHub verf\u00FCgbar. F\u00FCr den lokalen Modus brauchst du weder Account noch API-Key. Packaging, gehostete Dienste und kommerzielle Features k\u00F6nnen sich sp\u00E4ter noch \u00E4ndern.",
+        faq3_q: "Was ist der Unterschied zu Google Assistant?",
+        faq3_a: "Google Assistant funktioniert nur mit einer begrenzten Anzahl von Google-integrierten Apps und braucht Internet. PokeClaw steuert JEDE App auf deinem Handy \u00FCber Accessibility Services und funktioniert komplett offline. Es liest die echten UI-Elemente auf dem Bildschirm und findet die Tipper selbst heraus.",
+        faq4_q: "Funktioniert es offline?",
+        faq4_a: "Ja. Der lokale Modus l\u00E4uft nach dem einmaligen Modell-Download auf deinem Ger\u00E4t. Wenn du Cloud-Modelle aktivierst, k\u00F6nnen einzelne Funktionen auch die Cloud verwenden.",
+        faq5_q: "Sind meine Daten sicher?",
+        faq5_a: "Im lokalen Modus bleibt die Modellausf\u00FChrung auf deinem Ger\u00E4t. Wenn du Cloud-Modelle aktivierst, gehen Anfragen an den von dir konfigurierten Anbieter. Der Quellcode ist auf GitHub verf\u00FCgbar.",
+        faq6_q: "Kann ich auch Cloud-Modelle nutzen?",
+        faq6_a: "Ja. PokeClaw unterst\u00FCtzt jede OpenAI-kompatible API (GPT-4o, Claude, Gemini usw.). Trag deinen eigenen API-Key in den Einstellungen ein. Der Cloud-Modus ist bei komplexen Aufgaben leistungsf\u00E4higer. Du kannst mitten im Gespr\u00E4ch zwischen lokal und Cloud wechseln.",
+        faq7_q: "Samsung sagt, es ist Malware?",
+        faq7_a: "Das ist eine typische Sideloading-Warnung. Samsung markiert oft unsignierte APKs, die au\u00DFerhalb des Play Stores installiert werden. Der aktuelle Public-Build wird als direktes APK verteilt, und der Quellcode ist auf GitHub verf\u00FCgbar.",
+        cta_title: "Bereit, KI auf deinem Handy auszuprobieren?",
+        cta_sub: "Lade das APK herunter und probiere den aktuellen Public-Build aus. Im lokalen Modus brauchst du keinen Account und keinen API-Key; Cloud ist optional.",
+        cta_download: "PokeClaw herunterladen",
+        cta_star: "\u2B50 Star auf GitHub",
+        footer_releases: "Releases",
+        footer_license: "Lizenz"
+      },
+      zh: {
+        nav_download: "Download APK",
+        nav_star: "\u2B50 GitHub \u52A0\u661F",
+        hero_title: "\u4F60\u90E8\u624B\u6A5F\u3002\u4F60\u5605 AI\u3002<br>\u5514\u9700\u8981\u96F2\u7AEF\u3002",
+        hero_sub: "AI \u5E6B\u4F60\u81EA\u52D5\u56DE\u8986 WhatsApp\u3001\u641C YouTube\u3001\u958B email\uFF0C\u540C\u57CB\u8655\u7406\u624B\u6A5F\u4EFB\u52D9\u3002\u4F60\u53EF\u4EE5\u7528\u672C\u5730\u6A21\u5F0F\u55BA\u624B\u6A5F\u76F4\u63A5\u8DD1\uFF1B\u9047\u5230\u96E3\u555F\u5605\u4EFB\u52D9\uFF0C\u4EA6\u53EF\u4EE5\u63A5\u99C1 optional cloud models\u3002",
+        hero_download: "Download APK",
+        hero_star: "\u2B50 GitHub \u52A0\u661F",
+        hero_note: "Apache 2.0 \u2022 \u76F4\u63A5 APK \u5B89\u88DD \u2022 Android 9+ \u2022 \u63D0\u4F9B\u672C\u5730\u6A21\u5F0F",
+        social_proof: "r/LocalLLaMA \u7372\u5F97 335 \u500B upvote",
+        demo_interactive_title: "\u76F4\u63A5\u8A66\u7528 \u2014 \u5514\u9700\u8981 download",
+        demo_interactive_sub: "Click \u4E0B\u771F\u5BE6 UI\uFF0C\u5462\u500B\u5C31\u4FC2 PokeClaw \u55BA\u4F60\u624B\u6A5F\u4E0A\u5605\u6A23\u5B50\u3002",
+        demo_interactive_hint: "\u4E92\u52D5 prototype \u2014 tap \u6309\u9215\u3001\u5207\u63DB\u9801\u9762\u3001\u63A2\u7D22\u5404\u500B\u756B\u9762",
+        demo_video_title: "\u777E Gemma 4 \u9EDE\u6A23\u63A7\u5236\u624B\u6A5F",
+        demo_hardware_note: "<strong>\u5099\u6CE8\uFF1A</strong>\u5462\u5572 demo \u4FC2\u55BA\u5187 GPU \u52A0\u901F\u5605 CPU-only \u624B\u6A5F\u4E0A\u9304\u88FD\u5605\u3002\u6709 GPU \u5605\u624B\u6A5F\uFF08Pixel 8+\u3001Galaxy S24\u3001Dimensity 9200+\uFF09\u901F\u5EA6\u5FEB\u597D\u591A\u3002CPU \u6A21\u5F0F\u7B2C\u4E00\u6B21 warmup \u5927\u7D04\u9700\u8981 45 \u79D2\uFF0CGPU \u6A21\u5F0F\u5FEB\u5F97\u591A\u3002",
+        demo_card1_title: "\u7528 AI \u767C\u9001 WhatsApp \u8A0A\u606F",
+        demo_card2_title: "\u81EA\u52D5\u56DE\u8986\u6A21\u5F0F",
+        how_title: "\u9EDE\u6A23\u904B\u4F5C",
+        step1_title: "\u5B89\u88DD APK",
+        step1_desc: "install APK \u4E00\u6B21\uFF0C\u7B2C\u4E00\u6B21\u958B Local mode \u6703\u81EA\u52D5\u4E0B\u8F09 2.6 GB \u6A21\u578B\u3002\u672C\u5730\u6A21\u5F0F\u5514\u9700\u8981\u5E33\u6236\u3002",
+        step2_title: "\u958B Accessibility \u6B0A\u9650",
+        step2_desc: "\u4E00\u500B\u6B0A\u9650\u5C31\u5920\u3002PokeClaw \u8B80\u53D6\u87A2\u5E55\u5167\u5BB9\uFF0C\u63A7\u5236\u9EDE\u64CA\u3001\u6ED1\u52D5\u540C\u6253\u5B57\u3002",
+        step3_title: "\u8A71\u6BD4\u4F60\u90E8\u624B\u6A5F\u77E5\u8981\u505A\u54A9",
+        step3_desc: "\u7528\u666E\u901A\u8A9E\u8A00\u6253\u5C31\u5F97\u3002AI \u81EA\u5DF1\u641E\u51FA\u8981\u9EDE tap\u3001\u6253\u958B\u6B63\u78BA app\uFF0C\u7136\u5F8C\u5E6B\u4F60\u505A\u3002",
+        usecases_title: "\u5BE6\u969B\u53EF\u4EE5\u505A\u5230\u54A9",
+        usecases_sub: "\u771F\u5BE6\u529F\u80FD\uFF0C\u5514\u4FC2 demo \u73A9\u5177\u3002\u800C\u5BB6\u5DF2\u7D93\u53EF\u4EE5\u7528\u3002",
+        uc1_title: "WhatsApp \u81EA\u52D5\u56DE\u8986",
+        uc1_desc: "\u76E3\u6E2C\u6307\u5B9A\u806F\u7D61\u4EBA\u5605\u8A0A\u606F\uFF0C\u7528 Gemma 4 \u81EA\u52D5\u751F\u6210\u56DE\u8986\u4E26\u767C\u9001\u3002AI \u8B80\u53D6\u5C0D\u8A71\u4E0A\u6587\u4E0B\u7406\uFF0C\u751F\u6210\u5408\u9069\u56DE\u8986\uFF0C\u5168\u90E8\u55BA\u88DD\u7F6E\u672C\u5730\u5B8C\u6210\u3002",
+        tag_offline: "\u652F\u63F4\u96E2\u7DDA",
+        uc2_title: "\u64B0\u5BEB\u540C\u767C\u9001 Email",
+        uc2_desc: "\u300C\u5E6B\u6211\u5BEB\u5C01 email \u8A71\u4ECA\u65E5\u6703\u9072\u5230\u3002\u300DPokeClaw \u81EA\u52D5\u6253\u958B mail app\u3001\u586B\u597D\u6536\u4EF6\u4EBA\u3001\u6253\u597D\u5167\u5BB9\u3002",
+        tag_both: "\u672C\u5730 + \u96F2\u7AEF",
+        uc3_title: "\u55BA\u4EFB\u4F55 app \u641C\u5C0B",
+        uc3_desc: "\u300C\u55BA YouTube \u641E\u641E\u7B11\u8C93\u54AA\u7247\u3002\u300DAI \u6253\u958B app\u3001\u641E\u5230\u641C\u5C0B\u6B04\u3001\u8F38\u5165\u4F60\u5605\u67E5\u8A62\u3001\u7136\u5F8C\u6309\u641C\u5C0B\u3002",
+        tag_both2: "\u672C\u5730 + \u96F2\u7AEF",
+        uc4_title: "\u63A7\u5236\u4EFB\u4F55 app",
+        uc4_desc: "Send \u8A0A\u606F\u3001\u958B\u8A2D\u5B9A\u3001\u5207\u63DB\u9801\u9762\u3001\u95DC\u639B\u5F48\u51FA\u8996\u7A97\u3002\u4F60\u53EF\u4EE5 tap \u5230\u5605\u5622\uFF0CPokeClaw \u90FD\u53EF\u4EE5\u5E6B\u4F60 tap\u3002\u7528\u771F\u5BE6 Android Accessibility\uFF0C\u5514\u4FC2\u622A\u5716\u5206\u6790\u3002",
+        tag_both3: "\u672C\u5730 + \u96F2\u7AEF",
+        testimonials_title: "\u7528\u5BB6\u9EDE\u8B1B",
+        compare_title: "\u9EDE\u89E3 Local-First \u91CD\u8981",
+        compare_sub: "PokeClaw \u7D50\u5408\u672C\u5730\u57F7\u884C\u3001optional cloud models\uFF0C\u540C open-source \u5605 public build\u3002",
+        cmp_offline: "\u652F\u63F4\u96E2\u7DDA",
+        cmp_ai: "AI \u9A45\u52D5",
+        cmp_anyapp: "\u63A7\u5236\u4EFB\u4F55 app",
+        cmp_limited: "\u6709\u9650\u5236",
+        cmp_limited2: "\u6709\u9650\u5236",
+        cmp_free: "\u514D\u8CBB",
+        cmp_noaccount: "\u5514\u9700\u8981\u5E33\u6236",
+        cmp_data: "\u6578\u64DA\u7559\u55BA\u88DD\u7F6E",
+        cmp_natlang: "\u81EA\u7136\u8A9E\u8A00\u8F38\u5165",
+        stat_stars: "GitHub Stars",
+        stat_forks: "Forks",
+        stat_offline: "\u652F\u63F4\u96E2\u7DDA",
+        stat_tools: "\u5167\u5EFA\u5DE5\u5177",
+        story_title: "PokeClaw \u80CC\u5F8C\u5605\u6545\u4E8B",
+        story_p1: "Gemma 4 \u4FC2\u661F\u671F\u4E8C\u767C\u5E03\u5605\u3002\u661F\u671F\u56DB\u6211\u5DF2\u7D93\u6709\u500B\u53EF\u4EE5\u7528 Gemma 4 \u63A7\u5236\u624B\u6A5F\u5605 working app\u3002\u5169\u500B\u901A\u5BB5\u3001\u4E00\u500B\u4EBA\u3001\u52A0\u4E0A\u4E00\u5927\u5806 Claude Code\u3002",
+        story_p2: "\u6211\u641E\u54D7\u597D\u5E7E\u500B\u6708\u8CC7\u6599\u5148\u6C7A\u5B9A\u81EA\u5DF1\u5BEB\u3002\u5927\u90E8\u5206 open-source \u624B\u6A5F\u81EA\u52D5\u5316\u9805\u76EE\uFF0C\u4E0D\u662F\u4F9D\u8CF4 cloud LLM\uFF0C\u5C31\u4FC2\u597D\u91CD screenshot vision\uFF0C\u6216\u8005\u5B89\u88DD\u540C\u767C\u4F48\u9580\u6ABB\u8F03\u9AD8\u3002PokeClaw \u96C6\u4E2D\u505A local-first execution\uFF0C\u76F4\u63A5\u5C0D\u4F4F live accessibility tree \u8DD1\uFF0C\u5FC5\u8981\u6642\u518D\u52A0 optional cloud support\u3002",
+        story_p3: "PokeClaw \u4FC2\u4E00\u500B\u7368\u7ACB\u958B\u767C\u8005\u5F9E\u96F6\u958B\u59CB\u9020\u5605 prototype\u3002\u5514\u4FC2\u6253\u78E8\u597D\u5605\u6D88\u8CBB\u8005\u7522\u54C1\u3002\u5982\u679C\u55BA\u4F60\u90E8\u6A5F\u8DD1\u5F97\u8D77\uFF0C\u597D\u597D\uFF0C\u5982\u679C\u6709\u554F\u984C\uFF0C<a href=\"https://github.com/agents-io/PokeClaw/issues\" class=\"story-link\">\u6B61\u8FCE\u958B issue</a>\u3002",
+        story_p4: "\u5B8C\u6574\u4EE3\u78BC\u4FC2\u516C\u958B\u5605\u3002\u96A8\u4FBF\u777E\u3001\u96A8\u4FBF fork\u3001\u96A8\u4FBF\u5728\u4E0A\u9762\u7E7C\u7E8C\u5EFA\u3002\u672C\u4F86\u5C31\u4FC2\u549A\u8A2D\u8A08\u5605\u3002",
+        faq_title: "\u5E38\u898B\u554F\u984C",
+        faq1_q: "\u652F\u63F4\u54A9\u624B\u6A5F\uFF1F",
+        faq1_a: "Android 9+ arm64 \u67B6\u69CB\u30022B \u6A21\u578B\u9700\u8981\u5927\u7D04 4 GB \u53EF\u7528 RAM\u3002\u5E73\u50F9\u6A5F\u90FD\u53EF\u4EE5\u8DD1\uFF0C\u4F46 CPU \u6A21\u5F0F warmup \u5927\u6982\u8981 45 \u79D2\u3002\u6709 ML \u6676\u7247\u5605\u65D7\u8266\u6A5F\uFF08Pixel 8+\u3001Galaxy S24\u3001Dimensity 9200+\uFF09\u7528 GPU \u52A0\u901F\u5FEB\u597D\u591A\u3002",
+        faq2_q: "\u771F\u4FC2\u514D\u8CBB\uFF1F\u6709\u54A9\u96B1\u85CF\u689D\u4EF6\uFF1F",
+        faq2_a: "\u76EE\u524D\u516C\u958B\u7248\u672C\u4EE5 Apache 2.0 open-source \u5F62\u5F0F\u653E\u55BA GitHub\u3002\u672C\u5730\u6A21\u5F0F\u5514\u9700\u8981\u5E33\u6236\u6216\u8005 API key\u3002\u4E4B\u5F8C\u5605 packaging\u3001hosted services \u540C\u5546\u696D\u529F\u80FD\u4ECD\u7136\u53EF\u80FD\u6703\u8ABF\u6574\u3002",
+        faq3_q: "\u540C Google Assistant \u6709\u54A9\u5206\u5225\uFF1F",
+        faq3_a: "Google Assistant \u53EA\u652F\u63F4\u6709\u9650\u5605 Google \u6574\u5408 app\uFF0C\u800C\u4E14\u9700\u8981\u4E0A\u7DB2\u3002PokeClaw \u900F\u904E Accessibility Services \u63A7\u5236\u4F60\u624B\u6A5F\u4E0A\u4EFB\u4F55 app\uFF0C\u5B8C\u5168\u96E2\u7DDA\u90FD\u53EF\u4EE5\u7528\u3002\u4F62\u8B80\u53D6\u87A2\u5E55\u4E0A\u771F\u5BE6\u5605 UI \u5143\u7D20\uFF0C\u81EA\u5DF1\u641E\u51FA\u8981\u9EDE tap\u3002",
+        faq4_q: "\u771F\u4FC2\u53EF\u4EE5\u96E2\u7DDA\u7528\uFF1F",
+        faq4_a: "\u53EF\u4EE5\u3002Local mode \u55BA\u4E00\u6B21\u6027\u4E0B\u8F09\u6A21\u578B\u4E4B\u5F8C\u6703\u55BA\u88DD\u7F6E\u4E0A\u904B\u884C\uFF1B\u5982\u679C\u4F60\u958B\u555F\u4E86 cloud models\uFF0C\u90E8\u5206\u529F\u80FD\u4EA6\u53EF\u4EE5\u7528\u96F2\u7AEF\u3002",
+        faq5_q: "\u6211\u5605\u6578\u64DA\u5B89\u5168\u55CE\uFF1F",
+        faq5_a: "\u55BA Local mode \u5E95\u4E0B\uFF0C\u6A21\u578B\u57F7\u884C\u6703\u7559\u55BA\u4F60\u90E8\u88DD\u7F6E\u3002\u5982\u679C\u4F60\u958B\u4E86 cloud models\uFF0C\u8ACB\u6C42\u5C31\u6703\u767C\u53BB\u4F60\u8A2D\u5B9A\u5605 provider\u3002\u539F\u59CB\u78BC\u4EA6\u5DF2\u653E\u4E0A GitHub \u4FE1\u4F60\u81EA\u5DF1\u6AA2\u67E5\u3002",
+        faq6_q: "\u53EF\u4EE5\u7528\u96F2\u7AEF\u6A21\u578B\u55CE\uFF1F",
+        faq6_a: "\u53EF\u4EE5\u3002PokeClaw \u652F\u63F4\u4EFB\u4F55 OpenAI \u76F8\u5BB9 API\uFF08GPT-4o\u3001Claude\u3001Gemini \u7B49\uFF09\u3002\u55BA\u8A2D\u5B9A\u5165\u9762\u586B\u5165\u4F60\u81EA\u5DF1\u5605 API key \u5C31\u5F97\u3002\u96F2\u7AEF\u6A21\u5F0F\u5C0D\u8907\u96DC\u4EFB\u52D9\u66F4\u667A\u80FD\u3002\u672C\u5730\u540C\u96F2\u7AEF\u53EF\u4EE5\u55BA\u5C0D\u8A71\u9014\u4E2D\u96A8\u6642\u5207\u63DB\u3002",
+        faq7_q: "Samsung \u8A71\u4FC2\u60E1\u610F\u8EDF\u4EF6\uFF1F",
+        faq7_a: "\u5462\u500B\u901A\u5E38\u4FC2 sideload \u5B89\u88DD\u5605\u8AA4\u5831\u3002Samsung \u6703\u5C0D Play Store \u4EE5\u5916\u5B89\u88DD\u5605\u672A\u7C3D\u540D APK \u63D0\u793A\u98A8\u96AA\u3002\u76EE\u524D\u516C\u958B\u7248\u672C\u4FC2 direct APK\uFF0C\u539F\u59CB\u78BC\u4EA6\u653E\u55BA GitHub\u3002",
+        cta_title: "\u6E96\u5099\u597D\u55BA\u4F60\u90E8\u624B\u6A5F\u8A66 AI \u672A\uFF1F",
+        cta_sub: "download APK\uFF0C\u8A66\u4E0B\u76EE\u524D\u516C\u958B\u7248\u672C\u3002\u672C\u5730\u6A21\u5F0F\u5514\u9700\u8981\u5E33\u6236\u6216\u8005 API key\uFF1Bcloud mode \u4FC2 optional\u3002",
+        cta_download: "Download PokeClaw",
+        cta_star: "\u2B50 GitHub \u52A0\u661F",
+        footer_releases: "Releases",
+        footer_license: "License"
+      }
+    };
+
+    function switchLang(lang) {
+      document.querySelectorAll('[data-i18n]').forEach(function(el) {
+        var key = el.getAttribute('data-i18n');
+        if (translations[lang] && translations[lang][key]) {
+          el.innerHTML = translations[lang][key];
+        }
+      });
+      document.querySelectorAll('.lang-btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      var activeBtn = document.querySelector('[data-lang="' + lang + '"]');
+      if (activeBtn) activeBtn.classList.add('active');
+      document.documentElement.lang = lang === 'zh' ? 'zh-Hant' : lang;
+      localStorage.setItem('pokeclaw-lang', lang);
+    }
+
+    // Auto-detect or restore saved language
+    (function() {
+      var saved = localStorage.getItem('pokeclaw-lang');
+      if (saved && translations[saved]) {
+        switchLang(saved);
+      }
+    })();
+
+    // Nav scroll effect
+    (function () {
+      var nav = document.getElementById('navbar');
+      window.addEventListener('scroll', function () {
+        nav.style.background = window.scrollY > 20 ? 'rgba(13, 17, 23, 0.97)' : 'rgba(13, 17, 23, 0.85)';
+      }, { passive: true });
+    })();
+
+    // Live GitHub stats
+    fetch('https://api.github.com/repos/agents-io/PokeClaw')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.stargazers_count) document.getElementById('star-count').textContent = d.stargazers_count.toLocaleString() + '+';
+        if (d.forks_count) document.getElementById('fork-count').textContent = d.forks_count.toLocaleString() + '+';
+      })
+      .catch(function() {});
+  </script>
+
+  <!-- GoatCounter — privacy-friendly, no cookies -->
+  <script data-goatcounter="https://pokeclaw.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+
+</body>
+</html>

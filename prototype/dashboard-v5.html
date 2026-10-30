@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PokeClaw v5 — ember_dark</title>
+<style>
+:root {
+  --bg: #151211;
+  --surface: #1F1A18;
+  --user-bubble: #D45A30;
+  --user-text: #FEF2ED;
+  --ai-bubble: #342C28;
+  --ai-border: #3D332C;
+  --ai-text: #E0D5CC;
+  --accent: #E8845A;
+  --text1: #E0D5CC;
+  --text2: #7A6E64;
+  --text3: #5A4F47;
+  --border: #332B27;
+  --divider: #2A2220;
+  /* Task mode tint */
+  --task-accent: #E8845A;
+  --task-bg: #1A1410;
+  --task-border: #E8845A40;
+  --task-glow: #E8845A20;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:var(--bg);color:var(--text1);max-width:390px;margin:0 auto;
+  height:100vh;display:flex;flex-direction:column;overflow:hidden;
+}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--divider);}
+.tb-left{display:flex;align-items:center;gap:10px;}
+.tb-title{font-size:18px;font-weight:700;}
+.tb-title b{color:var(--accent);}
+.tb-badge{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--ai-bubble);color:var(--accent);border:1px solid var(--ai-border);}
+
+/* Chat area */
+.chat-area{flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:12px 16px;}
+.msg{max-width:80%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.5;margin-bottom:6px;word-wrap:break-word;}
+.msg-u{background:var(--user-bubble);color:var(--user-text);align-self:flex-end;border-bottom-right-radius:4px;}
+.msg-a{background:var(--ai-bubble);color:var(--ai-text);align-self:flex-start;border:1px solid var(--ai-border);border-bottom-left-radius:4px;}
+
+/* Empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:30px 20px;}
+.empty-i{font-size:40px;margin-bottom:10px;}
+.empty-t{font-size:17px;font-weight:600;}
+.empty-s{font-size:13px;color:var(--accent);margin:4px 0;}
+.empty-d{font-size:11px;color:var(--text2);max-width:260px;line-height:1.6;margin-top:4px;}
+
+/* Prompt suggestions (matching existing app style) */
+.prompts{padding:0 28px;display:flex;flex-direction:column;gap:6px;margin-top:16px;}
+.pr{display:flex;align-items:center;border-radius:12px;background:var(--surface);border:0.5px solid var(--border);cursor:pointer;overflow:hidden;transition:border-color 0.15s;}
+.pr:active{border-color:var(--accent);}
+.pr-bar{width:3px;min-height:36px;border-radius:12px 0 0 12px;background:var(--accent);flex-shrink:0;}
+.pr-text{padding:9px 14px;font-size:13px;color:var(--text2);}
+
+/* Bottom sheet */
+.sheet-panel{background:var(--surface);border-top:1px solid var(--divider);transition:max-height 0.3s ease;overflow:hidden;}
+.sheet-handle{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;cursor:pointer;}
+.sheet-handle svg{width:14px;height:14px;fill:var(--accent);transition:transform 0.3s;}
+.sheet-handle.closed svg{transform:rotate(180deg);}
+.sheet-handle-text{font-size:11px;color:var(--accent);font-weight:500;}
+.sheet-bar{display:none;}
+.sheet-body{padding:0 12px;overflow-y:auto;max-height:50vh;}
+.sheet-body.hide{display:none;}
+
+/* Section label */
+.sl{font-size:10px;font-weight:600;color:var(--text3);padding:6px 4px 4px;text-transform:uppercase;letter-spacing:0.6px;}
+
+/* Quick task prompts (full sentence, matching app style) */
+.qt{display:flex;flex-direction:column;gap:4px;}
+.qt-item{display:flex;align-items:center;border-radius:10px;background:var(--bg);border:0.5px solid var(--border);cursor:pointer;overflow:hidden;transition:border-color 0.12s;}
+.qt-item:active{border-color:var(--accent);}
+.qt-bar{width:3px;min-height:32px;background:var(--accent);border-radius:10px 0 0 10px;flex-shrink:0;}
+.qt-text{padding:8px 12px;font-size:12px;color:var(--text2);}
+.qt.collapsed .qt-item:nth-child(n+6){display:none;}
+.qt-more{display:flex;align-items:center;justify-content:center;gap:3px;padding:6px;color:var(--accent);font-size:10px;cursor:pointer;}
+.qt-more svg{width:10px;height:10px;fill:var(--accent);transition:transform 0.3s;}
+.qt-more.open svg{transform:rotate(180deg);}
+
+/* Background task card */
+.bg-card{border-radius:12px;background:var(--bg);border:0.5px solid var(--border);cursor:pointer;transition:border-color 0.12s;margin-bottom:8px;}
+.bg-card:active{border-color:var(--ai-border);}
+.bg-card.running{border:1px solid var(--accent);background:#E8845A08;}
+.bg-row{display:flex;align-items:center;padding:12px;gap:10px;}
+.bg-icon{width:38px;height:38px;border-radius:10px;background:#E8845A15;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.bg-info{flex:1;}
+.bg-title{font-size:13px;font-weight:600;}
+.bg-desc{font-size:10px;color:var(--text3);margin-top:1px;}
+.bg-arr{color:var(--text3);font-size:16px;}
+
+/* ===== INPUT BAR ===== */
+.input-bar{display:flex;align-items:center;gap:6px;padding:6px 10px 10px;background:var(--surface);border-top:1px solid var(--divider);}
+
+/* Segmented toggle (Local only) */
+.seg-toggle{
+  display:flex;border-radius:16px;background:var(--bg);border:1px solid var(--border);
+  flex-shrink:0;overflow:hidden;
+}
+.seg-btn{
+  padding:7px 12px;font-size:11px;font-weight:600;cursor:pointer;
+  border:none;background:transparent;color:var(--text3);transition:all 0.2s;
+  user-select:none;
+}
+.seg-btn.on{background:var(--ai-bubble);color:var(--text1);border-radius:14px;}
+.seg-btn.on.task{background:var(--task-accent);color:white;}
+
+.inp{
+  flex:1;padding:9px 14px;border-radius:20px;
+  background:var(--bg);border:1px solid var(--border);
+  color:var(--text1);font-size:14px;outline:none;transition:all 0.2s;
+}
+.inp:focus{border-color:#E8845A50;box-shadow:0 0 0 2px var(--task-glow);}
+.inp::placeholder{color:var(--text3);}
+/* Task mode input */
+.inp.task-mode{border-color:var(--task-accent);background:var(--task-bg);box-shadow:0 0 0 2px var(--task-glow);}
+.inp.task-mode::placeholder{color:#E8845A80;}
+
+.btn-send{
+  width:34px;height:34px;border-radius:50%;border:none;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;transition:all 0.12s;
+  background:#E8845A20;
+}
+.btn-send.on{background:var(--user-bubble);}
+.btn-send.task-mode{background:var(--task-accent);}
+.btn-send svg{width:15px;height:15px;fill:white;}
+
+/* Task mode banner */
+.task-banner{
+  display:none;padding:6px 12px;text-align:center;
+  font-size:10px;color:var(--task-accent);background:var(--task-bg);
+  border-bottom:1px solid var(--task-border);letter-spacing:0.3px;
+}
+.task-banner.show{display:block;}
+
+/* Monitor overlay */
+.overlay{position:fixed;inset:0;background:#00000070;z-index:50;display:none;align-items:flex-end;justify-content:center;}
+.overlay.show{display:flex;}
+.modal{background:var(--surface);border-radius:16px 16px 0 0;width:390px;padding:16px;animation:su 0.25s ease;}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.m-bar{width:32px;height:3px;border-radius:2px;background:var(--text3);margin:0 auto 14px;}
+.m-title{font-size:15px;font-weight:600;margin-bottom:12px;}
+.fr{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+.fl{font-size:11px;color:var(--text2);width:50px;}
+.fi{flex:1;padding:8px 10px;border-radius:8px;font-size:12px;background:var(--bg);border:1px solid var(--border);color:var(--text1);outline:none;}
+.fi:focus{border-color:#E8845A40;}
+.tp{display:flex;gap:6px;flex:1;}
+.tp-p{padding:5px 10px;border-radius:14px;font-size:11px;background:var(--bg);border:1px solid var(--border);color:var(--text2);cursor:pointer;}
+.tp-p.on{background:#D45A3018;border-color:var(--user-bubble);color:var(--accent);}
+.btn-go{width:100%;padding:11px;border-radius:10px;border:none;background:var(--user-bubble);color:white;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;}
+
+/* Demo switcher */
+.dsw{position:fixed;top:10px;right:12px;display:flex;gap:3px;z-index:100;}
+.dsw button{padding:3px 8px;border-radius:5px;font-size:9px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text3);}
+.dsw button.on{background:var(--ai-bubble);color:var(--accent);border-color:var(--ai-border);}
+
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(4px);}}
+.toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);padding:7px 16px;background:var(--user-bubble);color:white;border-radius:8px;font-size:12px;z-index:200;}
+</style>
+</head>
+<body>
+
+<div class="dsw">
+  <button class="on" id="dl" onclick="sw('local')">Local</button>
+  <button id="dc" onclick="sw('cloud')">Cloud</button>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <div class="tb-left">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="#7A6E64"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    <div class="tb-title">Poke<b>Claw</b></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="tb-badge" id="badge">Local AI</div>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="#7A6E64"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+  </div>
+</div>
+
+<!-- TASK MODE BANNER (Local only) -->
+<div class="task-banner" id="task-banner">🤖 Task Mode — your input will control the phone</div>
+
+<!-- CHAT AREA -->
+<div class="chat-area" id="chat">
+  <div class="empty" id="empty-local">
+    <div class="empty-i">🦞</div>
+    <div class="empty-t">PokeClaw</div>
+    <div class="empty-s" id="empty-sub">Local AI</div>
+
+    <!-- Mode explainer cards (Local only) -->
+    <div id="mode-explainer" style="display:flex;gap:8px;padding:16px 0 8px;width:100%;max-width:300px;">
+      <div style="flex:1;padding:12px;border-radius:12px;background:var(--surface);border:0.5px solid var(--border);text-align:center;">
+        <div style="font-size:22px;margin-bottom:4px;">💬</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px;">Chat</div>
+        <div style="font-size:10px;color:var(--text3);line-height:1.4;">Ask questions<br>Have a conversation</div>
+      </div>
+      <div style="display:flex;align-items:center;color:var(--text3);font-size:18px;">→</div>
+      <div style="flex:1;padding:12px;border-radius:12px;background:var(--task-bg);border:1px solid var(--task-border);text-align:center;">
+        <div style="font-size:22px;margin-bottom:4px;">🤖</div>
+        <div style="font-size:13px;font-weight:600;color:var(--task-accent);margin-bottom:2px;">Task</div>
+        <div style="font-size:10px;color:var(--accent);line-height:1.4;">Control your phone<br>Run commands</div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--text3);text-align:center;padding:0 40px;line-height:1.5;margin-bottom:4px;">
+      Switch to <b style="color:var(--task-accent);">🤖 Task</b> below to give phone commands
+    </div>
+    <div style="font-size:16px;color:var(--text3);animation:bounce 1.5s infinite;">↓</div>
+  </div>
+  <div class="prompts" id="chat-prompts">
+    <div class="pr" onclick="fillChat('Tell me a joke')"><div class="pr-bar"></div><div class="pr-text">Tell me a joke</div></div>
+    <div class="pr" onclick="fillChat('What can you do?')"><div class="pr-bar"></div><div class="pr-text">What can you do?</div></div>
+    <div class="pr" onclick="fillChat('Help me draft an email')"><div class="pr-bar"></div><div class="pr-text">Help me draft an email</div></div>
+  </div>
+</div>
+
+<!-- BOTTOM SHEET: Quick Tasks + Background (collapsible) -->
+<div class="sheet-panel" id="sheet">
+  <div class="sheet-handle" id="sheet-handle" onclick="toggleSheet()">
+    <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+    <span class="sheet-handle-text" id="sheet-handle-text">Quick Tasks</span>
+    <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+  </div>
+  <div class="sheet-body" id="sheet-body">
+    <div class="sl">Quick Tasks</div>
+    <div class="qt collapsed" id="qt">
+      <div class="qt-item" onclick="fillTask('How much battery left?')"><div class="qt-bar"></div><div class="qt-text">🔋 How much battery left?</div></div>
+      <div class="qt-item" onclick="fillTask('What WiFi am I on?')"><div class="qt-bar"></div><div class="qt-text">📶 What WiFi am I on?</div></div>
+      <div class="qt-item" onclick="fillTask('Read my notifications')"><div class="qt-bar"></div><div class="qt-text">🔔 Read my notifications</div></div>
+      <div class="qt-item" onclick="fillTask('Call ')"><div class="qt-bar"></div><div class="qt-text">📞 Call someone</div></div>
+      <div class="qt-item" onclick="fillTask('Send hi to Mom on WhatsApp')"><div class="qt-bar"></div><div class="qt-text">💬 Send hi to Mom on WhatsApp</div></div>
+      <div class="qt-item" onclick="fillTask('How much storage do I have?')"><div class="qt-bar"></div><div class="qt-text">💾 How much storage do I have?</div></div>
+      <div class="qt-item" onclick="fillTask('Turn on dark mode')"><div class="qt-bar"></div><div class="qt-text">🌙 Turn on dark mode</div></div>
+      <div class="qt-item" onclick="fillTask('What apps do I have?')"><div class="qt-bar"></div><div class="qt-text">📱 What apps do I have?</div></div>
+      <div class="qt-item" onclick="fillTask('How hot is my phone?')"><div class="qt-bar"></div><div class="qt-text">🌡️ How hot is my phone?</div></div>
+      <div class="qt-item" onclick="fillTask('Is bluetooth on?')"><div class="qt-bar"></div><div class="qt-text">🔵 Is bluetooth on?</div></div>
+      <div class="qt-item" onclick="fillTask('What Android version?')"><div class="qt-bar"></div><div class="qt-text">📲 What Android version am I running?</div></div>
+      <div class="qt-item" onclick="fillTask('Take a screenshot')"><div class="qt-bar"></div><div class="qt-text">📸 Take a screenshot</div></div>
+    </div>
+    <div class="qt-more" id="qt-more" onclick="toggleQT()"><span id="qt-more-t">Show more</span><svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg></div>
+
+    <div class="sl">Background</div>
+    <div class="bg-card" id="bgc" onclick="openMonitor()">
+      <div class="bg-row">
+        <div class="bg-icon">👁️</div>
+        <div class="bg-info">
+          <div class="bg-title" id="bg-t">Monitor & Auto-Reply</div>
+          <div class="bg-desc" id="bg-d">Watch messages and reply automatically</div>
+        </div>
+        <div class="bg-arr" id="bg-a">›</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INPUT BAR -->
+<div class="input-bar" id="ibar">
+  <!-- Local: segmented toggle -->
+  <div class="seg-toggle" id="seg-toggle">
+    <button class="seg-btn on" id="seg-chat" onclick="setTaskMode(false)">💬 Chat</button>
+    <button class="seg-btn" id="seg-task" onclick="setTaskMode(true)">🤖 Task</button>
+  </div>
+  <input class="inp" id="inp" placeholder="Chat with local AI..." oninput="chk()">
+  <button class="btn-send" id="send" onclick="doSend()">
+    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+  </button>
+</div>
+
+<!-- MONITOR SHEET -->
+<div class="overlay" id="ov" onclick="if(event.target===this)closeMonitor()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="m-bar"></div>
+    <div class="m-title">👁️ Monitor & Auto-Reply</div>
+    <div class="fr"><span class="fl">Contact</span><input class="fi" placeholder="e.g. Mom, Girlfriend" id="mc"></div>
+    <div class="fr"><span class="fl">App</span><select class="fi" style="appearance:auto;"><option>WhatsApp</option><option>LINE</option><option>Telegram</option><option>WeChat</option></select></div>
+    <div class="fr"><span class="fl">Tone</span><div class="tp"><div class="tp-p on" onclick="tone(this)">Casual</div><div class="tp-p" onclick="tone(this)">Formal</div><div class="tp-p" onclick="tone(this)">Funny</div></div></div>
+    <button class="btn-go" onclick="startMonitor()">Start Monitoring</button>
+  </div>
+</div>
+
+<script>
+let mode='local', taskMode=false, sheetOpen=true, qtOpen=false;
+
+function sw(m){
+  mode=m;
+  const badge=document.getElementById('badge');
+  const inp=document.getElementById('inp');
+  const modeBtn=document.getElementById('mode-btn');
+  const banner=document.getElementById('task-banner');
+  const emSub=document.getElementById('empty-sub');
+  const emDesc=document.getElementById('empty-desc');
+  const chatPrompts=document.getElementById('chat-prompts');
+
+  if(m==='cloud'){
+    badge.textContent='Cloud AI'; badge.style.color='#E8845A'; badge.style.borderColor='#E8845A40';
+    document.getElementById('seg-toggle').style.display='none';
+    banner.classList.remove('show');
+    taskMode=false;
+    updateInputStyle();
+    inp.placeholder='Chat or give a task...';
+    emSub.textContent='Cloud AI';
+    emDesc.innerHTML='Chat and tasks work together.<br>Just type anything below.';
+    document.getElementById('mode-explainer').style.display='none';
+    chatPrompts.innerHTML=`
+      <div class="pr" onclick="fillChat('What time is it in Tokyo?')"><div class="pr-bar"></div><div class="pr-text">What time is it in Tokyo?</div></div>
+      <div class="pr" onclick="fillChat('Help me write a birthday message')"><div class="pr-bar"></div><div class="pr-text">Help me write a birthday message</div></div>
+      <div class="pr" onclick="fillChat('Send hi to Mom on WhatsApp')"><div class="pr-bar"></div><div class="pr-text">💬 Send hi to Mom on WhatsApp</div></div>
+    `;
+    document.getElementById('dl').classList.remove('on'); document.getElementById('dc').classList.add('on');
+  } else {
+    badge.textContent='Local AI'; badge.style.color='#E8845A'; badge.style.borderColor='#3D332C';
+    document.getElementById('seg-toggle').style.display='flex';
+    emSub.textContent='Local AI';
+    emDesc.innerHTML='';
+    document.getElementById('mode-explainer').style.display='flex';
+    chatPrompts.innerHTML=`
+      <div class="pr" onclick="fillChat('Tell me a joke')"><div class="pr-bar"></div><div class="pr-text">Tell me a joke</div></div>
+      <div class="pr" onclick="fillChat('What can you do?')"><div class="pr-bar"></div><div class="pr-text">What can you do?</div></div>
+      <div class="pr" onclick="fillChat('Help me draft an email')"><div class="pr-bar"></div><div class="pr-text">Help me draft an email</div></div>
+    `;
+    document.getElementById('dl').classList.add('on'); document.getElementById('dc').classList.remove('on');
+    updateInputStyle();
+  }
+}
+
+function setTaskMode(on){
+  taskMode=on;
+  updateInputStyle();
+}
+
+function updateInputStyle(){
+  const btn=document.getElementById('mode-btn');
+  const inp=document.getElementById('inp');
+  const send=document.getElementById('send');
+  const banner=document.getElementById('task-banner');
+
+  if(mode==='cloud'){
+    inp.className='inp';
+    inp.placeholder='Chat or give a task...';
+    send.className='btn-send';
+    banner.classList.remove('show');
+    return;
+  }
+
+  const segChat=document.getElementById('seg-chat');
+  const segTask=document.getElementById('seg-task');
+
+  if(taskMode){
+    segTask.classList.add('on','task'); segChat.classList.remove('on');
+    inp.className='inp task-mode';
+    inp.placeholder='Describe a phone task...';
+    send.className='btn-send task-mode';
+    banner.classList.add('show');
+  } else {
+    segChat.classList.add('on'); segChat.classList.remove('task');
+    segTask.classList.remove('on','task');
+    inp.className='inp';
+    inp.placeholder='Chat with local AI...';
+    send.className='btn-send';
+    banner.classList.remove('show');
+  }
+  chk();
+}
+
+function toggleSheet(){
+  sheetOpen=!sheetOpen;
+  document.getElementById('sheet-body').classList.toggle('hide',!sheetOpen);
+  const handle=document.getElementById('sheet-handle');
+  const text=document.getElementById('sheet-handle-text');
+  handle.classList.toggle('closed',!sheetOpen);
+  text.textContent=sheetOpen?'Quick Tasks':'Quick Tasks';
+}
+
+function toggleQT(){
+  qtOpen=!qtOpen;
+  document.getElementById('qt').classList.toggle('collapsed',!qtOpen);
+  document.getElementById('qt-more-t').textContent=qtOpen?'Show less':'Show more';
+  document.getElementById('qt-more').classList.toggle('open',qtOpen);
+}
+
+function fillTask(t){
+  // Auto-switch to task mode
+  if(mode==='local' && !taskMode){ taskMode=true; updateInputStyle(); }
+  const inp=document.getElementById('inp');
+  inp.value=t; inp.focus(); chk();
+  const u=t.indexOf(' '); // put cursor at end
+}
+
+function fillChat(t){
+  if(mode==='local' && taskMode){ taskMode=false; updateInputStyle(); }
+  const inp=document.getElementById('inp');
+  inp.value=t; inp.focus(); chk();
+}
+
+function chk(){
+  const v=document.getElementById('inp').value.trim();
+  const s=document.getElementById('send');
+  s.classList.toggle('on', v.length>0 && !taskMode);
+  if(taskMode) s.classList.toggle('task-mode', v.length>0);
+}
+
+function doSend(){
+  const inp=document.getElementById('inp'), v=inp.value.trim();
+  if(!v) return;
+  const label = (mode==='local' && taskMode) ? 'Task' : (mode==='cloud' ? 'Sent' : 'Chat');
+
+  // Add message to chat
+  const chat=document.getElementById('chat');
+  const emp=chat.querySelector('.empty'); if(emp) emp.style.display='none';
+  const prompts=document.getElementById('chat-prompts'); if(prompts) prompts.style.display='none';
+
+  const u=document.createElement('div'); u.className='msg msg-u'; u.textContent=v; chat.appendChild(u);
+  setTimeout(()=>{
+    const a=document.createElement('div'); a.className='msg msg-a';
+    if(v.toLowerCase().includes('battery')) a.textContent='Battery: 73%, not charging, 32°C';
+    else if(v.toLowerCase().includes('joke')) a.textContent="Why don't skeletons fight each other? They don't have the guts!";
+    else a.textContent=label==='Task'?'Running task: '+v:'Sure, I can help with that!';
+    chat.appendChild(a); chat.scrollTop=chat.scrollHeight;
+  },800);
+
+  inp.value=''; chk(); chat.scrollTop=chat.scrollHeight;
+}
+
+function openMonitor(){document.getElementById('ov').classList.add('show');}
+function closeMonitor(){document.getElementById('ov').classList.remove('show');}
+function tone(e){e.parentElement.querySelectorAll('.tp-p').forEach(p=>p.classList.remove('on'));e.classList.add('on');}
+function startMonitor(){
+  const c=document.getElementById('mc').value||'Girlfriend';
+  closeMonitor();
+  document.getElementById('bgc').classList.add('running');
+  document.getElementById('bg-t').textContent='Active';
+  document.getElementById('bg-d').textContent='Monitoring '+c+' on WhatsApp';
+}
+
+sw('local');
+</script>
+</body>
+</html>
