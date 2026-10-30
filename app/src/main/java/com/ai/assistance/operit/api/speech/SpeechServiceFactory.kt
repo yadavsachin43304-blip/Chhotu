@@ -17,6 +17,8 @@ object SpeechServiceFactory {
         SHERPA_NCNN,
         OPENAI_STT,
         DEEPGRAM_STT,
+        /** Chhotu Master: Android system SpeechRecognizer (hi-IN, works offline when the Hindi pack is installed) */
+        ANDROID_SYSTEM,
     }
 
     /**
@@ -43,6 +45,7 @@ object SpeechServiceFactory {
         val effectiveType = when (selectedType) {
             SpeechServiceType.OPENAI_STT,
             SpeechServiceType.DEEPGRAM_STT,
+            SpeechServiceType.ANDROID_SYSTEM,
             -> SpeechServiceType.SHERPA_NCNN
             else -> selectedType
         }
@@ -65,6 +68,7 @@ object SpeechServiceFactory {
     ): SpeechService {
         return when (type) {
             SpeechServiceType.SHERPA_NCNN -> acquireLocalSpeechService(context, type)
+            SpeechServiceType.ANDROID_SYSTEM -> AndroidSystemSpeechProvider(context.applicationContext)
             SpeechServiceType.OPENAI_STT -> {
                 runBlocking {
                     OpenAISttProvider(

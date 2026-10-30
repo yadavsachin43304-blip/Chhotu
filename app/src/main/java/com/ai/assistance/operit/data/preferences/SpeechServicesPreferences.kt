@@ -75,7 +75,7 @@ class SpeechServicesPreferences(private val context: Context) {
 
         // Default Values
         val DEFAULT_TTS_SERVICE_TYPE = VoiceServiceFactory.VoiceServiceType.SIMPLE_TTS
-        val DEFAULT_STT_SERVICE_TYPE = SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN
+        val DEFAULT_STT_SERVICE_TYPE = SpeechServiceFactory.SpeechServiceType.ANDROID_SYSTEM
 
         const val DEFAULT_TTS_SPEECH_RATE = 1.0f
         const val DEFAULT_TTS_PITCH = 1.0f
@@ -88,7 +88,7 @@ class SpeechServicesPreferences(private val context: Context) {
             httpMethod = "GET",
             requestBody = "",
             contentType = "application/json",
-            localeTag = "",
+            localeTag = "hi-IN", // Chhotu Master: Hindi system TTS by default
             voiceId = "",
             modelName = "",
             responsePipeline = emptyList()
@@ -224,7 +224,8 @@ class SpeechServicesPreferences(private val context: Context) {
             prefs[STT_SERVICE_TYPE] = serviceType.name
 
             when (serviceType) {
-                SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN -> {
+                SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN,
+                SpeechServiceFactory.SpeechServiceType.ANDROID_SYSTEM -> {
                 }
                 SpeechServiceFactory.SpeechServiceType.OPENAI_STT -> {
                     httpConfig?.let { prefs[STT_HTTP_CONFIG] = serializerJson.encodeToString(it) }

@@ -367,6 +367,14 @@ android {
     }
 
     signingConfigs {
+        // Fixed debug key committed in the repo so every Chhotu Master build can update the previous one.
+        create("chhotuDebug") {
+            storeFile = file("chhotu-debug.p12")
+            storeType = "pkcs12"
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         val releaseKeystorePath = localProperties.getProperty("RELEASE_STORE_FILE")
         val releaseStorePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
         val releaseKeyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
@@ -394,11 +402,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.ai.assistance.operit"
+        applicationId = "com.sachin.chhotu.master"
         minSdk = 26
         targetSdk = 34
         versionCode = 51
-        versionName = "1.12.2"
+        versionName = "1.12.2-chhotu-master-1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -433,9 +441,9 @@ android {
             }
         }
         debug {
-            applicationIdSuffix = ".debug"
-            signingConfig = signingConfigs.getByName("debug")
-            resValue("string", "app_name", "Operit Debug")
+            // Chhotu Master: debug build is the shipped build; same id as release so it installs beside old Chhotu
+            signingConfig = signingConfigs.getByName("chhotuDebug")
+            resValue("string", "app_name", "Chhotu")
         }
         create("clone") {
             initWith(getByName("debug"))

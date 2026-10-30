@@ -1,3 +1,27 @@
+# Chhotu Master
+
+**Chhotu** is Sachin's Hindi / Hinglish voice assistant for Android: it talks **online** (cloud model such as Gemini) and **offline** (an on-device model), and controls the phone safely.
+
+This branch (`chhotu-master-dev`) is a modified version of **[Operit AI](https://github.com/AAswordman/Operit)** (LGPL-3.0). All credit for the base app goes to the Operit authors; see `LICENSE` and `NOTICE`.
+
+## What Chhotu changes on top of Operit
+- App name **Chhotu**, package `com.sachin.chhotu.master` (installs beside old Chhotu `com.sachin.chhotu`).
+- Default character **Chhotu**: warm Hindi/Hinglish persona, replies in the language you speak, short spoken answers.
+- English UI when the phone language (e.g. Hindi) has no translation, instead of Chinese.
+- **Online + offline brain**: chat turns use your cloud model; if there is no internet, no API key, or the cloud call fails, the same turn is answered by the on-device model (MNN or llama.cpp) automatically.
+- Default cloud provider: Google Gemini (`gemini-3.5-flash-lite`), key entered by you in Settings. OpenRouter, Groq (OpenAI-compatible) and others also work.
+- Offline model list puts **Qwen3-1.7B-MNN** (recommended for a 6 GB phone) and **Qwen3.5-0.8B-MNN** (fast) at the top for one-tap download.
+- Voice: Hindi system TTS (`hi-IN`) by default, replies read aloud automatically, new **Android system speech recognition** engine with `hi-IN` (works offline once the Hindi offline speech pack is installed).
+- Safety: shell / terminal / raw-code tools are OFF by default; calls, messages, payments/UPI apps, deletes, installs and system-setting changes always ask for confirmation (never "always allowed"); the model can no longer skip the permission check; no upstream announcement or update checks.
+- Memory stays local (Operit's on-device memory); nothing is sent anywhere except the cloud provider you choose.
+
+## Setup (short)
+1. **Online**: Settings > Model config > Default config > paste your Gemini API key (from aistudio.google.com/apikey). Model `gemini-3.5-flash-lite`.
+2. **Offline**: Settings > Model config > add/choose provider **MNN** > Download models > tap **Qwen3-1.7B-MNN** (about 1-1.5 GB). Chhotu finds it automatically; no need to switch configs.
+3. **Voice**: Settings > Speech services: TTS = system TTS (hi-IN), STT = Android system (Hindi). On the phone install Google "Speech Services" Hindi voice + Hindi offline speech recognition for fully offline voice.
+
+---
+
 <h1 align="center">
   <img src="app/src/main/assets/logo.svg" width="48" height="48" align="absmiddle" alt=""> Operit AI
 </h1>

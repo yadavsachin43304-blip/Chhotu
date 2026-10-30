@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Operit AI</string>
+    <string name="app_name">Chhotu</string>
     <string name="accessibility_service_description">用于获取UI层次结构，为AI助手提供更快速的界面分析能力，不会收集或存储任何个人信息。</string>
     
     <!-- 模型选择器相关 -->
@@ -8504,4 +8504,6 @@
     <string name="codex_usage_unavailable">额度暂时不可用</string>
     <string name="codex_reset_after_days">%1$d 天后重置</string>
     <string name="codex_reset_after_clock">%1$02d:%2$02d 后重置</string>
+    <string name="chhotu_stt_type_android">Android system (Hindi, works offline with Hindi pack)</string>
+    <string name="chhotu_offline_no_model">Chhotu: internet ya API key nahi hai, aur offline model download nahi hua. Settings &gt; Model config &gt; MNN &gt; download \"Qwen3-1.7B-MNN\" (one tap), ya Gemini key daalein.</string>
 </resources>

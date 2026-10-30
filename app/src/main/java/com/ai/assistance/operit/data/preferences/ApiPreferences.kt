@@ -154,7 +154,7 @@ class ApiPreferences private constructor(private val context: Context) {
         const val DEFAULT_ENABLE_MEMORY_AUTO_UPDATE = true
 
         // Default value for Auto Read
-        const val DEFAULT_ENABLE_AUTO_READ = false
+        const val DEFAULT_ENABLE_AUTO_READ = true
 
         // Default value for Tools Enable/Disable
         const val DEFAULT_ENABLE_TOOLS = true
@@ -183,8 +183,8 @@ class ApiPreferences private constructor(private val context: Context) {
         const val DEFAULT_FEATURE_TOGGLES_JSON = "{}"
 
         // API 配置默认值
-        const val DEFAULT_API_ENDPOINT = "https://api.deepseek.com/v1/chat/completions"
-        const val DEFAULT_MODEL_NAME = "deepseek-v4-flash"
+        const val DEFAULT_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
+        const val DEFAULT_MODEL_NAME = "gemini-3.5-flash-lite"
 
         private const val TAG = "ApiPreferences"
     }

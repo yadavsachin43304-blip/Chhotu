@@ -455,7 +455,9 @@ object ToolExecutionManager {
         }
 
         // 检查是否强制拒绝权限（deny_tool标记）
-        val hasPromptForPermission = !invocation.rawText.contains("deny_tool")
+        // Chhotu Master: model output must never be able to skip the permission check, so the
+        // upstream "deny_tool" bypass is disabled and every tool call goes through the check.
+        val hasPromptForPermission = true
 
         if (hasPromptForPermission) {
             // 检查权限，如果需要则弹出权限请求界面

@@ -758,12 +758,8 @@ class MainActivity : ComponentActivity() {
             }
         )
 
-        // 自动检查更新（仅提示，不自动下载）
-        lifecycleScope.launch {
-            // 延迟几秒，等待应用完全启动
-            delay(3000)
-            checkForUpdates()
-        }
+        // Chhotu Master: no automatic update check against upstream Operit releases (privacy, and
+        // Operit updates are a different app). Chhotu updates come from Sachin's GitHub releases.
     }
 
     private fun checkForUpdates() {

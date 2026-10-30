@@ -285,6 +285,8 @@ object LocaleUtils {
             return sameLanguageVariants.first()
         }
 
-        return normalizedCode
+        // Chhotu Master: an unsupported system language (e.g. Hindi) must not show the Chinese
+        // default resources; English UI is used instead. Chhotu still talks in Hindi via the persona.
+        return LanguageCodes.ENGLISH
     }
 }

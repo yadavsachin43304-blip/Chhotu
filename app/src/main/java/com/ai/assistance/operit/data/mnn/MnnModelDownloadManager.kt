@@ -251,7 +251,7 @@ class MnnModelDownloadManager private constructor(private val context: Context) 
             val jsonString = response.body?.string() ?: ""
             val marketData = json.decodeFromString<ModelMarketData>(jsonString)
             saveToCache(jsonString)
-            return@withContext Result.success(marketData.models)
+            return@withContext Result.success(prioritizeForChhotu(marketData.models))
         } catch (e: Exception) {
             AppLogger.e(TAG, "获取模型列表失败", e)
             val cachedResult = loadFromCache()
@@ -259,6 +259,24 @@ class MnnModelDownloadManager private constructor(private val context: Context) 
         }
     }
     
+    /**
+     * Chhotu Master: show the models that fit a 6 GB phone and speak Hindi reasonably first,
+     * so the offline brain is a one-tap download at the top of the list.
+     */
+    private fun prioritizeForChhotu(models: List<MnnModel>): List<MnnModel> {
+        val recommended = listOf(
+            "Qwen3-1.7B-MNN" to "\u2B50 Chhotu recommended (6 GB phone, best Hindi for size). ",
+            "Qwen3.5-0.8B-MNN" to "\u26A1 Chhotu fast option (lower quality, very quick). ",
+            "Qwen2.5-1.5B-Instruct-MNN" to "Chhotu alternative. "
+        )
+        val pinned = recommended.mapNotNull { (name, note) ->
+            models.firstOrNull { it.modelName.equals(name, ignoreCase = true) }
+                ?.let { it.copy(description = note + it.description) }
+        }
+        val pinnedNames = pinned.map { it.modelName.lowercase() }.toSet()
+        return pinned + models.filter { it.modelName.lowercase() !in pinnedNames }
+    }
+
     private fun saveToCache(jsonString: String) {
         try {
             File(context.filesDir, CACHE_FILE_NAME).writeText(jsonString)
@@ -275,7 +293,7 @@ class MnnModelDownloadManager private constructor(private val context: Context) 
             }
             val jsonString = cacheFile.readText()
             val marketData = json.decodeFromString<ModelMarketData>(jsonString)
-            Result.success(marketData.models)
+            Result.success(prioritizeForChhotu(marketData.models))
         } catch (e: Exception) {
             AppLogger.e(TAG, "从缓存加载失败", e)
             Result.failure(e)

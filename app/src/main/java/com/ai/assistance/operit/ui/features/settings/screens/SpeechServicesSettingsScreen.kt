@@ -2129,6 +2129,7 @@ fun SpeechServicesSettingsScreen(
                                     SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN -> stringResource(R.string.speech_services_stt_type_sherpa)
                                     SpeechServiceFactory.SpeechServiceType.OPENAI_STT -> stringResource(R.string.speech_services_stt_type_openai)
                                     SpeechServiceFactory.SpeechServiceType.DEEPGRAM_STT -> stringResource(R.string.speech_services_stt_type_deepgram)
+                                    SpeechServiceFactory.SpeechServiceType.ANDROID_SYSTEM -> stringResource(R.string.chhotu_stt_type_android)
                                 },
                                 onValueChange = {},
                                 readOnly = true,
@@ -2150,6 +2151,7 @@ fun SpeechServicesSettingsScreen(
                                                     SpeechServiceFactory.SpeechServiceType.SHERPA_NCNN -> stringResource(R.string.speech_services_stt_type_sherpa)
                                                     SpeechServiceFactory.SpeechServiceType.OPENAI_STT -> stringResource(R.string.speech_services_stt_type_openai)
                                                     SpeechServiceFactory.SpeechServiceType.DEEPGRAM_STT -> stringResource(R.string.speech_services_stt_type_deepgram)
+                                                    SpeechServiceFactory.SpeechServiceType.ANDROID_SYSTEM -> stringResource(R.string.chhotu_stt_type_android)
                                                 },
                                                 fontWeight = if (sttServiceTypeInput == type) FontWeight.Medium else FontWeight.Normal
                                             ) 

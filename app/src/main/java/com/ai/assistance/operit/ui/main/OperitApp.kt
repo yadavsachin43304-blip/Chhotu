@@ -404,12 +404,7 @@ fun OperitApp(
             pluginDenylistRepository.refreshFromRemote()
         }
 
-        if (remoteAnnouncement != null) return@LaunchedEffect
-
-        val announcement = remoteAnnouncementRepository.fetchDisplayableAnnouncement()
-        if (announcement != null && remoteAnnouncementPreferences.shouldShow(announcement.version)) {
-            remoteAnnouncement = announcement
-        }
+        // Chhotu Master: upstream Operit announcements are not fetched (no extra network calls).
     }
 
     // Get FPS counter display setting

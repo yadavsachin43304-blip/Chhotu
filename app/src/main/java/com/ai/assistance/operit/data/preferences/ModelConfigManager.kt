@@ -70,7 +70,7 @@ class ModelConfigManager(
         const val DEFAULT_CONFIG_NAME = "model_config_default_name"
 
         // Default API provider type
-        private val DEFAULT_API_PROVIDER_TYPE = ApiProviderType.DEEPSEEK
+        private val DEFAULT_API_PROVIDER_TYPE = ApiProviderType.GOOGLE
         private const val OPENAI_CHAT_REASONING_EFFORT_RULE_ID = "openai-chat-reasoning-effort"
         private const val DEEPSEEK_CHAT_REASONING_EFFORT_RULE_ID = "deepseek-reasoning-effort"
         private const val DEEPSEEK_RESPONSES_REASONING_EFFORT_RULE_ID = "deepseek-responses-reasoning-effort"

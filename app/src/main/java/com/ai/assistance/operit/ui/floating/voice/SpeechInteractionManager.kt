@@ -162,7 +162,7 @@ class SpeechInteractionManager(
                         delay(160)
                     }
                     ok = speechService.startRecognition(
-                        languageCode = "zh-CN",
+                        languageCode = "hi-IN", // Chhotu Master: Hindi speech recognition
                         continuousMode = true,
                         partialResults = true
                     )

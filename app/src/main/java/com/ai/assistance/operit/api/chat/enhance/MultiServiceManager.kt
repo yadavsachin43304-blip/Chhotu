@@ -4,6 +4,7 @@ import android.content.Context
 import com.ai.assistance.operit.util.AppLogger
 import com.ai.assistance.operit.api.chat.llmprovider.AIService
 import com.ai.assistance.operit.api.chat.llmprovider.AIServiceFactory
+import com.ai.assistance.operit.api.chat.llmprovider.ChhotuOfflineFallbackService
 import com.ai.assistance.operit.api.chat.llmprovider.RateLimitedAIService
 import com.ai.assistance.operit.api.chat.llmprovider.RateLimiterRegistry
 import com.ai.assistance.operit.api.chat.llmprovider.RequestConcurrencyRegistry
@@ -133,7 +134,11 @@ class MultiServiceManager(private val context: Context) {
         val configMapping = functionalConfigManager.getConfigMappingForFunction(functionType)
         val config = modelConfigManager.getModelConfigFlow(configMapping.configId).first()
 
-        val service = createServiceFromConfig(config, configMapping.modelIndex)
+        val service = createServiceFromConfig(
+            config,
+            configMapping.modelIndex,
+            offlineFallback = functionType == FunctionType.CHAT
+        )
         val managedService = ManagedService(
             service = service,
             modelConfig = config
@@ -154,7 +159,7 @@ class MultiServiceManager(private val context: Context) {
         customServiceInstances[cacheKey]?.let { return it }
 
         val config = modelConfigManager.getModelConfigFlow(configId).first()
-        val service = createServiceFromConfig(config, normalizedIndex)
+        val service = createServiceFromConfig(config, normalizedIndex, offlineFallback = true)
         val managedService = ManagedService(
             service = service,
             modelConfig = config
@@ -295,7 +300,11 @@ class MultiServiceManager(private val context: Context) {
     }
 
     /** 根据配置创建AIService实例 */
-    private suspend fun createServiceFromConfig(config: ModelConfigData, modelIndex: Int): AIService {
+    private suspend fun createServiceFromConfig(
+        config: ModelConfigData,
+        modelIndex: Int,
+        offlineFallback: Boolean = false
+    ): AIService {
         // 使用公共函数计算有效索引
         val actualIndex = getValidModelIndex(config.modelName, modelIndex)
         
@@ -313,11 +322,24 @@ class MultiServiceManager(private val context: Context) {
         
         AppLogger.d(TAG, "创建服务: 原始模型='${config.modelName}', 选中模型='$selectedModelName' (请求索引=$modelIndex, 实际索引=$actualIndex)")
 
-        val rawService = AIServiceFactory.createService(
+        val createdService = AIServiceFactory.createService(
             config = configWithSelectedModel,
             modelConfigManager = modelConfigManager,
             context = context
         )
+        // Chhotu Master: chat turns automatically use the on-device model when there is no
+        // internet, no API key, or the cloud request fails before replying.
+        val rawService =
+            if (offlineFallback && ChhotuOfflineFallbackService.shouldWrap(configWithSelectedModel)) {
+                ChhotuOfflineFallbackService(
+                    appContext = context.applicationContext,
+                    primary = createdService,
+                    primaryConfig = configWithSelectedModel,
+                    modelConfigManager = modelConfigManager
+                )
+            } else {
+                createdService
+            }
 
         val requestLimitPerMinute = config.requestLimitPerMinute.coerceAtLeast(0)
         val maxConcurrentRequests = config.maxConcurrentRequests.coerceAtLeast(0)

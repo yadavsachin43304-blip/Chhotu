@@ -1,0 +1,18 @@
+Chhotu Master
+Copyright (c) 2026 Sachin Yadav (modifications)
+
+This application is a modified version of Operit AI
+  https://github.com/AAswordman/Operit  (commit 929ca6c)
+  Copyright (c) the Operit authors
+  Licensed under the GNU Lesser General Public License v3.0 (see LICENSE).
+
+As required by the LGPL-3.0, the complete corresponding source code of this
+modified version, including all Chhotu changes, is published in
+https://github.com/yadavsachin43304-blip/Chhotu (branch chhotu-master-dev).
+
+Third-party components bundled by Operit keep their own licenses
+(llama.cpp - MIT, MNN - Apache-2.0, sherpa-ncnn / sherpa-onnx - Apache-2.0,
+QuickJS - MIT, and others listed in the Operit repository).
+
+PokeClaw (agents-io/PokeClaw, Apache-2.0) was evaluated but NO PokeClaw code is
+included in this build; phone control uses Operit's own Accessibility tools.

@@ -73,6 +73,12 @@
     <queries>
         <!-- 允许查询和绑定到无障碍服务提供者应用 -->
         <package android:name="com.ai.assistance.operit.provider" />
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
 
     <application
@@ -497,6 +503,16 @@
             android:permission="android.permission.BIND_VOICE_INTERACTION"
             android:exported="true" />
         
+        <!-- Chhotu Master self-test (CI / debugging). Guarded by DUMP: only adb shell or the system can trigger it. -->
+        <receiver
+            android:name=".core.chhotu.ChhotuSelfTestReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.sachin.chhotu.SELFTEST" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

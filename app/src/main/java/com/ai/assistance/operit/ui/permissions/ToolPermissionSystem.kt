@@ -197,7 +197,22 @@ class ToolPermissionSystem private constructor(private val context: Context) {
         val key = toolPermissionKey(tool.name)
         val overrideLevel = preferences[key]?.let { PermissionLevel.fromString(it) }
         
-        val permissionLevel = overrideLevel ?: masterSwitch
+        val configuredLevel =
+            if (overrideLevel == null && ChhotuSafetyPolicy.isOffByDefault(tool.name)) {
+                // Chhotu Master: shell / terminal / raw code tools stay OFF until the user enables them.
+                PermissionLevel.FORBID
+            } else {
+                overrideLevel ?: masterSwitch
+            }
+        val permissionLevel =
+            if (configuredLevel == PermissionLevel.ALLOW && ChhotuSafetyPolicy.mustAlwaysConfirm(tool)) {
+                // Chhotu Master: calls, messages, payments, deletes, installs and system settings are
+                // never auto-approved, even if "always allow" was chosen earlier.
+                PermissionLevel.ASK
+            } else {
+                configuredLevel
+            }
+        AppLogger.d(TAG, "Permission level for ${tool.name}: $permissionLevel")
         
         return when (permissionLevel) {
             PermissionLevel.ALLOW -> ToolPermissionCheckResult.GRANTED
@@ -272,8 +287,10 @@ class ToolPermissionSystem private constructor(private val context: Context) {
                 PermissionRequestResult.DENY -> ToolPermissionCheckResult.DENIED
                 PermissionRequestResult.ALWAYS_ALLOW -> {
                     permissionRequestInfo?.first?.let { tool ->
-                        CoroutineScope(Dispatchers.IO).launch {
-                            saveToolPermission(tool.name, PermissionLevel.ALLOW)
+                        if (!ChhotuSafetyPolicy.mustAlwaysConfirm(tool)) {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                saveToolPermission(tool.name, PermissionLevel.ALLOW)
+                            }
                         }
                     }
                     ToolPermissionCheckResult.GRANTED
