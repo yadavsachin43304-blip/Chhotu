@@ -25,9 +25,13 @@ env:
 
 jobs:
   build:
-    name: Build Chhotu Master APK (arm64)
+    name: Build Chhotu Master APK (${{ matrix.abi }})
     runs-on: ubuntu-24.04
     timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, x86_64]
 
     steps:
       - name: Checkout source
@@ -86,7 +90,7 @@ jobs:
         with:
           path: |
             **/.cxx/operit_deps/*-src
-          key: android-cmake-sources-${{ runner.os }}-${{ runner.arch }}-arm64-v8a-ndk-${{ env.ANDROID_NDK_VERSION }}-cmake-${{ env.ANDROID_CMAKE_VERSION }}-${{ hashFiles('cmake/**', '**/CMakeLists.txt', '**/*.cmake', '**/build.gradle.kts', 'gradle.properties') }}
+          key: android-cmake-sources-${{ runner.os }}-${{ runner.arch }}-${{ matrix.abi }}-ndk-${{ env.ANDROID_NDK_VERSION }}-cmake-${{ env.ANDROID_CMAKE_VERSION }}-${{ hashFiles('cmake/**', '**/CMakeLists.txt', '**/*.cmake', '**/build.gradle.kts', 'gradle.properties') }}
 
       - name: Restore Android dependency cache
         id: cache-manual-deps
@@ -94,6 +98,15 @@ jobs:
         with:
           path: ${{ env.MANUAL_DEPS_DIR }}
           key: android-full-deps-${{ runner.os }}-${{ hashFiles('ci/script/download_android_dependencies.sh', 'ci/script/prepare_android_dependencies.py') }}
+
+      - name: Restore Gradle native build cache (per ABI)
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            **/.cxx/**/obj
+          key: android-native-obj-${{ runner.os }}-${{ matrix.abi }}-${{ hashFiles('**/CMakeLists.txt', '**/build.gradle.kts') }}
+          restore-keys: |
+            android-native-obj-${{ runner.os }}-${{ matrix.abi }}-
 
       - name: Restore generated STT asset cache
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
@@ -167,13 +180,13 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x ./gradlew
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon
+          ./gradlew :app:assembleDebug -PchhotuAbis=${{ matrix.abi }} --stacktrace --no-daemon
 
       - name: Upload build reports
         if: failure()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: chhotu-build-reports-${{ github.run_number }}
+          name: chhotu-build-reports-${{ matrix.abi }}-${{ github.run_number }}
           path: |
             app/build/reports/**
             build/reports/**
@@ -192,7 +205,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: chhotu-master-apk
+          name: ${{ matrix.abi == 'arm64-v8a' && 'chhotu-master-apk' || 'chhotu-master-x86_64-test-apk' }}
           path: apk/*.apk
           if-no-files-found: error
           retention-days: 14
@@ -210,10 +223,10 @@ jobs:
           persist-credentials: false
           submodules: false
 
-      - name: Download APK
+      - name: Download x86_64 test APK
         uses: actions/download-artifact@v4
         with:
-          name: chhotu-master-apk
+          name: chhotu-master-x86_64-test-apk
           path: apk
 
       - name: Free disk space
@@ -256,7 +269,7 @@ jobs:
 
   release:
     name: Publish GitHub release (only after emulator PASS)
-    needs: emulator-test
+    needs: [build, emulator-test]
     runs-on: ubuntu-24.04
     steps:
       - name: Download APK
@@ -280,10 +293,10 @@ jobs:
           Chhotu Master 1 - Sachin's Hindi/Hinglish voice assistant (online + offline).
 
           Built from AAswordman/Operit source (LGPL-3.0), rebranded as Chhotu (com.sachin.chhotu.master, installs beside old Chhotu).
-          Signed debug build, arm64-v8a.
+          Signed debug build, arm64-v8a (phone build).
 
-          Tested before release on an Android 14 emulator (x86_64 image running the arm64 APK through ARM translation):
-          install, launch, chat screen, offline on-device reply with no API key, TTS synthesis, no crash.
+          Tested before release on an Android 14 x86_64 emulator with an x86_64 build of the same commit:
+          install, launch, offline on-device reply with no API key, TTS synthesis, crash-safe :llm process, no crash.
           See the workflow run's test evidence artifact for the full report.
 
           Setup: Settings > Model config > Gemini API key (online). For offline: Model config > MNN > download Qwen3-1.7B-MNN.

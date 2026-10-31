@@ -12,7 +12,11 @@ import com.ai.assistance.operit.core.chat.hooks.PromptTurn
 import com.ai.assistance.operit.core.chat.hooks.PromptTurnKind
 import com.ai.assistance.operit.data.model.ApiProviderType
 import com.ai.assistance.operit.data.model.ModelConfigData
+import com.ai.assistance.operit.core.tools.system.AndroidPermissionLevel
+import com.ai.assistance.operit.data.preferences.AgreementPreferences
 import com.ai.assistance.operit.data.preferences.ModelConfigManager
+import com.ai.assistance.operit.data.preferences.androidPermissionPreferences
+import com.ai.assistance.operit.data.preferences.initAndroidPermissionPreferences
 import com.ai.assistance.operit.util.AppLogger
 import java.io.File
 import java.util.Locale
@@ -40,20 +44,26 @@ class ChhotuSelfTestReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "ChhotuSelfTest"
         const val ACTION = "com.sachin.chhotu.SELFTEST"
+        const val ACTION_PREPARE = "com.sachin.chhotu.SELFTEST_PREPARE"
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != ACTION) return
         val appContext = context.applicationContext
+        if (intent.action == ACTION_PREPARE) {
+            prepareForTest(appContext)
+            return
+        }
+        if (intent.action != ACTION) return
         val runLlm = intent.getBooleanExtra("llm", true)
         val runTts = intent.getBooleanExtra("tts", true)
-        AppLogger.i(TAG, "CHHOTU_SELFTEST_START llm=$runLlm tts=$runTts")
+        val crashProbe = intent.getBooleanExtra("crash_probe", false)
+        AppLogger.i(TAG, "CHHOTU_SELFTEST_START llm=$runLlm tts=$runTts crash_probe=$crashProbe")
         val pending = goAsync()
         scope.launch {
             try {
                 if (runTts) testTts(appContext)
-                if (runLlm) testOfflineBrain(appContext)
+                if (runLlm) testOfflineBrain(appContext, crashProbe)
             } catch (e: Throwable) {
                 AppLogger.e(TAG, "CHHOTU_SELFTEST_CRASH ${e.javaClass.simpleName}: ${e.message}", e)
             } finally {
@@ -63,7 +73,31 @@ class ChhotuSelfTestReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun testOfflineBrain(context: Context) {
+    /**
+     * Test-only: marks the first-run agreement as accepted and picks the "standard" permission
+     * level, so the emulator test lands on the chat screen without tapping through onboarding.
+     */
+    private fun prepareForTest(context: Context) {
+        val pending = goAsync()
+        scope.launch {
+            try {
+                AgreementPreferences(context).acceptCurrentAgreement()
+                initAndroidPermissionPreferences(context)
+                androidPermissionPreferences.savePreferredPermissionLevel(AndroidPermissionLevel.STANDARD)
+                AppLogger.i(TAG, "CHHOTU_SELFTEST_PREPARED level=${androidPermissionPreferences.getPreferredPermissionLevel()}")
+            } catch (e: Throwable) {
+                AppLogger.e(TAG, "CHHOTU_SELFTEST_PREPARE_FAIL ${e.javaClass.simpleName}: ${e.message}", e)
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    private suspend fun testOfflineBrain(context: Context, crashProbe: Boolean = false) {
+        if (crashProbe) {
+            testCrashSafety(context)
+            return
+        }
         try {
             val modelConfigManager = ModelConfigManager(context)
             val local = ChhotuOfflineFallbackService.findLocalModelConfig(modelConfigManager)
@@ -90,7 +124,11 @@ class ChhotuSelfTestReceiver : BroadcastReceiver() {
             }
             val seconds = (System.currentTimeMillis() - startedAt) / 1000.0
             val text = reply.toString().replace("\n", " ").trim()
-            if (text.isNotBlank()) {
+            val outcome = brain.lastOfflineOutcome
+            AppLogger.i(TAG, "CHHOTU_SELFTEST_LLM_OUTCOME $outcome error=${brain.lastOfflineError}")
+            if (outcome != ChhotuOfflineFallbackService.OfflineOutcome.OK) {
+                AppLogger.e(TAG, "CHHOTU_SELFTEST_LLM_FAIL outcome=$outcome error=${brain.lastOfflineError} shown=${text.take(200)}")
+            } else if (text.isNotBlank()) {
                 AppLogger.i(TAG, "CHHOTU_SELFTEST_LLM_OK provider=${brain.providerModel} seconds=$seconds reply=${text.take(300)}")
             } else {
                 AppLogger.e(TAG, "CHHOTU_SELFTEST_LLM_FAIL empty reply provider=${brain.providerModel}")
@@ -98,6 +136,44 @@ class ChhotuSelfTestReceiver : BroadcastReceiver() {
             brain.release()
         } catch (e: Throwable) {
             AppLogger.e(TAG, "CHHOTU_SELFTEST_LLM_FAIL ${e.javaClass.simpleName}: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Crash-safety probe: asks the ":llm" process to SIGABRT itself mid-request (exactly what a
+     * llama.cpp / MNN native abort does) and checks that this main process survives and gets the
+     * friendly "offline brain stopped" message instead of dying.
+     */
+    private suspend fun testCrashSafety(context: Context) {
+        try {
+            val local = ChhotuOfflineFallbackService.findLocalModelConfig(ModelConfigManager(context))
+            if (local == null) {
+                AppLogger.e(TAG, "CHHOTU_SELFTEST_CRASHSAFE_FAIL no local model")
+                return
+            }
+            val mainPid = android.os.Process.myPid()
+            var crashed = false
+            val text = StringBuilder()
+            try {
+                withTimeout(120_000L) {
+                    ChhotuLocalLlmClient.generate(
+                        context = context,
+                        localConfig = local,
+                        history = listOf(PromptTurn(kind = PromptTurnKind.USER, content = "Ek lambi kahani sunao.")),
+                        crashProbe = true,
+                    ).collect { text.append(it) }
+                }
+            } catch (e: ChhotuLocalLlmCrashedException) {
+                crashed = true
+                AppLogger.i(TAG, "crash probe: llm process died as intended: ${e.message}")
+            }
+            if (crashed && android.os.Process.myPid() == mainPid) {
+                AppLogger.i(TAG, "CHHOTU_SELFTEST_CRASHSAFE_OK main_pid=$mainPid survived the :llm SIGABRT")
+            } else {
+                AppLogger.e(TAG, "CHHOTU_SELFTEST_CRASHSAFE_FAIL crashed=$crashed text=${text.take(200)}")
+            }
+        } catch (e: Throwable) {
+            AppLogger.e(TAG, "CHHOTU_SELFTEST_CRASHSAFE_FAIL ${e.javaClass.simpleName}: ${e.message}", e)
         }
     }
 

@@ -6,6 +6,8 @@ import android.net.NetworkCapabilities
 import com.ai.assistance.operit.R
 import com.ai.assistance.operit.core.chat.hooks.PromptTurn
 import com.ai.assistance.operit.core.chat.hooks.PromptTurnKind
+import com.ai.assistance.operit.core.chhotu.ChhotuLocalLlmClient
+import com.ai.assistance.operit.core.chhotu.ChhotuLocalLlmCrashedException
 import com.ai.assistance.operit.data.mnn.MnnModelDownloadManager
 import com.ai.assistance.operit.data.model.ApiProviderType
 import com.ai.assistance.operit.data.model.ModelConfigData
@@ -174,31 +176,37 @@ class ChhotuOfflineFallbackService(
         }
     }
 
-    @Volatile private var active: AIService = primary
-    @Volatile private var localService: AIService? = null
-    @Volatile private var localServiceModel: String? = null
-    private val localLock = Any()
+    /** Result of the last offline turn, read by the self-test. */
+    enum class OfflineOutcome { NONE, OK, FAILED, CRASHED }
+
+    @Volatile private var offlineActive = false
+    @Volatile private var offlineProviderModel: String = ""
+    @Volatile private var offlineOutputTokens: Long = 0L
+    @Volatile var lastOfflineOutcome: OfflineOutcome = OfflineOutcome.NONE
+        private set
+    @Volatile var lastOfflineError: String? = null
+        private set
 
     override val inputTokenCount: Long
-        get() = active.inputTokenCount
+        get() = if (offlineActive) 0L else primary.inputTokenCount
 
     override val cachedInputTokenCount: Long
-        get() = active.cachedInputTokenCount
+        get() = if (offlineActive) 0L else primary.cachedInputTokenCount
 
     override val outputTokenCount: Long
-        get() = active.outputTokenCount
+        get() = if (offlineActive) offlineOutputTokens else primary.outputTokenCount
 
     override val providerModel: String
-        get() = active.providerModel
+        get() = if (offlineActive) offlineProviderModel else primary.providerModel
 
     override fun resetTokenCounts() {
         primary.resetTokenCounts()
-        localService?.resetTokenCounts()
+        offlineOutputTokens = 0L
     }
 
     override fun cancelStreaming() {
         primary.cancelStreaming()
-        localService?.cancelStreaming()
+        ChhotuLocalLlmClient.cancelAll()
     }
 
     override suspend fun getModelsList(context: Context): Result<List<ModelOption>> {
@@ -218,11 +226,7 @@ class ChhotuOfflineFallbackService(
 
     override fun release() {
         primary.release()
-        synchronized(localLock) {
-            localService?.release()
-            localService = null
-            localServiceModel = null
-        }
+        ChhotuLocalLlmClient.cancelAll()
     }
 
     private fun cloudUnavailableReason(): String? {
@@ -230,21 +234,6 @@ class ChhotuOfflineFallbackService(
         val readiness = ChatConfigReadiness.evaluate(primaryConfig, 0, emptySet())
         if (!readiness.isReady) return "cloud model not configured (${readiness.issue})"
         return null
-    }
-
-    private suspend fun obtainLocalService(): AIService? {
-        val localConfig = findLocalModelConfig(modelConfigManager) ?: return null
-        val key = "${localConfig.apiProviderTypeId}:${localConfig.modelName}"
-        synchronized(localLock) {
-            val existing = localService
-            if (existing != null && localServiceModel == key) return existing
-            existing?.release()
-            val created = AIServiceFactory.createService(localConfig, modelConfigManager, appContext)
-            localService = created
-            localServiceModel = key
-            AppLogger.i(TAG, "offline brain ready: $key")
-            return created
-        }
     }
 
     override suspend fun sendMessage(
@@ -262,30 +251,64 @@ class ChhotuOfflineFallbackService(
         recordTokenUsage: Boolean,
         onUsageFinalized: (suspend (attempt: Int?) -> Unit)?,
     ): Stream<String> = com.ai.assistance.operit.util.stream.stream {
-        suspend fun runOffline(local: AIService, why: String) {
-            AppLogger.i(TAG, "CHHOTU_BRAIN_MODE=OFFLINE reason=$why model=${local.providerModel}")
-            active = local
-            local.sendMessage(
-                context = context,
-                chatHistory = buildOfflineHistory(chatHistory),
-                modelParameters = modelParameters,
-                enableThinking = false,
-                stream = stream,
-                availableTools = null,
-                preserveThinkInHistory = false,
-                onTokensUpdated = onTokensUpdated,
-                onUsageReported = onUsageReported,
-                onNonFatalError = onNonFatalError,
-                enableRetry = false,
-                recordTokenUsage = recordTokenUsage,
-                onUsageFinalized = onUsageFinalized,
-            ).collect { chunk -> emit(chunk) }
-            AppLogger.i(TAG, "CHHOTU_BRAIN_OFFLINE_REPLY_DONE")
+        suspend fun runOffline(local: ModelConfigData, why: String) {
+            val label = "${local.apiProviderTypeId}:${local.modelName}"
+            AppLogger.i(TAG, "CHHOTU_BRAIN_MODE=OFFLINE reason=$why model=$label")
+            offlineActive = true
+            offlineProviderModel = label
+            offlineOutputTokens = 0L
+            var emittedText = false
+            val replyText = StringBuilder()
+            try {
+                // runs in the separate ":llm" process, so a native crash there cannot kill the app
+                ChhotuLocalLlmClient.generate(
+                    context = appContext,
+                    localConfig = local,
+                    history = buildOfflineHistory(chatHistory),
+                    onProviderModel = { pm -> if (pm.isNotBlank() && pm != "cancelled") offlineProviderModel = pm },
+                ).collect { chunk ->
+                    if (chunk.isNotBlank()) emittedText = true
+                    if (replyText.length < 400) replyText.append(chunk)
+                    offlineOutputTokens += 1
+                    emit(chunk)
+                }
+                runCatching { onTokensUpdated(0L, 0L, offlineOutputTokens) }
+                if (emittedText) {
+                    lastOfflineOutcome = OfflineOutcome.OK
+                    lastOfflineError = null
+                    AppLogger.i(
+                        TAG,
+                        "CHHOTU_BRAIN_OFFLINE_REPLY_DONE tokens=$offlineOutputTokens text=" +
+                            replyText.toString().replace(Regex("\\s+"), " ").trim().take(300)
+                    )
+                } else {
+                    lastOfflineOutcome = OfflineOutcome.FAILED
+                    lastOfflineError = "empty reply"
+                    AppLogger.w(TAG, "CHHOTU_BRAIN_OFFLINE_FAILED empty reply")
+                    emit(appContext.getString(R.string.chhotu_offline_failed, "empty reply"))
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ChhotuLocalLlmCrashedException) {
+                lastOfflineOutcome = OfflineOutcome.CRASHED
+                lastOfflineError = e.message
+                AppLogger.e(TAG, "CHHOTU_BRAIN_OFFLINE_CRASHED ${e.message}")
+                emit((if (emittedText) "\n\n" else "") + appContext.getString(R.string.chhotu_offline_crashed))
+            } catch (e: Throwable) {
+                lastOfflineOutcome = OfflineOutcome.FAILED
+                lastOfflineError = "${e.javaClass.simpleName}: ${e.message}"
+                AppLogger.e(TAG, "CHHOTU_BRAIN_OFFLINE_FAILED ${e.javaClass.simpleName}: ${e.message}")
+                emit(
+                    (if (emittedText) "\n\n" else "") +
+                        appContext.getString(R.string.chhotu_offline_failed, (e.message ?: e.javaClass.simpleName).take(160))
+                )
+            }
+            runCatching { onUsageFinalized?.invoke(1) }
         }
 
         val unavailable = cloudUnavailableReason()
         if (unavailable != null) {
-            val local = obtainLocalService()
+            val local = findLocalModelConfig(modelConfigManager)
             if (local != null) {
                 runOffline(local, unavailable)
                 return@stream
@@ -294,12 +317,16 @@ class ChhotuOfflineFallbackService(
                 !ChatConfigReadiness.evaluate(primaryConfig, 0, emptySet()).isReady
             ) {
                 AppLogger.w(TAG, "CHHOTU_BRAIN_MODE=NONE reason=$unavailable (no offline model)")
-                throw IOException(appContext.getString(R.string.chhotu_offline_no_model))
+                lastOfflineOutcome = OfflineOutcome.FAILED
+                lastOfflineError = "no offline model ($unavailable)"
+                // answer with a clear message (shown + read aloud) instead of an error popup
+                emit(appContext.getString(R.string.chhotu_offline_no_model))
+                return@stream
             }
         }
 
         AppLogger.i(TAG, "CHHOTU_BRAIN_MODE=ONLINE model=${primary.providerModel}")
-        active = primary
+        offlineActive = false
         var emittedAny = false
         try {
             primary.sendMessage(
@@ -324,7 +351,7 @@ class ChhotuOfflineFallbackService(
             throw e
         } catch (e: Exception) {
             if (emittedAny) throw e
-            val local = obtainLocalService() ?: throw e
+            val local = findLocalModelConfig(modelConfigManager) ?: throw e
             AppLogger.w(TAG, "cloud request failed before any reply, switching to offline brain", e)
             runOffline(local, "cloud error: ${e.javaClass.simpleName}")
         }

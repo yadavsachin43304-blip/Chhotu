@@ -70,10 +70,14 @@ android {
         }
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("CMakeLists.txt")
-            version = "3.22.1"
+    // -PchhotuSkipMnnNative=true: emergency switch for the x86_64 emulator test build only, in case
+    // MNN's native code cannot be compiled for x86_64 (the release arm64 build always builds MNN).
+    if ((project.findProperty("chhotuSkipMnnNative") as String?) != "true") {
+        externalNativeBuild {
+            cmake {
+                path = file("CMakeLists.txt")
+                version = "3.22.1"
+            }
         }
     }
 

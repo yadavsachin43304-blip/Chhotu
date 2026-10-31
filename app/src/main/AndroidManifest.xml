@@ -510,8 +510,16 @@
             android:permission="android.permission.DUMP">
             <intent-filter>
                 <action android:name="com.sachin.chhotu.SELFTEST" />
+                <action android:name="com.sachin.chhotu.SELFTEST_PREPARE" />
             </intent-filter>
         </receiver>
+
+        <!-- Chhotu offline brain: llama.cpp / MNN run in their own process so a native crash
+             there cannot take down the app. Not exported: only Chhotu itself can bind. -->
+        <service
+            android:name=".core.chhotu.ChhotuLocalLlmService"
+            android:exported="false"
+            android:process=":llm" />
 
     </application>
 

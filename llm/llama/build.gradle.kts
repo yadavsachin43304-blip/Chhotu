@@ -27,7 +27,16 @@ android {
                     "-DANDROID_STL=c++_static",
                     "-DANDROID_PLATFORM=android-26",
                     "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
-                    "-DLLAMA_BUILD_COMMON=ON"
+                    "-DLLAMA_BUILD_COMMON=ON",
+                    // x86 options are ignored on arm64. On the x86_64 emulator test build keep to the
+                    // baseline Android x86_64 ISA (SSE4.2) so llama.cpp never hits an illegal instruction.
+                    "-DGGML_NATIVE=OFF",
+                    "-DGGML_AVX=OFF",
+                    "-DGGML_AVX2=OFF",
+                    "-DGGML_AVX512=OFF",
+                    "-DGGML_FMA=OFF",
+                    "-DGGML_F16C=OFF",
+                    "-DGGML_BMI2=OFF"
                 )
             }
         }

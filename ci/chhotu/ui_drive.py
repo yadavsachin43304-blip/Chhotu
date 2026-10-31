@@ -45,6 +45,9 @@ BLOCKING_TEXT = ["i have read and agree", "please wait", "select permission leve
                  "basic permissions", "incomplete permissions", "user agreement"]
 
 step = 0
+MAX_SAME_TAP = 2  # never tap the same label more than 2 times in a row
+last_label = None
+same_count = 0
 
 
 def sh(*args, timeout=60):
@@ -129,6 +132,7 @@ def find_chat_input(nodes):
 
 
 def main():
+    global last_label, same_count
     w, h = screen_size()
     log(f"screen {w}x{h}")
     chat = None
@@ -153,8 +157,15 @@ def main():
                 if not label or any(bad in label for bad in NEVER):
                     continue
                 if label == word or (len(word) > 4 and label.startswith(word)):
+                    if label == last_label and same_count >= MAX_SAME_TAP:
+                        log(f"skip '{label}' (already tapped {same_count} times in a row)")
+                        continue
                     log(f"tap '{label}' at {n['cx']},{n['cy']}")
                     tap(n["cx"], n["cy"])
+                    if label == last_label:
+                        same_count += 1
+                    else:
+                        last_label, same_count = label, 1
                     pressed = True
                     break
             if pressed:
