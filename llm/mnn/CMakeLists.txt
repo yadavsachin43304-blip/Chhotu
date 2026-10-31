@@ -201,10 +201,16 @@ target_include_directories(MNNWrapper PRIVATE
 )
 
 # 添加编译选项以解决 TLS 问题
-target_compile_options(MNNWrapper PRIVATE -fno-emulated-tls)
-target_compile_options(MNN PRIVATE -fno-emulated-tls)
+if(NOT ANDROID_ABI STREQUAL "x86_64")
+  target_compile_options(MNNWrapper PRIVATE -fno-emulated-tls)
+endif()
+if(NOT ANDROID_ABI STREQUAL "x86_64")
+  target_compile_options(MNN PRIVATE -fno-emulated-tls)
+endif()
 if(TARGET llm)
-    target_compile_options(llm PRIVATE -fno-emulated-tls)
+    if(NOT ANDROID_ABI STREQUAL "x86_64")
+      target_compile_options(llm PRIVATE -fno-emulated-tls)
+    endif()
     if(EXISTS "${MNN_SOURCE_DIR}/transformers/llm/engine/src/minja/chat_template.hpp")
         target_compile_options(MNNWrapper PRIVATE -DLLM_USE_MINJA)
         target_include_directories(MNNWrapper PRIVATE

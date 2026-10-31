@@ -25,7 +25,7 @@ android {
 
         externalNativeBuild {
             cmake {
-                cppFlags += listOf("-std=c++17", "-fno-emulated-tls")
+                cppFlags += if (((rootProject.findProperty("chhotuAbis") as String?) ?: "").contains("x86_64")) listOf("-std=c++17") else listOf("-std=c++17", "-fno-emulated-tls")
                 arguments += listOf(
                     "-DANDROID_STL=c++_static",
                     "-DANDROID_PLATFORM=android-26",
