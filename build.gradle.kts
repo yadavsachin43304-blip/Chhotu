@@ -48,6 +48,12 @@ subprojects {
                 filters.clear()
                 filters.addAll(chhotuAbis)
             }
+            // x86_64 test build: native ELF TLS (-fno-emulated-tls) needs __tls_get_addr, which bionic
+            // only exports from API 29 on x86_64. The emulator is API 34, so raise minSdk for that build only.
+            if (chhotuAbis.contains("x86_64")) {
+                val cur = androidExt.defaultConfig.minSdkVersion?.apiLevel ?: 0
+                if (cur < 29) androidExt.defaultConfig.minSdkVersion(29)
+            }
         }
     }
 }
