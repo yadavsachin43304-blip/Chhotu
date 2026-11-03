@@ -12,7 +12,7 @@ public final class Prefs {
             "gemini-2.5-flash-native-audio-preview-12-2025"
     };
     /** Female prebuilt Gemini voices. */
-    public static final String[] VOICES = {"Aoede", "Kore", "Leda", "Zephyr", "Autonoe", "Sulafat"};
+    public static final String[] VOICES = {"Sulafat", "Aoede", "Kore", "Leda", "Zephyr", "Autonoe", "Achernar", "Vindemiatrix"};
     public static final String[] THEME_NAMES = {"Hologram", "Cyber", "Anime"};
 
     private Prefs() {}

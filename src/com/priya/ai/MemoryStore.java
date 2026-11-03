@@ -133,7 +133,7 @@ public class MemoryStore {
     /** Text injected into Priya's system prompt at session start. */
     public String contextForPrompt() {
         String n = tail(notes, 10 * 1024).trim();
-        String c = tail(convo, 3 * 1024).trim();
+        String c = tail(convo, 8 * 1024).trim();
         StringBuilder sb = new StringBuilder();
         if (!n.isEmpty()) sb.append("SAVED NOTES / VAADE (oldest to newest):\n").append(n).append("\n\n");
         if (!c.isEmpty()) sb.append("RECENT CONVERSATION:\n").append(c).append("\n");

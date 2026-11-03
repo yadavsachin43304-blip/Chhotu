@@ -44,13 +44,63 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         view.setListener(this);
         root.addView(view, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        buildPowerButton();
         buildDrawer();
         setContentView(root);
+    }
+
+    // ------------------------------------------------------------------ front ON / OFF button
+
+    private TextView power;
+    private final android.os.Handler ui = new android.os.Handler(android.os.Looper.getMainLooper());
+    private int lastPowerState = -1;
+
+    private void buildPowerButton() {
+        power = Ui.text(this, "", 15, 0xFFFFFFFF, true);
+        power.setGravity(Gravity.CENTER);
+        int ph = Ui.dp(this, 16), pv = Ui.dp(this, 10);
+        power.setPadding(ph, pv, ph, pv);
+        power.setElevation(Ui.dp(this, 8));
+        power.setOnClickListener(v -> onMic());
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | Gravity.END);
+        lp.setMargins(0, 0, Ui.dp(this, 14), Ui.dp(this, 22));
+        root.addView(power, lp);
+        refreshPower();
+    }
+
+    private void refreshPower() {
+        boolean on = PriyaBus.running();
+        int st = on ? 1 : 0;
+        if (st != lastPowerState) {
+            lastPowerState = st;
+            power.setText(on ? "\u25CF  Priya ON" : "\u23FB  Priya OFF");
+            android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+            g.setCornerRadius(Ui.dp(this, 24));
+            g.setColor(on ? 0xE61DB954 : 0xE6C62828);
+            g.setStroke(Ui.dp(this, 1), 0x66FFFFFF);
+            power.setBackground(g);
+        }
+    }
+
+    private final Runnable powerTick = new Runnable() {
+        @Override public void run() {
+            refreshPower();
+            ui.postDelayed(this, 300);
+        }
+    };
+
+    @Override protected void onPause() {
+        super.onPause();
+        ui.removeCallbacks(powerTick);
     }
 
     @Override protected void onResume() {
         super.onResume();
         applyTheme(Prefs.theme(this));
+        ui.removeCallbacks(powerTick);
+        ui.post(powerTick);
         if (Prefs.apiKey(this).isEmpty() && !PriyaBus.running()) {
             PriyaBus.status = "Pehle Menu > API mein Gemini key daalo";
         } else if (!PriyaBus.running() && PriyaBus.state != PriyaBus.ERROR) {

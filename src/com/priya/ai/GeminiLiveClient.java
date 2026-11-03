@@ -28,6 +28,13 @@ public class GeminiLiveClient {
     private static final String HOST = "generativelanguage.googleapis.com";
     private static final String PATH =
             "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=";
+    private static final String PATH_ALPHA =
+            "/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=";
+
+    /** Affective (emotion-aware) dialog is only offered on native-audio Live models. */
+    private boolean affective() {
+        return model != null && model.contains("native-audio");
+    }
 
     private final String apiKey;
     private final String model;
@@ -63,7 +70,7 @@ public class GeminiLiveClient {
     public void connect() {
         String path;
         try {
-            path = PATH + URLEncoder.encode(apiKey, "UTF-8");
+            path = ((full && affective()) ? PATH_ALPHA : PATH) + URLEncoder.encode(apiKey, "UTF-8");
         } catch (Exception e) {
             path = PATH + apiKey;
         }
@@ -136,6 +143,7 @@ public class GeminiLiveClient {
 
             JSONObject gen = new JSONObject();
             gen.put("responseModalities", new JSONArray().put("AUDIO"));
+            gen.put("temperature", 0.9);
             gen.put("speechConfig", new JSONObject().put("voiceConfig",
                     new JSONObject().put("prebuiltVoiceConfig", new JSONObject().put("voiceName", voice))));
             setup.put("generationConfig", gen);
@@ -146,6 +154,11 @@ public class GeminiLiveClient {
             setup.put("inputAudioTranscription", new JSONObject());
             setup.put("outputAudioTranscription", new JSONObject());
 
+            if (full && affective()) {
+                // Emotion-aware voice: tone follows the user's mood (native-audio models, v1alpha).
+                gen.put("enableAffectiveDialog", true);
+                setup.put("proactivity", new JSONObject().put("proactiveAudio", true));
+            }
             if (full) {
                 setup.put("contextWindowCompression", new JSONObject().put("slidingWindow", new JSONObject()));
                 JSONObject sr = new JSONObject();

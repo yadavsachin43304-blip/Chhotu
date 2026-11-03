@@ -160,8 +160,23 @@ public class AudioEngine {
 
     // ------------------------------------------------------------------ playback
 
+    /** True while the server is still sending audio for the current reply. */
+    private volatile boolean generating = false;
+    /** After the user cuts Priya off, drop the rest of that old reply. */
+    private volatile boolean dropOld = false;
+
+    public void setGenerating(boolean g) {
+        generating = g;
+        if (!g) dropOld = false;
+    }
+
+    private void bargeIn() {
+        if (generating) dropOld = true;
+        interruptPlayback();
+    }
+
     public void playChunk(byte[] pcm24k) {
-        if (!running || pcm24k == null || pcm24k.length == 0) return;
+        if (!running || pcm24k == null || pcm24k.length == 0 || dropOld) return;
         setCommMode(true);
         long now = SystemClock.elapsedRealtime();
         long ms = pcm24k.length / 2 / (OUT_RATE / 1000);
@@ -294,6 +309,7 @@ public class AudioEngine {
         ArrayDeque<byte[]> preroll = new ArrayDeque<>();
         boolean inSpeech = false;
         int loud = 0;
+        int bargeLoud = 0;
         int hang = 0;
         float floor = 300f;
         float smooth = 0f;
@@ -321,6 +337,24 @@ public class AudioEngine {
             if (!speaking && commMode && SystemClock.elapsedRealtime() > speakEnd + 800) setCommMode(false);
 
             if (speaking && strictEcho) {
+                // Barge-in (roka-toki): a clearly loud, sustained voice cuts Priya off right away.
+                float bargeThr = Math.max(MIN_THR * 2.5f, floor * mult * 4f);
+                bargeLoud = rms > bargeThr ? bargeLoud + 1 : 0;
+                if (bargeLoud >= 12) { // ~240 ms of loud speech
+                    bargeLoud = 0;
+                    bargeIn();
+                    inSpeech = true;
+                    hang = HANG_FRAMES;
+                    loud = 0;
+                    PriyaBus.userTalking = true;
+                    sink.onSpeechStart();
+                    for (byte[] b : preroll) emit(sink, b);
+                    preroll.clear();
+                    emit(sink, toBytes(frame));
+                    continue;
+                }
+                preroll.addLast(toBytes(frame));
+                if (preroll.size() > PREROLL_FRAMES) preroll.removeFirst();
                 if (inSpeech) {
                     inSpeech = false;
                     flushSend(sink);
@@ -330,9 +364,9 @@ public class AudioEngine {
                 loud = 0;
                 hang = 0;
                 sendLen = 0;
-                preroll.clear();
                 continue;
             }
+            bargeLoud = 0;
 
             float thr = Math.max(MIN_THR, floor * mult);
             if (speaking) thr *= 2.5f; // barge-in only with a clearly louder voice
