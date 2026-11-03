@@ -1,0 +1,36 @@
+name: Build Priya AI APK
+on:
+  push:
+    branches: [priya-ai]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build tools on PATH
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          echo "$BT" >> $GITHUB_PATH
+          PJ=$(ls -d $ANDROID_HOME/platforms/android-* | sort -V | tail -1)/android.jar
+          echo "ANDROID_JAR=$PJ" >> $GITHUB_ENV
+          echo "BT=$BT  JAR=$PJ"
+      - name: Build
+        run: bash build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PriyaAI-apk
+          path: PriyaAI.apk
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: priya-ai-v${{ github.run_number }}
+          name: Priya AI v${{ github.run_number }}
+          target_commitish: priya-ai
+          files: PriyaAI.apk
