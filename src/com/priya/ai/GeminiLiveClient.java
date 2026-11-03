@@ -102,6 +102,18 @@ public class GeminiLiveClient {
 
     // ------------------------------------------------------------------ outgoing
 
+    /** Sends a text turn (used for system notes, e.g. a stranger's voice gave a command). */
+    public void sendText(String text) {
+        if (!isReady()) return;
+        try {
+            JSONObject turn = new JSONObject().put("role", "user")
+                    .put("parts", new JSONArray().put(new JSONObject().put("text", text)));
+            JSONObject msg = new JSONObject().put("clientContent",
+                    new JSONObject().put("turns", new JSONArray().put(turn)).put("turnComplete", true));
+            ws.send(msg.toString());
+        } catch (Exception ignored) { }
+    }
+
     public void sendAudio(byte[] pcm16k, int len) {
         if (!isReady()) return;
         String b64 = Base64.encodeToString(pcm16k, 0, len, Base64.NO_WRAP);
@@ -221,6 +233,23 @@ public class GeminiLiveClient {
                 new JSONObject().put("query", str("Search query")), "query"));
         a.put(fn("knowledge", "Search Priya's learned skill notes: 30 business skills (strategy, finance, pricing, marketing, funnels, SEO, automation, AI agents, SOPs, YouTube growth, scriptwriting, OKRs, negotiation) and the video editing + AI editing prompt handbook (cuts, transitions, keyframes, captions, colour, audio, prompt recipes).",
                 new JSONObject().put("query", str("Keywords, e.g. 'ripple delete', 'pricing strategy', 'J cut', 'unit economics'")), "query"));
+        a.put(fn("use_skill", "Load the full instructions of one of Priya's saved skills before doing a task that matches it.",
+                new JSONObject().put("name", str("Skill name from the SKILLS list")), "name"));
+        a.put(fn("create_skill", "Create and save a NEW skill for a kind of task. Only call after the user said yes to making the skill.",
+                new JSONObject()
+                        .put("name", str("Short skill name"))
+                        .put("description", str("One line: when to use this skill"))
+                        .put("instructions", str("Clear numbered steps Priya should follow for this kind of task")),
+                "name", "description", "instructions"));
+        a.put(fn("set_alarm", "Set an alarm on the phone.",
+                new JSONObject().put("hour", new JSONObject().put("type", "INTEGER").put("description", "Hour 0-23"))
+                        .put("minute", new JSONObject().put("type", "INTEGER").put("description", "Minute 0-59"))
+                        .put("label", str("Alarm label")), "hour"));
+        a.put(fn("open_link", "Open a website link in the browser.",
+                new JSONObject().put("url", str("Website URL")), "url"));
+        a.put(fn("whatsapp_chat", "Open a WhatsApp chat with a phone number and pre-type a message (does not send). Confirm with the user, then click 'Send'.",
+                new JSONObject().put("phone", str("Phone number with or without country code"))
+                        .put("text", str("Message text")), "phone"));
         a.put(fn("remember", "Save something to Priya's permanent memory: a promise (VAADA) the user made or Priya made, a fact about the user, or a note.",
                 new JSONObject()
                         .put("kind", enumStr("Type of memory", "VAADA", "FACT", "NOTE"))

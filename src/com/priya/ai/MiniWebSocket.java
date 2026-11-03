@@ -257,10 +257,18 @@ public class MiniWebSocket {
     }
 
     public void close() {
-        if (open) {
-            try { sendFrame(0x8, new byte[]{0x03, (byte) 0xE8}); } catch (Exception ignored) { }
-        }
-        finish(1000, "client closed");
+        // Never touch the (TLS) socket on the main thread: Android throws NetworkOnMainThreadException,
+        // which used to crash the app (and throw the user out) when Priya was switched off.
+        Thread t = new Thread(() -> {
+            try {
+                if (open) {
+                    try { sendFrame(0x8, new byte[]{0x03, (byte) 0xE8}); } catch (Throwable ignored) { }
+                }
+                finish(1000, "client closed");
+            } catch (Throwable ignored) { }
+        }, "ws-close");
+        t.setDaemon(true);
+        t.start();
     }
 
     private void finish(int code, String reason) {
@@ -268,7 +276,7 @@ public class MiniWebSocket {
         try {
             Socket s = socket;
             if (s != null) s.close();
-        } catch (IOException ignored) { }
+        } catch (Throwable ignored) { }
         if (done.compareAndSet(false, true)) {
             listener.onClosed(code, reason == null ? "" : reason);
         }

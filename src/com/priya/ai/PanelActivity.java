@@ -76,6 +76,7 @@ public class PanelActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        PriyaBus.appVisible = true;
         if (!rendered || "permissions".equals(page)) {
             render();
             rendered = true;
@@ -87,6 +88,7 @@ public class PanelActivity extends Activity {
             case "api": return "API (Gemini)";
             case "memory": return "Memory (30 MB)";
             case "settings": return "Settings";
+            case "skills": return "Skills";
             default: return "Permissions";
         }
     }
@@ -97,8 +99,14 @@ public class PanelActivity extends Activity {
             case "api": renderApi(); break;
             case "memory": renderMemory(); break;
             case "settings": renderSettings(); break;
+            case "skills": renderSkills(); break;
             default: renderPermissions(); break;
         }
+    }
+
+    @Override protected void onPause() {
+        super.onPause();
+        PriyaBus.appVisible = false;
     }
 
     private void toast(String s) { Toast.makeText(this, s, Toast.LENGTH_SHORT).show(); }
@@ -512,17 +520,125 @@ public class PanelActivity extends Activity {
         c3.addView(sv, Ui.matchWrap(this, 6));
         content.addView(c3);
 
+        LinearLayout cv = Ui.card(this);
+        cv.addView(Ui.text(this, "Voice Lock (sirf meri awaaz)", 16, Ui.TEXT, true));
+        final TextView vInfo = Ui.text(this, Prefs.voiceF0(this) > 0
+                ? "Aapki awaaz save hai (" + Math.round(Prefs.voiceF0(this)) + " Hz). ON hone par Priya baaki awaazein ignore karegi."
+                : "Pehle neeche button dabakar 8 second normal awaaz mein boliye.", 12.5f, Ui.SUB, false);
+        vInfo.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
+        cv.addView(vInfo);
+        cv.addView(Ui.switchRow(this, "Voice Lock ON", "Doosre logon / TV ki awaaz par kaam nahi karegi.",
+                Prefs.voiceLock(this), (b, on) -> {
+                    if (on && Prefs.voiceF0(this) <= 0) { toast("Pehle apni awaaz record karo."); b.setChecked(false); return; }
+                    Prefs.setVoiceLock(this, on);
+                }));
+        Button rec = Ui.button(this, "🎙  Meri awaaz record karo (8 sec)", Ui.ACCENT, 0xFF06202A);
+        rec.setOnClickListener(v -> {
+            if (PriyaBus.running()) { toast("Pehle Priya OFF karo."); return; }
+            if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 7); return;
+            }
+            rec.setEnabled(false);
+            vInfo.setText("Boliye… (8 second tak normal baat karo, jaise Priya se karte ho)");
+            new Thread(() -> {
+                float f0 = AudioEngine.enroll(8);
+                ui.post(() -> {
+                    rec.setEnabled(true);
+                    if (f0 > 0) {
+                        Prefs.setVoiceF0(this, f0);
+                        Prefs.setVoiceLock(this, true);
+                        vInfo.setText("Ho gaya ✓ Aapki awaaz save hai (" + Math.round(f0) + " Hz). Voice Lock ON.");
+                    } else {
+                        vInfo.setText("Awaaz saaf nahi mili. Shaant jagah mein dobara try karo.");
+                    }
+                });
+            }).start();
+        });
+        cv.addView(rec, Ui.matchWrap(this, 6));
+        content.addView(cv);
+
+        LinearLayout cf = Ui.card(this);
+        cf.addView(Ui.switchRow(this, "Home screen par Priya ka chhota face",
+                "Priya ON ho aur aap app se bahar ho to chhota face bolte hue dikhega. 'Overlay' permission chahiye.",
+                Prefs.floatingFace(this), (b, on) -> {
+                    Prefs.setFloatingFace(this, on);
+                    if (on && !Settings.canDrawOverlays(this)) {
+                        start(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + getPackageName())));
+                    }
+                }));
+        content.addView(cf);
+
         LinearLayout c4 = Ui.card(this);
         c4.addView(Ui.text(this, "Status", 16, Ui.TEXT, true));
         String echo = PriyaBus.echoInfo == null || PriyaBus.echoInfo.isEmpty() ? "Priya chalu hogi tab dikhega" : PriyaBus.echoInfo;
         TextView st = Ui.text(this, "Audio: " + echo + "\nLast good model: "
                 + (Prefs.lastGoodModel(this).isEmpty() ? "-" : Prefs.lastGoodModel(this))
-                + "\nAccessibility: " + (accessibilityOn(this) ? "ON" : "OFF"), 12.5f, Ui.SUB, false);
+                + "\nAccessibility: " + (accessibilityOn(this) ? "ON" : "OFF")
+                + (Prefs.lastCrash(this).isEmpty() ? "" : "\nLast error: " + Prefs.lastCrash(this).split("\n")[0]), 12.5f, Ui.SUB, false);
         st.setPadding(0, Ui.dp(this, 4), 0, 0);
         c4.addView(st);
         TextView note = Ui.text(this, "Settings badalne ke baad Priya ko ek baar band karke dobara chalu karo.", 12, Ui.SUB, false);
         note.setPadding(0, Ui.dp(this, 8), 0, 0);
         c4.addView(note);
         content.addView(c4);
+    }
+
+    // ================================================================== skills
+
+    private void renderSkills() {
+        final SkillStore store = new SkillStore(this);
+        TextView intro = Ui.text(this, "Priya har kaam se pehle dekhti hai ki uske paas us kaam ka skill hai ya nahi. "
+                + "Nahi hota to aapse poochhti hai ki naya skill banaye ya nahi.", 12.5f, Ui.SUB, false);
+        intro.setPadding(0, 0, 0, Ui.dp(this, 8));
+        content.addView(intro);
+
+        LinearLayout add = Ui.card(this);
+        add.addView(Ui.text(this, "➕ Naya skill", 16, Ui.TEXT, true));
+        final EditText nm = field("Skill ka naam (jaise: Instagram Caption Writer)", true);
+        final EditText ds = field("Kab use kare (ek line)", true);
+        final EditText in = field("Steps / instructions (Priya ye follow karegi)", false);
+        add.addView(nm, Ui.matchWrap(this, 6));
+        add.addView(ds, Ui.matchWrap(this, 6));
+        add.addView(in, Ui.matchWrap(this, 6));
+        Button save = Ui.button(this, "Save skill", Ui.ACCENT, 0xFF06202A);
+        save.setOnClickListener(v -> {
+            if (nm.getText().toString().trim().isEmpty()) { toast("Naam likho."); return; }
+            store.save(nm.getText().toString(), ds.getText().toString(), in.getText().toString());
+            toast("Skill save ho gaya ✓ (Priya ko OFF/ON karo)");
+            content.removeAllViews();
+            renderSkills();
+        });
+        add.addView(save, Ui.matchWrap(this, 8));
+        content.addView(add);
+
+        for (final SkillStore.Skill sk : store.list()) {
+            LinearLayout c = Ui.card(this);
+            c.addView(Ui.text(this, "🧩 " + sk.name, 16, Ui.TEXT, true));
+            TextView d = Ui.text(this, sk.description, 12.5f, Ui.SUB, false);
+            d.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
+            c.addView(d);
+            final TextView body = Ui.text(this, sk.instructions, 12.5f, Ui.TEXT, false);
+            body.setVisibility(View.GONE);
+            c.addView(body);
+            c.setOnClickListener(v -> body.setVisibility(body.getVisibility() == View.GONE ? View.VISIBLE : View.GONE));
+            Button del = Ui.button(this, "Hatao (sirf aap)", 0xFF3A2030, Ui.BAD);
+            del.setOnClickListener(v -> confirm("'" + sk.name + "' skill hatana hai?", () -> {
+                store.deleteByUser(sk.id);
+                content.removeAllViews();
+                renderSkills();
+            }));
+            c.addView(del, Ui.matchWrap(this, 6));
+            content.addView(c);
+        }
+    }
+
+    private EditText field(String hint, boolean single) {
+        EditText e = new EditText(this);
+        e.setHint(hint);
+        e.setHintTextColor(Ui.SUB);
+        e.setTextColor(Ui.TEXT);
+        e.setSingleLine(single);
+        if (!single) e.setMinLines(3);
+        return e;
     }
 }

@@ -36,8 +36,28 @@ public class MainActivity extends Activity implements ThemeView.Listener {
     private int panelW;
     private final LinearLayout[] tiles = new LinearLayout[3];
 
+    private static boolean crashGuard = false;
+
+    /** Background-thread errors are logged instead of killing the app (which threw the user out). */
+    static void installCrashGuard(android.content.Context ctx) {
+        if (crashGuard) return;
+        crashGuard = true;
+        final android.content.Context app = ctx.getApplicationContext();
+        final Thread.UncaughtExceptionHandler orig = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((th, ex) -> {
+            try {
+                java.io.StringWriter sw = new java.io.StringWriter();
+                ex.printStackTrace(new java.io.PrintWriter(sw));
+                String st = sw.toString();
+                Prefs.setLastCrash(app, th.getName() + ": " + (st.length() > 1500 ? st.substring(0, 1500) : st));
+            } catch (Throwable ignored) { }
+            if (th == android.os.Looper.getMainLooper().getThread() && orig != null) orig.uncaughtException(th, ex);
+        });
+    }
+
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
+        installCrashGuard(this);
         root = new FrameLayout(this);
         root.setBackgroundColor(Ui.BG);
         view = new ThemeView(this);
@@ -93,11 +113,13 @@ public class MainActivity extends Activity implements ThemeView.Listener {
 
     @Override protected void onPause() {
         super.onPause();
+        PriyaBus.appVisible = false;
         ui.removeCallbacks(powerTick);
     }
 
     @Override protected void onResume() {
         super.onResume();
+        PriyaBus.appVisible = true;
         applyTheme(Prefs.theme(this));
         ui.removeCallbacks(powerTick);
         ui.post(powerTick);
@@ -281,6 +303,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         list.addView(sec2);
         list.addView(menuItem("🔐", "Permissions", "Mic, Accessibility, Overlay, Contacts, Calls…", v -> openPanel("permissions")));
         list.addView(menuItem("🔑", "API (Gemini)", "API key aur model save karo", v -> openPanel("api")));
+        list.addView(menuItem("🧩", "Skills", "Priya ke skills dekho, naya skill banao", v -> openPanel("skills")));
         list.addView(menuItem("🧠", "Memory (30 MB)", "Vaade, notes aur conversation text", v -> openPanel("memory")));
         list.addView(menuItem("⚙️", "Settings", "Always listening, echo guard, voice", v -> openPanel("settings")));
 

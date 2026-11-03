@@ -35,6 +35,8 @@ public class AudioEngine {
         void onSpeechStart();
         void onSpeechChunk(byte[] pcm16k, int len);
         void onSpeechEnd();
+        /** A voice that is not the owner's kept talking (voice lock on). */
+        default void onStranger() { }
     }
 
     private static final int IN_RATE = 16000;
@@ -232,11 +234,13 @@ public class AudioEngine {
             AudioTrack t = track;
             if (t == null) break;
             int off = 0;
-            while (off < b.length && running) {
-                int w = t.write(b, off, b.length - off);
-                if (w < 0) break;
-                off += w;
-            }
+            try {
+                while (off < b.length && running) {
+                    int w = t.write(b, off, b.length - off);
+                    if (w < 0) break;
+                    off += w;
+                }
+            } catch (Throwable ignored) { break; }
         }
     }
 
@@ -325,11 +329,85 @@ public class AudioEngine {
         }
     }
 
+    // ------------------------------------------------------------------ voice lock (owner's voice only)
+
+    private float ownerF0 = 0f; // 0 = voice lock off
+
+    public void setVoiceLock(float f0) { ownerF0 = f0; }
+
+    /** Pitch (Hz) of a 40 ms window by normalised autocorrelation; 0 when unvoiced. */
+    static float pitch(short[] prev, short[] cur) {
+        int n = prev.length + cur.length;
+        float[] x = new float[n];
+        for (int i = 0; i < prev.length; i++) x[i] = prev[i];
+        for (int i = 0; i < cur.length; i++) x[prev.length + i] = cur[i];
+        double e0 = 0;
+        for (float v : x) e0 += v * v;
+        if (e0 < 1e6) return 0f;
+        int minLag = IN_RATE / 450, maxLag = IN_RATE / 65;
+        double best = 0; int bestLag = 0;
+        for (int lag = minLag; lag <= maxLag; lag++) {
+            double c = 0, e1 = 0, e2 = 0;
+            for (int i = 0; i + lag < n; i++) { c += x[i] * x[i + lag]; e1 += x[i] * x[i]; e2 += x[i + lag] * x[i + lag]; }
+            double r = c / Math.sqrt(e1 * e2 + 1e-9);
+            if (r > best) { best = r; bestLag = lag; }
+        }
+        return (best > 0.55 && bestLag > 0) ? (float) IN_RATE / bestLag : 0f;
+    }
+
+    static float median(java.util.List<Float> v) {
+        if (v.isEmpty()) return 0f;
+        java.util.List<Float> c = new java.util.ArrayList<>(v);
+        java.util.Collections.sort(c);
+        return c.get(c.size() / 2);
+    }
+
+    private boolean ownerVoice(java.util.List<Float> pitches) {
+        if (ownerF0 <= 0f) return true;
+        float m = median(pitches);
+        if (m <= 0f) return false;
+        float r = m / ownerF0;
+        return r > 0.80f && r < 1.25f;
+    }
+
+    /** Records the owner's voice for a few seconds and returns its typical pitch (Hz), or 0 on failure. */
+    public static float enroll(int seconds) {
+        AudioRecord r = null;
+        try {
+            int minBuf = AudioRecord.getMinBufferSize(IN_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+            r = new AudioRecord(MediaRecorder.AudioSource.MIC, IN_RATE, AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT, Math.max(minBuf * 2, IN_RATE));
+            if (r.getState() != AudioRecord.STATE_INITIALIZED) return 0f;
+            r.startRecording();
+            short[] prev = new short[FRAME], cur = new short[FRAME];
+            java.util.List<Float> ps = new java.util.ArrayList<>();
+            long end = SystemClock.elapsedRealtime() + seconds * 1000L;
+            while (SystemClock.elapsedRealtime() < end) {
+                int off = 0;
+                while (off < FRAME) { int k = r.read(cur, off, FRAME - off); if (k < 0) return 0f; off += k; }
+                float f = pitch(prev, cur);
+                if (f > 0) ps.add(f);
+                short[] t = prev; prev = cur; cur = t;
+            }
+            return ps.size() >= 40 ? median(ps) : 0f;
+        } catch (Throwable e) {
+            return 0f;
+        } finally {
+            try { if (r != null) { r.stop(); r.release(); } } catch (Throwable ignored) { }
+        }
+    }
+
     private void micLoop(MicSink sink) {
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
         short[] frame = new short[FRAME];
+        short[] prevFrame = new short[FRAME];
         ArrayDeque<byte[]> preroll = new ArrayDeque<>();
-        boolean inSpeech = false;
+        java.util.List<byte[]> pending = new java.util.ArrayList<>();
+        java.util.List<Float> uttPitch = new java.util.ArrayList<>();
+        java.util.ArrayDeque<Float> recentPitch = new java.util.ArrayDeque<>();
+        boolean inSpeech = false, deciding = false, rejected = false;
+        int uttFrames = 0;
+        long lastStranger = 0;
         int loud = 0;
         int bargeLoud = 0;
         int hang = 0;
@@ -343,7 +421,8 @@ public class AudioEngine {
         }
 
         while (running) {
-            int n = readFrame(frame);
+            int n;
+            try { n = readFrame(frame); } catch (Throwable t) { break; }
             if (n <= 0) {
                 if (!running) break;
                 SystemClock.sleep(10);
@@ -354,20 +433,21 @@ public class AudioEngine {
             float rms = (float) Math.sqrt(sum / n);
             smooth += (Math.min(1f, rms / 6000f) - smooth) * 0.35f;
             PriyaBus.micLevel = smooth;
+            float f0 = ownerF0 > 0f ? pitch(prevFrame, frame) : 0f;
+            System.arraycopy(frame, 0, prevFrame, 0, FRAME);
+            if (f0 > 0) { recentPitch.addLast(f0); if (recentPitch.size() > 12) recentPitch.removeFirst(); }
 
             boolean speaking = isSpeaking();
 
             if (speaking && strictEcho) {
-                // Barge-in (roka-toki): a clearly loud, sustained voice cuts Priya off right away.
-                // Priya's own voice comes back through the speaker, so the bar sits well above
-                // both the room noise and her current output level, after a short grace period.
+                // Barge-in (roka-toki): a clearly loud, sustained voice (the owner's, if voice lock is on) cuts Priya off.
                 float bargeThr = Math.max(MIN_THR * 5f, Math.max(floor * mult * 6f, outRms * 1.3f));
                 boolean grace = SystemClock.elapsedRealtime() - replyStart < 900;
                 bargeLoud = (!grace && rms > bargeThr) ? bargeLoud + 1 : Math.max(0, bargeLoud - 2);
-                if (bargeLoud >= 25) { // ~500 ms of clearly louder speech
+                if (bargeLoud >= 25 && (ownerF0 <= 0f || ownerVoice(new java.util.ArrayList<>(recentPitch)))) {
                     bargeLoud = 0;
                     bargeIn();
-                    inSpeech = true;
+                    inSpeech = true; deciding = false; rejected = false; uttFrames = 0;
                     hang = HANG_FRAMES;
                     loud = 0;
                     PriyaBus.userTalking = true;
@@ -381,8 +461,8 @@ public class AudioEngine {
                 if (preroll.size() > PREROLL_FRAMES) preroll.removeFirst();
                 if (inSpeech) {
                     inSpeech = false;
-                    flushSend(sink);
-                    sink.onSpeechEnd();
+                    if (!deciding && !rejected) { flushSend(sink); sink.onSpeechEnd(); }
+                    deciding = false; rejected = false; pending.clear();
                     PriyaBus.userTalking = false;
                 }
                 loud = 0;
@@ -393,7 +473,6 @@ public class AudioEngine {
             bargeLoud = 0;
 
             float thr = Math.max(MIN_THR, floor * mult);
-            if (speaking) thr *= 2.5f; // barge-in only with a clearly louder voice
             boolean voice = rms > thr;
 
             if (!inSpeech) {
@@ -405,19 +484,65 @@ public class AudioEngine {
                     inSpeech = true;
                     hang = HANG_FRAMES;
                     loud = 0;
-                    PriyaBus.userTalking = true;
-                    sink.onSpeechStart();
-                    for (byte[] b : preroll) emit(sink, b);
+                    uttFrames = 0;
+                    rejected = false;
+                    if (ownerF0 > 0f) {
+                        // hold the audio until we know whose voice it is (~250-400 ms); then it streams instantly
+                        deciding = true;
+                        pending.clear();
+                        pending.addAll(preroll);
+                        uttPitch.clear();
+                        uttPitch.addAll(recentPitch);
+                    } else {
+                        deciding = false;
+                        PriyaBus.userTalking = true;
+                        sink.onSpeechStart();
+                        for (byte[] b : preroll) emit(sink, b);
+                    }
                     preroll.clear();
                 }
             } else {
-                emit(sink, toBytes(frame));
-                if (voice) {
-                    hang = HANG_FRAMES;
-                } else if (--hang <= 0) {
+                uttFrames++;
+                boolean ended = false;
+                if (voice) hang = HANG_FRAMES;
+                else if (--hang <= 0) ended = true;
+
+                if (deciding) {
+                    pending.add(toBytes(frame));
+                    if (f0 > 0) uttPitch.add(f0);
+                    if (uttPitch.size() >= 12 || (ended && uttPitch.size() >= 4)) {
+                        deciding = false;
+                        if (ownerVoice(uttPitch)) {
+                            PriyaBus.userTalking = true;
+                            sink.onSpeechStart();
+                            for (byte[] b : pending) emit(sink, b);
+                        } else {
+                            rejected = true;
+                        }
+                        pending.clear();
+                    } else if (ended) {
+                        deciding = false;
+                        rejected = true;
+                        pending.clear();
+                    }
+                } else if (!rejected) {
+                    emit(sink, toBytes(frame));
+                }
+
+                if (ended) {
                     inSpeech = false;
-                    flushSend(sink);
-                    sink.onSpeechEnd();
+                    if (rejected) {
+                        long now = SystemClock.elapsedRealtime();
+                        if (uttFrames > 70 && now - lastStranger > 60000) { // a stranger clearly spoke for ~1.4 s+
+                            lastStranger = now;
+                            sink.onStranger();
+                        }
+                    } else {
+                        flushSend(sink);
+                        sink.onSpeechEnd();
+                    }
+                    rejected = false;
+                    deciding = false;
                     PriyaBus.userTalking = false;
                 }
             }

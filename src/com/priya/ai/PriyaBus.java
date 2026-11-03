@@ -12,6 +12,8 @@ public final class PriyaBus {
     public static volatile String userText = "";
     public static volatile String priyaText = "";
     public static volatile String echoInfo = "";
+    /** True while one of Priya's own screens is on top (then the floating face hides). */
+    public static volatile boolean appVisible = false;
 
     private PriyaBus() {}
 

@@ -45,6 +45,9 @@ public class ThemeView extends View {
     private Listener listener;
     private int theme = -1;
     private Bitmap avatar;
+    private Bitmap avatarOpen;   // same artwork with the mouth open: cross-faded by voice level = lip-sync
+    private final Paint mouthPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG);
+    private float mouth = 0f;
 
     private final float d;
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -93,6 +96,10 @@ public class ThemeView extends View {
         avatar = null;
         try (InputStream is = getContext().getAssets().open("av_" + theme + ".webp")) {
             avatar = BitmapFactory.decodeStream(is);
+        } catch (IOException ignored) { }
+        avatarOpen = null;
+        try (InputStream is = getContext().getAssets().open("av_" + theme + "_m.webp")) {
+            avatarOpen = BitmapFactory.decodeStream(is);
         } catch (IOException ignored) { }
         stKey = usKey = prKey = "";
         relayout();
@@ -227,6 +234,13 @@ public class ThemeView extends View {
                     avCx + avW / 2f * breathe, avCy + avH / 2f * breathe);
             bmpPaint.setAlpha(on ? 255 : 215);
             c.drawBitmap(avatar, null, rf, bmpPaint);
+            // lip-sync: open the mouth with Priya's live voice level
+            float target = PriyaBus.state == PriyaBus.SPEAKING ? Math.min(1f, PriyaBus.outLevel * 1.8f) : 0f;
+            mouth += (target - mouth) * 0.55f;
+            if (avatarOpen != null && mouth > 0.02f) {
+                mouthPaint.setAlpha((int) (Math.min(1f, mouth) * (on ? 255 : 215)));
+                c.drawBitmap(avatarOpen, null, rf, mouthPaint);
+            }
         }
 
         if (theme == 1 && on) { // rotating arcs around the portrait ring

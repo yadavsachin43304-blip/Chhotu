@@ -29,6 +29,24 @@ public class ActionExecutor {
     private final Context ctx;
     private final MemoryStore memory;
     private final AudioManager am;
+    private final SkillStore skills;
+
+    /** Words Priya must never act on: delete / remove / reset and their cousins (Hindi + English). */
+    private static final String[] FORBIDDEN = {
+            "delete", "remove", "reset", "uninstall", "erase", "wipe", "format", "factory",
+            "clear data", "clear storage", "clear all data", "deactivate", "close account",
+            "हटा", "डिलीट", "मिटा", "रीसेट", "अनइंस्टॉल", "hatao", "hata do", "mitao", "mita do"
+    };
+
+    static boolean forbidden(String text) {
+        if (text == null) return false;
+        String t = text.toLowerCase(Locale.ROOT);
+        for (String w : FORBIDDEN) if (t.contains(w)) return true;
+        return false;
+    }
+
+    private static final String BLOCKED = "BLOCKED: Delete, remove, reset (aur uninstall/format/clear data) Priya ke role ke khilaf hai. "
+            + "Ye kaam nahi kiya gaya. User ko pyaar se batao ki ye safety ke liye tum nahi karti, wo chahe to khud kar sakta hai.";
 
     private static final Map<String, String> ALIASES = new HashMap<>();
     static {
@@ -51,6 +69,7 @@ public class ActionExecutor {
         this.ctx = ctx.getApplicationContext();
         this.memory = memory;
         this.am = (AudioManager) this.ctx.getSystemService(Context.AUDIO_SERVICE);
+        this.skills = new SkillStore(this.ctx);
     }
 
     /** Runs one tool call and returns a short result string for the model. Never throws. */
@@ -66,6 +85,19 @@ public class ActionExecutor {
                 case "call_contact":    return callContact(args.optString("name_or_number", ""));
                 case "web_search":      return webSearch(args.optString("query", ""));
                 case "knowledge":       return knowledge(args.optString("query", ""));
+                case "use_skill": {
+                    SkillStore.Skill sk = skills.find(args.optString("name", ""));
+                    return sk == null ? "Is naam ka skill nahi hai. Skills: \n" + skills.summaryForPrompt()
+                            : "SKILL '" + sk.name + "' instructions:\n" + sk.instructions;
+                }
+                case "create_skill": {
+                    String nm = args.optString("name", "");
+                    SkillStore.Skill sk = skills.save(nm, args.optString("description", ""), args.optString("instructions", ""));
+                    return sk == null ? "Skill save nahi hua." : "Naya skill '" + sk.name + "' save ho gaya. Ab isi ko use karke kaam karo.";
+                }
+                case "set_alarm":       return setAlarm(args.optInt("hour", -1), args.optInt("minute", 0), args.optString("label", "Priya"));
+                case "open_link":       return openLink(args.optString("url", ""));
+                case "whatsapp_chat":   return whatsappChat(args.optString("phone", ""), args.optString("text", ""));
                 case "remember":
                     memory.addNote(args.optString("kind", "NOTE"), args.optString("text", ""));
                     return "Memory mein save ho gaya.";
@@ -107,6 +139,35 @@ public class ActionExecutor {
     }
 
     // ------------------------------------------------------------------ tools
+
+    private String setAlarm(int hour, int minute, String label) {
+        if (hour < 0 || hour > 23) return "Alarm ka sahi time (hour 0-23) chahiye.";
+        Intent i = new Intent(android.provider.AlarmClock.ACTION_SET_ALARM)
+                .putExtra(android.provider.AlarmClock.EXTRA_HOUR, hour)
+                .putExtra(android.provider.AlarmClock.EXTRA_MINUTES, minute)
+                .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, label)
+                .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try { ctx.startActivity(i); return String.format(Locale.ROOT, "Alarm %02d:%02d par laga diya.", hour, minute); }
+        catch (Exception e) { return "Alarm app nahi khula."; }
+    }
+
+    private String openLink(String url) {
+        if (url.trim().isEmpty()) return "Link nahi mila.";
+        if (!url.startsWith("http")) url = "https://" + url.trim();
+        try { ctx.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return "Link khol diya."; }
+        catch (Exception e) { return "Link nahi khula."; }
+    }
+
+    private String whatsappChat(String phone, String text) {
+        String digits = phone.replaceAll("[^0-9]", "");
+        if (digits.length() == 10) digits = "91" + digits;
+        String url = "https://wa.me/" + digits + (text.isEmpty() ? "" : "?text=" + Uri.encode(text));
+        try {
+            ctx.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            return "WhatsApp chat khul gaya, message type ho gaya hai. User ki haan ke baad hi 'Send' par click karna.";
+        } catch (Exception e) { return "WhatsApp nahi khula."; }
+    }
 
     private String openApp(String query) throws Exception {
         if (query.trim().isEmpty()) return "App ka naam nahi mila.";
@@ -178,6 +239,7 @@ public class ActionExecutor {
     }
 
     private String clickOnScreen(String text) {
+        if (forbidden(text)) return BLOCKED;
         PriyaAccessibilityService a = PriyaAccessibilityService.get();
         if (a == null) return NEED_A11Y;
         return a.clickByText(text) ? "'" + text + "' par tap kar diya." : "'" + text + "' screen par nahi mila.";

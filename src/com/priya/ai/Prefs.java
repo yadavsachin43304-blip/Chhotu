@@ -55,4 +55,16 @@ public final class Prefs {
     /** 1..10, higher = picks up quieter voices. */
     public static int sensitivity(Context c) { return sp(c).getInt("sensitivity", 5); }
     public static void setSensitivity(Context c, int v) { sp(c).edit().putInt("sensitivity", v).apply(); }
+
+    /** Owner's voice pitch (Hz) recorded in Settings; 0 = not recorded. */
+    public static float voiceF0(Context c) { return sp(c).getFloat("voice_f0", 0f); }
+    public static void setVoiceF0(Context c, float v) { sp(c).edit().putFloat("voice_f0", v).apply(); }
+    public static boolean voiceLock(Context c) { return sp(c).getBoolean("voice_lock", false); }
+    public static void setVoiceLock(Context c, boolean v) { sp(c).edit().putBoolean("voice_lock", v).apply(); }
+
+    public static boolean floatingFace(Context c) { return sp(c).getBoolean("floating_face", true); }
+    public static void setFloatingFace(Context c, boolean v) { sp(c).edit().putBoolean("floating_face", v).apply(); }
+
+    public static String lastCrash(Context c) { return sp(c).getString("last_crash", ""); }
+    public static void setLastCrash(Context c, String v) { sp(c).edit().putString("last_crash", v == null ? "" : v).commit(); }
 }
