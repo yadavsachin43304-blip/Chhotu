@@ -241,13 +241,13 @@ public class ActionExecutor {
         }
         // verify + skip pre-roll ads for up to ~12 s
         boolean playing = false;
-        for (int i = 0; i < 12; i++) {
+        for (int k = 0; k < 12; k++) {
             SystemClock.sleep(1000);
             a = PriyaAccessibilityService.get();
             if (a == null) break;
             a.skipAdIfShown();
             if (!playing) playing = a.videoPlayerOpen();
-            if (playing && i >= 5) break;
+            if (playing && k >= 5) break;
         }
         return playing ? "VERIFIED: YouTube par '" + q + "' ka video chal raha hai (ad aaya to skip kiya)."
                 : "Video par tap kiya par pakka nahi ki player khula. read_screen se check karo, aur zarurat ho to sahi title par tap karo.";
