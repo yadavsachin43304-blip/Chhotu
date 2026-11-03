@@ -88,8 +88,8 @@ say "2/6 Manifest + resources + assets link (aapt2)"
 
 say "3/6 Java compile (javac)"
 # shellcheck disable=SC2046
-"$JAVAC" -source 1.8 -target 1.8 -Xlint:-options -nowarn -encoding UTF-8 \
-  -bootclasspath "$ANDROID_JAR" -d "$OUT/classes" $(find src -name '*.java')
+"$JAVAC" --release 8 -Xlint:-options -nowarn -encoding UTF-8 \
+  -classpath "$ANDROID_JAR" -d "$OUT/classes" $(find src -name '*.java')
 
 say "4/6 DEX (d8)"
 # shellcheck disable=SC2046
