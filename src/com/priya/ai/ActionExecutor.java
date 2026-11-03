@@ -63,7 +63,21 @@ public class ActionExecutor {
         ALIASES.put("chrome", "chrome");
         ALIASES.put("map", "maps");
         ALIASES.put("playstore", "playstore");
+        ALIASES.put("capcutvideoeditor", "capcut");
+        ALIASES.put("kepkat", "capcut");
+        ALIASES.put("capcat", "capcut");
     }
+
+    /** Lets look_at_screen hand a screenshot to the live Gemini session. */
+    public interface ImageSink { void sendImage(byte[] jpeg); }
+    private volatile ImageSink imageSink;
+    public void setImageSink(ImageSink s) { imageSink = s; }
+
+    // manager-mode plan + coding retry counter
+    private final java.util.List<String> plan = new java.util.ArrayList<>();
+    private String planGoal = "";
+    private int codeFails = 0;
+    private static final int MAX_CODE_FAILS = 5;
 
     public ActionExecutor(Context ctx, MemoryStore memory) {
         this.ctx = ctx.getApplicationContext();
@@ -79,9 +93,28 @@ public class ActionExecutor {
                 case "open_app":        return openApp(args.optString("app_name", ""));
                 case "youtube_play":    return youtubePlay(args.optString("query", ""));
                 case "phone_control":   return phoneControl(args.optString("action", ""));
-                case "click_on_screen": return clickOnScreen(args.optString("text", ""));
-                case "type_text":       return typeText(args.optString("text", ""));
+                case "click_on_screen": return clickOnScreen(args.optString("text", ""),
+                        args.optInt("index", 1), args.optBoolean("long_press", false));
+                case "type_text":       return typeText(args.optString("text", ""), args.optString("field", ""),
+                        args.optBoolean("press_enter", false));
                 case "read_screen":     return readScreen();
+                case "look_at_screen":  return lookAtScreen();
+                case "tap_at":          return tapAt(args.optDouble("x", -1), args.optDouble("y", -1),
+                        args.optBoolean("long_press", false));
+                case "swipe":           return swipeTool(args);
+                case "scroll_until":    return scrollUntil(args.optString("text", ""), args.optString("direction", "down"),
+                        args.optInt("max_swipes", 8));
+                case "wait_for_text":   return waitForText(args.optString("text", ""), args.optInt("timeout_sec", 10));
+                case "dismiss_popup":   return dismissPopup();
+                case "list_apps":       return listApps(args.optString("filter", ""));
+                case "task_plan":       return taskPlan(args.optString("goal", ""), args.optJSONArray("steps"));
+                case "task_progress":   return taskProgress(args.optInt("step", 0), args.optString("status", "done"),
+                        args.optString("note", ""));
+                case "termux_check":    return termuxCheck();
+                case "code_write_file": return codeWriteFile(args.optString("path", ""), args.optString("content", ""));
+                case "code_read_file":  return codeReadFile(args.optString("path", ""));
+                case "code_run":        return codeRun(args.optString("command", ""), args.optString("workdir", ""),
+                        args.optInt("timeout_sec", 60));
                 case "call_contact":    return callContact(args.optString("name_or_number", ""));
                 case "web_search":      return webSearch(args.optString("query", ""));
                 case "knowledge":       return knowledge(args.optString("query", ""));
@@ -176,6 +209,10 @@ public class ActionExecutor {
         if (alias != null) q = alias;
 
         PackageManager pm = ctx.getPackageManager();
+        if (query.trim().matches("[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)+")) { // a package name, e.g. com.lemon.lvoverseas
+            Intent byPkg = pm.getLaunchIntentForPackage(query.trim());
+            if (byPkg != null && launch(byPkg)) { SystemClock.sleep(1600); return query.trim() + " khol diya. read_screen se check karo."; }
+        }
         Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
         List<ResolveInfo> apps = pm.queryIntentActivities(main, 0);
         ResolveInfo best = null;
@@ -253,24 +290,298 @@ public class ActionExecutor {
                 : "Video par tap kiya par pakka nahi ki player khula. read_screen se check karo, aur zarurat ho to sahi title par tap karo.";
     }
 
-    private String clickOnScreen(String text) {
+    private String clickOnScreen(String text, int index, boolean longPress) {
         if (forbidden(text)) return BLOCKED;
         PriyaAccessibilityService a = PriyaAccessibilityService.get();
         if (a == null) return NEED_A11Y;
-        return a.clickByText(text) ? "'" + text + "' par tap kar diya." : "'" + text + "' screen par nahi mila.";
+        String r = a.clickSmart(text, Math.max(0, index - 1), longPress, false);
+        if (r.startsWith("OK")) {
+            SystemClock.sleep(600);
+            return r + ". Ab read_screen / wait_for_text se check karo ki sahi screen khuli.";
+        }
+        switch (r) {
+            case "FORBIDDEN": return BLOCKED;
+            case "AD": return "BLOCKED: Ye ad/sponsored cheez hai — Priya ads par kabhi tap nahi karti. Asli item chuno.";
+            case "NOT_FOUND": return "'" + text + "' screen par nahi mila. read_screen se asli label dekho, scroll_until try karo, "
+                    + "ya icon ho to look_at_screen karke tap_at se position par tap karo.";
+            default: return "'" + text + "' mila par tap nahi ho paya. tap_at se uske @x,y par tap karo.";
+        }
     }
 
-    private String typeText(String text) {
+    private String typeText(String text, String field, boolean enter) {
         PriyaAccessibilityService a = PriyaAccessibilityService.get();
         if (a == null) return NEED_A11Y;
-        return a.typeText(text) ? "Type kar diya." : "Koi text field focus mein nahi mila.";
+        String r = a.typeInto(text, field, enter);
+        if (r.startsWith("OK")) return "Type kar diya" + r.substring(2) + ".";
+        if (r.equals("NO_FIELD")) return "Koi text field nahi mila. Pehle search box / input par click_on_screen ya tap_at karo, phir type_text.";
+        return "Field mila par text set nahi hua. Field par tap karke dobara try karo.";
     }
 
     private String readScreen() {
         PriyaAccessibilityService a = PriyaAccessibilityService.get();
         if (a == null) return NEED_A11Y;
-        String s = a.dumpScreen(3000);
-        return s.isEmpty() ? "Screen par padhne layak text nahi mila." : s;
+        String s = a.dumpScreen(4500);
+        return s.trim().isEmpty() ? "Screen par padhne layak text nahi mila — look_at_screen se screenshot dekho." : s;
+    }
+
+    private String lookAtScreen() {
+        PriyaAccessibilityService a = PriyaAccessibilityService.get();
+        if (a == null) return NEED_A11Y;
+        if (android.os.Build.VERSION.SDK_INT < 30) return "Screenshot dekhna Android 11+ par hi hota hai. read_screen use karo.";
+        ImageSink sink = imageSink;
+        if (sink == null) return "Live session ready nahi hai, read_screen use karo.";
+        byte[] jpg = a.screenshotJpeg(720);
+        if (jpg == null) return "Screenshot nahi mila (Accessibility ko ek baar OFF karke ON karo taaki screenshot ki permission mile). Abhi read_screen use karo.";
+        sink.sendImage(jpg);
+        return "Screenshot bhej diya (image dekho). Screen " + a.screenW() + "x" + a.screenH()
+                + " px. Kisi cheez par tap karne ke liye image mein uski jagah ka andaza 0-1 fraction mein lo "
+                + "(x = left se, y = upar se; jaise x=0.5,y=0.9 = neeche beech) aur tap_at / swipe mein wahi do.";
+    }
+
+    /** x/y <= 1.0 are fractions of the screen, larger values are pixels. */
+    private static float px(double v, int size) {
+        return (float) (v <= 1.0 ? v * size : v);
+    }
+
+    private String tapAt(double x, double y, boolean longPress) {
+        PriyaAccessibilityService a = PriyaAccessibilityService.get();
+        if (a == null) return NEED_A11Y;
+        if (x < 0 || y < 0) return "x aur y dono chahiye (0-1 fraction ya pixel).";
+        float fx = px(x, a.screenW()), fy = px(y, a.screenH());
+        String bad = a.unsafeAt(Math.round(fx), Math.round(fy));
+        if (bad != null) return bad.startsWith("AD") ? "BLOCKED: wahan ad hai (" + bad + "). Tap nahi kiya." : BLOCKED + " (" + bad + ")";
+        String what = a.labelAt(Math.round(fx), Math.round(fy));
+        boolean ok = longPress ? a.longPress(fx, fy, 900) : a.tap(fx, fy);
+        SystemClock.sleep(500);
+        return ok ? (longPress ? "Long-press" : "Tap") + " kiya @" + Math.round(fx) + "," + Math.round(fy)
+                + (what.isEmpty() ? "" : " ('" + what + "')") + ". Ab check karo kya hua."
+                : "Gesture nahi chala.";
+    }
+
+    private String swipeTool(JSONObject args) {
+        PriyaAccessibilityService a = PriyaAccessibilityService.get();
+        if (a == null) return NEED_A11Y;
+        double x1 = args.optDouble("x1", -1), y1 = args.optDouble("y1", -1);
+        double x2 = args.optDouble("x2", -1), y2 = args.optDouble("y2", -1);
+        if (x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0) return "x1,y1,x2,y2 chahiye (0-1 fraction ya pixel).";
+        int dur = Math.max(80, Math.min(args.optInt("duration_ms", 400), 10000));
+        int hold = Math.max(0, Math.min(args.optInt("hold_ms", 0), 5000));
+        int w = a.screenW(), h = a.screenH();
+        float fx1 = px(x1, w), fy1 = px(y1, h), fx2 = px(x2, w), fy2 = px(y2, h);
+        if (hold > 0) {
+            String bad = a.unsafeAt(Math.round(fx1), Math.round(fy1));
+            if (bad != null) return "BLOCKED: drag shuru karne ki jagah par " + bad + " hai.";
+        }
+        boolean ok = a.drag(fx1, fy1, fx2, fy2, hold, dur);
+        SystemClock.sleep(400);
+        return ok ? (hold > 0 ? "Hold karke drag kiya" : "Swipe kiya") + " (" + Math.round(fx1) + "," + Math.round(fy1)
+                + ") se (" + Math.round(fx2) + "," + Math.round(fy2) + "). Ab look_at_screen/read_screen se result check karo."
+                : "Swipe/drag nahi chala.";
+    }
+
+    private String scrollUntil(String text, String dir, int max) {
+        PriyaAccessibilityService a = PriyaAccessibilityService.get();
+        if (a == null) return NEED_A11Y;
+        if (text.trim().isEmpty()) return "Kya dhundhna hai, wo text do.";
+        int n = a.scrollUntil(text, dir, Math.max(1, Math.min(max, 25)));
+        return n >= 0 ? "'" + text + "' screen par dikh gaya (" + n + " scroll). Ab click_on_screen karo."
+                : "'" + text + "' " + max + " scroll ke baad bhi nahi mila. Doosra naam/search try karo.";
+    }
+
+    private String waitForText(String text, int sec) {
+        PriyaAccessibilityService a = PriyaAccessibilityService.get();
+        if (a == null) return NEED_A11Y;
+        if (text.trim().isEmpty()) return "Kis text ka intezaar karna hai?";
+        sec = Math.max(1, Math.min(sec, 300));
+        // several alternatives allowed: "Saved|Done|Export done"
+        String[] opts = text.split("\\|");
+        long end = SystemClock.uptimeMillis() + sec * 1000L;
+        while (true) {
+            for (String o : opts) {
+                if (!o.trim().isEmpty() && a.textVisible(o.trim())) return "VERIFIED: '" + o.trim() + "' screen par aa gaya.";
+            }
+            if (SystemClock.uptimeMillis() > end) break;
+            SystemClock.sleep(500);
+        }
+        return "TIMEOUT: " + sec + " sec mein '" + text + "' nahi dikha. read_screen/look_at_screen se dekho kya hua (popup? error?).";
+    }
+
+    private String dismissPopup() {
+        PriyaAccessibilityService a = PriyaAccessibilityService.get();
+        if (a == null) return NEED_A11Y;
+        String t = a.dismissPopup();
+        if (t == null) return "Koi 'Not now/Skip/Close' wala popup button nahi mila. Popup ho to read_screen se dekho; "
+                + "X icon ho to look_at_screen + tap_at. Allow/Buy/Install/Subscribe khud mat dabana.";
+        SystemClock.sleep(500);
+        return "Popup band kiya ('" + t + "' dabaya). read_screen se check karo.";
+    }
+
+    private String listApps(String filter) {
+        PackageManager pm = ctx.getPackageManager();
+        Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> apps = pm.queryIntentActivities(main, 0);
+        java.util.TreeMap<String, String> sorted = new java.util.TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        String f = norm(filter);
+        for (ResolveInfo ri : apps) {
+            String label = String.valueOf(ri.loadLabel(pm));
+            String pkg = ri.activityInfo.packageName;
+            if (!f.isEmpty() && !norm(label).contains(f) && !pkg.contains(filter.trim().toLowerCase(Locale.ROOT))) continue;
+            sorted.put(label + " (" + pkg + ")", pkg);
+        }
+        if (sorted.isEmpty()) return f.isEmpty() ? "Koi app nahi mila." : "'" + filter + "' se milta koi app installed nahi hai.";
+        StringBuilder sb = new StringBuilder("Installed apps (" + sorted.size() + "):\n");
+        for (String k : sorted.keySet()) {
+            if (sb.length() > 4000) { sb.append("…"); break; }
+            sb.append(k).append('\n');
+        }
+        return sb.toString();
+    }
+
+    // ------------------------------------------------------------------ manager mode
+
+    private synchronized String taskPlan(String goal, org.json.JSONArray steps) {
+        plan.clear();
+        planGoal = goal;
+        codeFails = 0;
+        if (steps != null) for (int i = 0; i < steps.length(); i++) {
+            String st = steps.optString(i, "").trim();
+            if (!st.isEmpty()) plan.add(st);
+        }
+        if (plan.isEmpty()) return "Plan mein steps do (list).";
+        StringBuilder sb = new StringBuilder("PLAN save: " + goal + "\n");
+        for (int i = 0; i < plan.size(); i++) sb.append(i + 1).append(". ").append(plan.get(i)).append('\n');
+        sb.append("Sachin ko ek line mein plan batao, phir Step 1 shuru karo. Har step ke baad verify karke task_progress call karo.");
+        return sb.toString();
+    }
+
+    private synchronized String taskProgress(int step, String status, String note) {
+        if (plan.isEmpty()) return "Koi plan active nahi. Bade kaam ke liye pehle task_plan banao.";
+        if (step < 1 || step > plan.size()) return "Step number 1-" + plan.size() + " ke beech hona chahiye.";
+        if ("failed".equals(status)) {
+            return "Step " + step + " fail (" + note + "). Recover karo: back / dismiss_popup / doosra label / look_at_screen. "
+                    + "Ye step 3 baar fail ho chuka ho to ruk jao aur Sachin ko batao kya dikkat hai.";
+        }
+        if ("retrying".equals(status)) return "Theek hai, step " + step + " dobara karo: " + plan.get(step - 1);
+        if (step == plan.size()) {
+            String g = planGoal;
+            plan.clear();
+            return "SAB STEPS POORE: '" + g + "'. Ab Sachin ko 1-2 line mein report do (kya kiya, result kahan hai). Aur kuch khud se mat karna.";
+        }
+        return "Step " + step + " done. Agla Step " + (step + 1) + ": " + plan.get(step) + " (chhota sa status bolo aur karo).";
+    }
+
+    // ------------------------------------------------------------------ coding (Termux)
+
+    private static final java.util.regex.Pattern DANGER_CMD = java.util.regex.Pattern.compile(
+            "(^|[;&|`(\\s])(rm|rmdir|unlink|shred|mkfs[.\\w]*|dd|truncate|wipefs|fdisk|srm)(\\s|$)"
+            + "|git\\s+(clean|reset|rm|push\\s+.*--force|branch\\s+-[dD])"
+            + "|\\s-delete\\b|--delete|rimraf"
+            + "|(pip3?|npm|yarn|pnpm|pkg|apt|apt-get|dpkg)\\s+(uninstall|remove|rm|purge|autoremove|prune|clean|-r|-P)"
+            + "|chmod\\s+-R\\s+0+\\s|>\\s*/dev/(sd|block)",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    private static final String[] DANGER_CODE = {
+            "rm -rf", "rm -r ", "rm -f ", "shutil.rmtree", "os.remove(", "os.unlink(", "os.rmdir(", "os.removedirs(",
+            ".unlink(", "unlinksync", "rmsync", "fs.rm(", "fs.rmdir(", "fs.unlink(", "rimraf", ".delete()",
+            "deleterecursively", "files.delete", "drop table", "drop database", "truncate table", "format c:",
+            "mkfs", "/system/", "su -c"};
+
+    private static boolean dangerousCommand(String cmd) {
+        return forbidden(cmd) || DANGER_CMD.matcher(cmd).find();
+    }
+
+    private static String dangerousCode(String code) {
+        String low = code.toLowerCase(Locale.ROOT);
+        for (String d : DANGER_CODE) if (low.contains(d)) return d;
+        return null;
+    }
+
+    private static final String CODE_BLOCKED = "BLOCKED: Is code/command mein delete/remove/reset jaisa kaam hai — "
+            + "ye Priya ke role ke khilaf hai, nahi chalaya. Bina delete wala tareeka likho, ya Sachin ko batao ki ye kaam wo khud karein.";
+
+    /** Turns a user path into an absolute path inside ~/PriyaCode (or /sdcard/PriyaCode). Null if it escapes. */
+    private static String safePath(String p) {
+        if (p == null) return null;
+        p = p.trim().replace('\\', '/');
+        if (p.isEmpty()) return null;
+        for (String seg : p.split("/")) if (seg.equals("..")) return null;
+        if (p.startsWith("/sdcard/PriyaCode") || p.startsWith("/storage/emulated/0/PriyaCode")) return p;
+        if (p.startsWith(TermuxBridge.ROOT)) return p;
+        if (p.startsWith("~/")) p = p.substring(2);
+        if (p.startsWith("/")) return null;
+        if (p.startsWith("PriyaCode/")) p = p.substring("PriyaCode/".length());
+        return TermuxBridge.ROOT + "/" + p;
+    }
+
+    private String termuxCheck() {
+        TermuxBridge.Result r = TermuxBridge.bash(ctx,
+                "echo PRIYA_OK; uname -m; for t in python python3 node npm git clang java; do "
+                        + "command -v $t >/dev/null 2>&1 && printf '%s ' $t; done; echo; mkdir -p \"$HOME/PriyaCode\" && echo workspace=$HOME/PriyaCode",
+                null, 25);
+        if (r.setupProblem != null) return r.setupProblem;
+        if (!r.ok || !r.stdout.contains("PRIYA_OK")) {
+            return "Termux ne jawab nahi diya. " + r.err + "\n" + TermuxBridge.SETUP_HELP;
+        }
+        return "TERMUX READY.\n" + r.stdout.trim()
+                + "\n(Upar wali line mein installed tools hain. Jo chahiye aur nahi hai uske liye code_run se 'pkg install -y <naam>' chalao.)";
+    }
+
+    private String codeWriteFile(String path, String content) {
+        String abs = safePath(path);
+        if (abs == null) return "Path galat hai. Project folder ke andar relative path do, jaise 'calculator/main.py'.";
+        String bad = dangerousCode(content);
+        if (bad != null) return CODE_BLOCKED + " (mila: '" + bad + "')";
+        if (content.length() > 200000) return "File bahut badi hai (200 KB se zyada). Chhote files mein todo.";
+        TermuxBridge.Result r = TermuxBridge.bash(ctx,
+                "mkdir -p \"$(dirname \"$1\")\" && printf '%s' \"$2\" | base64 -d > \"$1\" && echo \"saved $(wc -c < \"$1\") bytes, $(wc -l < \"$1\") lines\"",
+                new String[]{abs, TermuxBridge.b64(content)}, 30);
+        if (r.setupProblem != null) return r.setupProblem;
+        if (!r.ok) return "File save nahi hui: " + r.err;
+        if (r.exitCode != 0) return "File save nahi hui (exit " + r.exitCode + "): " + TermuxBridge.clip(r.stderr, 800);
+        return "File likh di: " + abs + " — " + r.stdout.trim() + ". Ab code_run se chalao.";
+    }
+
+    private String codeReadFile(String path) {
+        String abs = safePath(path);
+        if (abs == null) return "Path galat hai.";
+        TermuxBridge.Result r = TermuxBridge.bash(ctx,
+                "if [ -d \"$1\" ]; then ls -la \"$1\"; else cat -n \"$1\" | head -c 7000; fi", new String[]{abs}, 20);
+        if (r.setupProblem != null) return r.setupProblem;
+        if (!r.ok) return "File nahi padh payi: " + r.err;
+        if (r.exitCode != 0) return "File nahi mili / padh nahi payi: " + TermuxBridge.clip(r.stderr, 600);
+        return r.stdout.isEmpty() ? "(file khaali hai)" : r.stdout;
+    }
+
+    private synchronized String codeRun(String cmd, String workdir, int timeoutSec) {
+        if (cmd.trim().isEmpty()) return "Kaunsi command chalani hai?";
+        if (dangerousCommand(cmd)) return CODE_BLOCKED;
+        if (codeFails >= MAX_CODE_FAILS) {
+            return "LIMIT: Code " + MAX_CODE_FAILS + " baar fail ho chuka hai. Ab aur try mat karo — Sachin ko asli error aur ab tak "
+                    + "kya-kya try kiya wo short mein batao, aur unse poochho aage kya karna hai. (Naya kaam ho to naya task_plan banao.)";
+        }
+        String wd = workdir.trim().isEmpty() ? TermuxBridge.ROOT : safePath(workdir);
+        if (wd == null) return "Workdir galat hai. Project folder ka naam do, jaise 'calculator'.";
+        timeoutSec = Math.max(5, Math.min(timeoutSec, 600));
+        TermuxBridge.Result r = TermuxBridge.bash(ctx,
+                "mkdir -p \"$1\" && cd \"$1\" || exit 97\n"
+                        + "export PYTHONUNBUFFERED=1 DEBIAN_FRONTEND=noninteractive\n"
+                        + "timeout -k 5 \"$2\" bash -c \"$3\" < /dev/null\n"
+                        + "rc=$?; [ $rc -eq 124 ] && echo \"[PRIYA] TIMEOUT: $2 sec se zyada chala, roka gaya\" >&2; exit $rc",
+                new String[]{wd, String.valueOf(timeoutSec), cmd}, timeoutSec + 20);
+        if (r.setupProblem != null) return r.setupProblem;
+        if (!r.ok) return "Command ka result nahi aaya: " + r.err;
+        boolean fail = r.exitCode != 0;
+        if (fail) codeFails++; else codeFails = 0;
+        StringBuilder sb = new StringBuilder();
+        sb.append("exit_code=").append(r.exitCode).append(fail ? " (FAIL " + codeFails + "/" + MAX_CODE_FAILS + ")" : " (SUCCESS)").append('\n');
+        if (!r.stdout.isEmpty()) sb.append("STDOUT:\n").append(TermuxBridge.clip(r.stdout, 2500)).append('\n');
+        if (!r.stderr.isEmpty()) sb.append("STDERR:\n").append(TermuxBridge.clip(r.stderr, 2500)).append('\n');
+        if (!r.err.isEmpty()) sb.append("TERMUX: ").append(TermuxBridge.clip(r.err, 300)).append('\n');
+        if (fail) sb.append(codeFails >= MAX_CODE_FAILS
+                ? "Ye aakhri koshish thi. Ab ruk kar Sachin ko error batao."
+                : "Error padho, wajah samjho, code_read_file / code_write_file se fix karo aur dobara code_run karo.");
+        else sb.append("Chal gaya. Output check karo ki Sachin ne jo maanga wahi hai, phir short report do.");
+        return sb.toString();
     }
 
     private String webSearch(String q) {
@@ -335,6 +646,12 @@ public class ActionExecutor {
                 PriyaAccessibilityService a = PriyaAccessibilityService.get();
                 if (a == null) return NEED_A11Y;
                 return a.scroll(action.equals("scroll_down")) ? "Scroll kar diya." : "Scroll nahi ho paya.";
+            }
+            case "scroll_left":
+            case "scroll_right": {
+                PriyaAccessibilityService a = PriyaAccessibilityService.get();
+                if (a == null) return NEED_A11Y;
+                return a.scrollHorizontal(action.equals("scroll_left")) ? "Side scroll kar diya." : "Scroll nahi ho paya.";
             }
             case "volume_up":
                 am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI);

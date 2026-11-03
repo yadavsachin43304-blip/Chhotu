@@ -30,6 +30,51 @@ public final class SkillStore {
         dir = new File(c.getFilesDir(), "skills");
         if (!dir.exists()) dir.mkdirs();
         seed();
+        seedV2();
+    }
+
+    /** v25: manager-mode skills (CapCut, coding agent, phone manager). Runs once on existing installs too. */
+    private void seedV2() {
+        File marker = new File(dir, ".seeded_v2");
+        if (marker.exists()) return;
+        save("CapCut Video Editor",
+                "CapCut mein video edit karna: video chunna, trim, music lagana, text/caption, export — sirf Sachin ke order par.",
+                "CapCut (package com.lemon.lvoverseas) mein Sachin ka editing order poora karna:\n"
+                        + "0. Order saaf samjho: kaunsa video (latest / naam / date), kitna trim (shuru/aakhir se kitne second), kaunsa music, aur kuch (text, speed). Kuch zaroori na pata ho to ek chhota sawaal. Phir task_plan: kholna > video chunna > trim > music > export > report.\n"
+                        + "1. open_app 'CapCut' (na mile to list_apps 'cap'; installed hi na ho to Sachin ko batao). wait_for_text 'New project|Naya' 15 sec. Update/Pro/offer popup aaye to dismiss_popup ya X (look_at_screen + tap_at). 'Try free', 'Subscribe', 'Buy', 'Pro' kabhi mat dabana.\n"
+                        + "2. click_on_screen 'New project' (Hindi UI mein 'नया प्रोजेक्ट'). Photos/videos ki permission maange to ye Sachin ke order ke liye zaroori hai — 'Allow' dabana theek hai.\n"
+                        + "3. Gallery: 'Videos' tab. Latest video = sabse pehla thumbnail (upar-baayein). Thumbnails par text nahi hota: look_at_screen karke tap_at se thumbnail (ya uske upar-daayein kone ka select circle) dabao. Galat video na chune — duration label dekh kar pakka karo. Phir click_on_screen 'Add'. wait_for_text 'Export' 20 sec (editor khul gaya).\n"
+                        + "4. TRIM: look_at_screen. Timeline neeche ke hisse mein hoti hai (aam taur par y≈0.62-0.72), beech mein safed khadi line = playhead, upar timecode (00:05 / 00:30). Clip par tap_at karke select karo — dono kinaron par safed handles aa jaate hain.\n"
+                        + "   Shuru se kaatna: playhead ko sahi second par lao (timeline ko swipe karke, timecode dekhte hue), phir LEFT handle ko swipe hold_ms=400 se playhead tak drag karo (handle snap ho jaata hai). Aakhir se kaatna: playhead ko naye end par lao, RIGHT handle ko playhead tak drag. Har drag ke baad look_at_screen se total duration check karo, zarurat ho to thoda adjust.\n"
+                        + "   'Split' theek hai, par 'Delete' button Priya ke liye blocked hai — hissa hatane ke liye hamesha handle-drag se trim karo.\n"
+                        + "5. MUSIC: clip deselect karo (timeline ke khaali hisse par tap ya back). Neeche toolbar: 'Audio' > 'Sounds' (ya 'Music'). Sachin ne gaana bataya ho to search mein type_text press_enter=true; nahi to unse poochho ya uske bataye mood ki category. Gaane par tap (preview) > '+' / 'Use' (look_at_screen se icon). Music video se lambi ho to music clip select karke uska right handle video ke end tak drag karo. Volume kehne par 'Volume'.\n"
+                        + "6. Text/caption order ho to 'Text' > 'Add text' (type_text) ya 'Auto captions'. Speed: clip select > 'Speed'.\n"
+                        + "7. EXPORT: upar-daayein 'Export' (ya upar-arrow icon). Resolution ka default theek hai. wait_for_text 'Saved|Done|saved to|100%' 240 sec. Share/TikTok popup aaye to 'Done' ya dismiss_popup — kahin share mat karna.\n"
+                        + "8. Verify: read_screen se 'Saved' pakka karo. Report: kya trim hua (kitne sec), kaunsa music, video gallery mein save hua. Har bade step ke baad task_progress.\n"
+                        + "Koi step 3 baar fail: ruk jao, Sachin ko batao screen par kya hai aur kya dikkat hai. CapCut ka UI version ke hisaab se badalta hai — label na mile to look_at_screen se icon pehchano.");
+        save("Coding Agent",
+                "Code likhna, Termux mein chalana, error khud theek karna (max 5 koshish) aur report dena.",
+                "Jab Sachin koi program/script/app banane ya chalane ko kahe:\n"
+                        + "1. termux_check (pehli baar ya error par). Setup na ho to tool ke steps Sachin ko Hindi mein ek-ek karke batao aur ruk jao.\n"
+                        + "2. Chhota project folder naam chuno (jaise 'calculator'). task_plan banao.\n"
+                        + "3. code_write_file se poori file likho (path 'calculator/main.py'). Saaf, chhota, sahi code.\n"
+                        + "4. code_run (workdir 'calculator', command 'python main.py'). Input wale program ko test ke liye: echo '2 3' | python main.py. Server/loop wale program ka timeout_sec chhota rakho.\n"
+                        + "5. exit_code 0 nahi ya STDERR mein error: error padho, asli wajah samjho, code_read_file se line dekho, code_write_file se poori fixed file likho, dobara code_run. ModuleNotFoundError ho to 'pip install <pkg>'; tool missing ho to 'pkg install -y <pkg>'.\n"
+                        + "6. Zyada se zyada 5 koshish. Phir bhi fail: ruk jao, asli error aur kya try kiya short mein batao, Sachin se poochho.\n"
+                        + "7. Chal jaaye to output check karo ki Sachin ne jo maanga wahi hai. Report: kya banaya, kahan (~/PriyaCode/<folder>), kaise chalana hai, output kya aaya.\n"
+                        + "8. Kabhi rm/delete/remove/uninstall/reset wali command ya file-delete karne wala code mat likho — blocked hai.");
+        save("Phone Control",
+                "Phone Manager: kisi bhi app mein koi bhi kaam step-by-step — app kholna, tap, type, scroll, drag, popups, verify, report.",
+                "Sachin ka koi bhi phone order (sirf unke saaf order par):\n"
+                        + "1. Order poora suno. Saaf na ho to ek chhota sawaal.\n"
+                        + "2. 2 se zyada steps ho to task_plan.\n"
+                        + "3. Har step: read_screen (har element ka @x,y) ya look_at_screen (icons/images) > action (open_app, click_on_screen, tap_at, swipe, type_text, scroll_until) > verify (read_screen / wait_for_text) > task_progress.\n"
+                        + "4. Popup: dismiss_popup. Permission popup sirf tab Allow jab Sachin ke kaam ke liye zaroori ho. Ad/Sponsored/Install/Buy/Subscribe kabhi nahi.\n"
+                        + "5. Atke to: back, dismiss_popup, scroll_until, doosra label (Hindi/English), position par tap. Ek step 3 baar fail > ruk kar Sachin ko batao.\n"
+                        + "6. Call, message/post bhejna, payment, account/settings badalna: aakhri button se pehle Sachin se haan lo.\n"
+                        + "7. Delete/remove/reset/uninstall/format/clear data hamesha mana.\n"
+                        + "8. Beech mein 1 line status, aakhir mein 1-2 line report. Order ke bahar kuch extra mat karo.");
+        try { marker.createNewFile(); } catch (Exception ignored) { }
     }
 
     private static String idFor(String name) {

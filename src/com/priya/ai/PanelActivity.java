@@ -167,6 +167,7 @@ public class PanelActivity extends Activity {
             if (Build.VERSION.SDK_INT >= 33 && !has("android.permission.POST_NOTIFICATIONS")) {
                 need.add("android.permission.POST_NOTIFICATIONS");
             }
+            if (TermuxBridge.installed(this) && !has(TermuxBridge.PERM)) need.add(TermuxBridge.PERM);
             if (need.isEmpty()) toast("Saari runtime permissions pehle se allowed hain.");
             else requestPermissions(need.toArray(new String[0]), REQ_PERMS);
         });
@@ -189,7 +190,8 @@ public class PanelActivity extends Activity {
         }
 
         permCard("Accessibility Service",
-                "Phone control: app kholna, tap, type, scroll, back/home, YouTube par gana chalana.\n"
+                "Phone control: app kholna, tap, type, scroll, drag, CapCut editing, screen dekhna, YouTube par gana chalana.\n"
+                        + "Update ke baad screenshot (look_at_screen) ke liye ise ek baar OFF karke phir ON karo.\n"
                         + "Android 13+ par agar switch grey ho to: App settings > ⋮ (teen dot) > 'Allow restricted settings', phir yahan wapas aao.",
                 accessibilityOn(this), "Accessibility settings kholo",
                 v -> start(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
@@ -214,6 +216,18 @@ public class PanelActivity extends Activity {
         permCard("Phone calls", "Call seedha laga dene ke liye (CALL_PHONE). Priya call se pehle aapse confirm karegi.",
                 has(Manifest.permission.CALL_PHONE), "Allow karo",
                 v -> requestPermissions(new String[]{Manifest.permission.CALL_PHONE}, REQ_PERMS));
+
+        boolean termux = TermuxBridge.installed(this);
+        permCard("Termux commands (Coding)",
+                termux ? "Priya Termux mein code likh kar chala sake (RUN_COMMAND). Termux mein ek baar ye bhi chalana:\n"
+                        + "mkdir -p ~/.termux && echo \"allow-external-apps=true\" >> ~/.termux/termux.properties && termux-reload-settings\n"
+                        + "termux-setup-storage\npkg install -y python nodejs git clang"
+                        : "Coding ke liye Termux chahiye — F-Droid se install karo (Play Store wala purana hai). Install ke baad yahan wapas aakar Allow karo.",
+                termux && has(TermuxBridge.PERM), termux ? "Allow karo" : "Termux download (F-Droid)",
+                v -> {
+                    if (TermuxBridge.installed(this)) requestPermissions(new String[]{TermuxBridge.PERM}, REQ_PERMS);
+                    else start(new Intent(Intent.ACTION_VIEW, Uri.parse("https://f-droid.org/packages/com.termux/")));
+                });
 
         permCard("Install-time permissions",
                 "Ye install ke saath apne aap mil jaati hain:\n"

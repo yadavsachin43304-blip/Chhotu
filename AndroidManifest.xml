@@ -15,6 +15,8 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <!-- run code in Termux (Coding Agent); user grants it in Menu > Permissions -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
 
     <!-- lets Priya see launcher apps (open_app) without QUERY_ALL_PACKAGES -->
     <queries>
@@ -23,6 +25,8 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
         <package android:name="com.google.android.youtube" />
+        <package android:name="com.termux" />
+        <package android:name="com.lemon.lvoverseas" />
     </queries>
 
     <application
@@ -51,6 +55,10 @@
             android:name=".PriyaService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <receiver
+            android:name=".TermuxResultReceiver"
+            android:exported="false" />
 
         <service
             android:name=".PriyaAccessibilityService"

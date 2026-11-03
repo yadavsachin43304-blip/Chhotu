@@ -121,6 +121,13 @@ public class GeminiLiveClient {
         } catch (JSONException ignored) { }
     }
 
+    /** One screen frame for the model to look at (Live API realtime video input). */
+    public void sendImage(byte[] jpeg) {
+        if (!isReady() || jpeg == null) return;
+        String b64 = Base64.encodeToString(jpeg, Base64.NO_WRAP);
+        ws.send("{\"realtimeInput\":{\"video\":{\"data\":\"" + b64 + "\",\"mimeType\":\"image/jpeg\"}}}");
+    }
+
     public void sendToolResponse(String id, String name, String result) {
         if (!isReady()) return;
         try {
@@ -179,6 +186,18 @@ public class GeminiLiveClient {
         return new JSONObject().put("type", "STRING").put("description", desc);
     }
 
+    private static JSONObject num(String desc) throws JSONException {
+        return new JSONObject().put("type", "NUMBER").put("description", desc);
+    }
+
+    private static JSONObject integer(String desc) throws JSONException {
+        return new JSONObject().put("type", "INTEGER").put("description", desc);
+    }
+
+    private static JSONObject bool(String desc) throws JSONException {
+        return new JSONObject().put("type", "BOOLEAN").put("description", desc);
+    }
+
     private static JSONObject enumStr(String desc, String... values) throws JSONException {
         JSONArray a = new JSONArray();
         for (String v : values) a.put(v);
@@ -199,22 +218,66 @@ public class GeminiLiveClient {
 
     static JSONArray toolDeclarations() throws JSONException {
         JSONArray a = new JSONArray();
-        a.put(fn("open_app", "Open an installed Android app by its name (e.g. WhatsApp, Chrome, Camera, Settings).",
-                new JSONObject().put("app_name", str("App name as the user says it")), "app_name"));
+        a.put(fn("open_app", "Open an installed Android app by its name (e.g. WhatsApp, CapCut, Chrome, Settings) or its package name.",
+                new JSONObject().put("app_name", str("App name as the user says it, or package name like com.lemon.lvoverseas")), "app_name"));
+        a.put(fn("list_apps", "List installed (launchable) apps with package names, optionally filtered. Use when unsure an app is installed or what it is called.",
+                new JSONObject().put("filter", str("Optional part of the app name, e.g. 'cap' or 'edit'"))));
         a.put(fn("youtube_play", "Search YouTube for a song or video and start playing the first result.",
                 new JSONObject().put("query", str("Song or video name, e.g. 'Arijit Singh Tum Hi Ho'")), "query"));
         a.put(fn("phone_control", "Control the phone: navigation, scrolling, volume, media keys, flashlight, lock screen, screenshot, settings screens.",
                 new JSONObject().put("action", enumStr("Action to perform",
                         "home", "back", "recents", "notifications", "quick_settings",
-                        "scroll_down", "scroll_up", "lock_screen", "screenshot",
+                        "scroll_down", "scroll_up", "scroll_left", "scroll_right", "lock_screen", "screenshot",
                         "volume_up", "volume_down", "mute",
                         "media_play_pause", "media_next", "media_previous",
                         "flashlight_on", "flashlight_off", "wifi_settings", "bluetooth_settings")), "action"));
-        a.put(fn("click_on_screen", "Tap a button or item on the current screen that shows the given text or label.",
-                new JSONObject().put("text", str("Visible text or content description of the item to tap")), "text"));
-        a.put(fn("type_text", "Type text into the currently focused input field on the screen.",
-                new JSONObject().put("text", str("Text to type")), "text"));
-        a.put(fn("read_screen", "Read the visible text of the current screen so you can describe it or decide what to tap.", null));
+        a.put(fn("click_on_screen", "Tap (or long-press) the element showing this text / content-description / view id, in any window incl. popups. Falls back to a real finger tap at its position. Refuses delete/remove/reset and ads.",
+                new JSONObject()
+                        .put("text", str("Visible text, icon label or id of the item, as read_screen shows it"))
+                        .put("index", integer("Which match when several share the text: 1 = first (default)"))
+                        .put("long_press", bool("true = long-press instead of tap")), "text"));
+        a.put(fn("tap_at", "Tap or long-press at a screen position. Use for icons / thumbnails / editor timelines without text. x,y as 0-1 fractions of the screen (from look_at_screen) or pixels (from read_screen @x,y).",
+                new JSONObject().put("x", num("x: 0-1 fraction from left, or pixels"))
+                        .put("y", num("y: 0-1 fraction from top, or pixels"))
+                        .put("long_press", bool("true = long-press")), "x", "y"));
+        a.put(fn("swipe", "Swipe or drag from (x1,y1) to (x2,y2). hold_ms > 0 presses and holds first, then drags without lifting: use it to drag CapCut trim handles, sliders, clips. Coordinates as 0-1 fractions or pixels.",
+                new JSONObject().put("x1", num("start x")).put("y1", num("start y"))
+                        .put("x2", num("end x")).put("y2", num("end y"))
+                        .put("duration_ms", integer("Move duration, default 400 (slower = more precise)"))
+                        .put("hold_ms", integer("Hold before moving, e.g. 400 for drag; 0 = plain swipe")),
+                "x1", "y1", "x2", "y2"));
+        a.put(fn("scroll_until", "Scroll the screen repeatedly until the given text appears (max_swipes times).",
+                new JSONObject().put("text", str("Text to find"))
+                        .put("direction", enumStr("Scroll direction", "down", "up", "left", "right"))
+                        .put("max_swipes", integer("Max swipes, default 8")), "text"));
+        a.put(fn("wait_for_text", "Wait until a text appears on screen (app loading, export finishing). Several options with '|', e.g. 'Saved|Done|Export'.",
+                new JSONObject().put("text", str("Text to wait for; alternatives separated by |"))
+                        .put("timeout_sec", integer("Max seconds to wait, default 10, max 300")), "text"));
+        a.put(fn("dismiss_popup", "Close a popup / dialog / promo by pressing a harmless button like Not now, Skip, Later, Got it, Close. Never presses Allow/Buy/Install/Subscribe/Delete.", null));
+        a.put(fn("type_text", "Type text into an input field: the one matching 'field' (its text/hint/label), else the focused or first field. press_enter=true submits (search).",
+                new JSONObject().put("text", str("Text to type"))
+                        .put("field", str("Optional: hint/label of the field, e.g. 'Search'"))
+                        .put("press_enter", bool("true = press Enter/Search after typing")), "text"));
+        a.put(fn("read_screen", "Read the current screen: every visible element with [tap]/[input]/[scroll] tags and its centre @x,y in pixels, incl. popups. Use before acting and to verify after.", null));
+        a.put(fn("look_at_screen", "Take a screenshot and look at it (image). Use when read_screen is not enough: icons without text, video thumbnails, CapCut timeline/handles, images. Then use tap_at / swipe with 0-1 fractions.", null));
+        a.put(fn("task_plan", "Manager mode: before a big multi-step order, save the plan (goal + ordered steps). Only for a task Sachin explicitly ordered.",
+                new JSONObject().put("goal", str("Sachin's order in one line"))
+                        .put("steps", new JSONObject().put("type", "ARRAY").put("items", new JSONObject().put("type", "STRING"))
+                                .put("description", "Ordered short steps")), "goal", "steps"));
+        a.put(fn("task_progress", "Manager mode: report a step's result after verifying it; returns the next step.",
+                new JSONObject().put("step", integer("Step number (1-based)"))
+                        .put("status", enumStr("Result of this step", "done", "failed", "retrying"))
+                        .put("note", str("Short note: what was verified or what went wrong")), "step", "status"));
+        a.put(fn("termux_check", "Check that Termux is installed and allows Priya to run code; returns tools available or exact setup steps for Sachin.", null));
+        a.put(fn("code_write_file", "Write a complete source file into Priya's coding workspace (~/PriyaCode in Termux). Overwrites the file with the full new content.",
+                new JSONObject().put("path", str("Relative path inside the workspace, e.g. 'calculator/main.py'"))
+                        .put("content", str("Full file content")), "path", "content"));
+        a.put(fn("code_read_file", "Read a file (with line numbers) or list a folder in the coding workspace.",
+                new JSONObject().put("path", str("Relative path, e.g. 'calculator/main.py' or 'calculator'")), "path"));
+        a.put(fn("code_run", "Run a shell command in Termux inside a project folder and get exit code, stdout and stderr (e.g. 'python main.py', 'node app.js', 'pip install requests'). No interactive input: pipe test input with echo.",
+                new JSONObject().put("command", str("Shell command"))
+                        .put("workdir", str("Project folder inside the workspace, e.g. 'calculator'"))
+                        .put("timeout_sec", integer("Max seconds, default 60, max 600")), "command"));
         a.put(fn("call_contact", "Place a phone call to a saved contact name or a phone number. Confirm with the user before calling.",
                 new JSONObject().put("name_or_number", str("Contact name or phone number")), "name_or_number"));
         a.put(fn("web_search", "Open a Google search for the query in the browser.",
