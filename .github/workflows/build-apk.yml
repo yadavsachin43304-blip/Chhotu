@@ -18,7 +18,8 @@ jobs:
         run: |
           BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
           echo "$BT" >> $GITHUB_PATH
-          PJ=$(ls -d $ANDROID_HOME/platforms/android-* | sort -V | tail -1)/android.jar
+          PJ=""; for v in 34 35 33 36; do [ -f $ANDROID_HOME/platforms/android-$v/android.jar ] && { PJ=$ANDROID_HOME/platforms/android-$v/android.jar; break; }; done
+          [ -n "$PJ" ] || { yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" >/dev/null; PJ=$ANDROID_HOME/platforms/android-34/android.jar; }
           echo "ANDROID_JAR=$PJ" >> $GITHUB_ENV
           echo "BT=$BT  JAR=$PJ"
       - name: Build
