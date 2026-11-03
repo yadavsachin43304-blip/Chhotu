@@ -175,8 +175,14 @@ public class AudioEngine {
         interruptPlayback();
     }
 
+    private volatile float outRms = 0f;
+    private volatile long replyStart = 0;
+
     public void playChunk(byte[] pcm24k) {
         if (!running || pcm24k == null || pcm24k.length == 0 || dropOld) return;
+        float r = rmsBytes(pcm24k);
+        outRms = Math.max(r, outRms * 0.9f);
+        if (SystemClock.elapsedRealtime() > speakEnd + 300) replyStart = SystemClock.elapsedRealtime();
         setCommMode(true);
         long now = SystemClock.elapsedRealtime();
         long ms = pcm24k.length / 2 / (OUT_RATE / 1000);
@@ -187,6 +193,7 @@ public class AudioEngine {
 
     public void interruptPlayback() {
         playQueue.clear();
+        playIdle = true;
         speakEnd = SystemClock.elapsedRealtime();
         try {
             if (track != null) {
@@ -197,12 +204,26 @@ public class AudioEngine {
         } catch (Exception ignored) { }
     }
 
+    private volatile boolean playIdle = true;
+
     private void playLoop() {
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
         while (running) {
             byte[] b;
             try {
                 b = playQueue.poll(200, TimeUnit.MILLISECONDS);
+                if (b == null) { playIdle = true; continue; }
+                if (playIdle) {
+                    java.io.ByteArrayOutputStream acc = new java.io.ByteArrayOutputStream();
+                    acc.write(b, 0, b.length);
+                    long until = SystemClock.elapsedRealtime() + 300;
+                    while (acc.size() < OUT_RATE / 2 && SystemClock.elapsedRealtime() < until && running) {
+                        byte[] more = playQueue.poll(20, TimeUnit.MILLISECONDS);
+                        if (more != null) acc.write(more, 0, more.length);
+                    }
+                    b = acc.toByteArray();
+                    playIdle = false;
+                }
             } catch (InterruptedException e) {
                 break;
             }
@@ -338,9 +359,12 @@ public class AudioEngine {
 
             if (speaking && strictEcho) {
                 // Barge-in (roka-toki): a clearly loud, sustained voice cuts Priya off right away.
-                float bargeThr = Math.max(MIN_THR * 2.5f, floor * mult * 4f);
-                bargeLoud = rms > bargeThr ? bargeLoud + 1 : 0;
-                if (bargeLoud >= 12) { // ~240 ms of loud speech
+                // Priya's own voice comes back through the speaker, so the bar sits well above
+                // both the room noise and her current output level, after a short grace period.
+                float bargeThr = Math.max(MIN_THR * 5f, Math.max(floor * mult * 6f, outRms * 1.3f));
+                boolean grace = SystemClock.elapsedRealtime() - replyStart < 900;
+                bargeLoud = (!grace && rms > bargeThr) ? bargeLoud + 1 : Math.max(0, bargeLoud - 2);
+                if (bargeLoud >= 25) { // ~500 ms of clearly louder speech
                     bargeLoud = 0;
                     bargeIn();
                     inSpeech = true;
