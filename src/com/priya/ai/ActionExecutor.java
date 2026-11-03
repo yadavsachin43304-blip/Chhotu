@@ -65,6 +65,7 @@ public class ActionExecutor {
                 case "read_screen":     return readScreen();
                 case "call_contact":    return callContact(args.optString("name_or_number", ""));
                 case "web_search":      return webSearch(args.optString("query", ""));
+                case "knowledge":       return knowledge(args.optString("query", ""));
                 case "remember":
                     memory.addNote(args.optString("kind", "NOTE"), args.optString("text", ""));
                     return "Memory mein save ho gaya.";
@@ -290,5 +291,46 @@ public class ActionExecutor {
             default:
                 return "Ye action samajh nahi aaya: " + action;
         }
+    }
+
+    // ------------------------------------------------------------------ learned skills (assets/knowledge.txt)
+
+    private static java.util.List<String> kLines;
+
+    private synchronized java.util.List<String> kLoad() {
+        if (kLines != null) return kLines;
+        java.util.List<String> l = new java.util.ArrayList<>();
+        try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(
+                ctx.getAssets().open("knowledge.txt"), "UTF-8"))) {
+            String line;
+            while ((line = r.readLine()) != null) if (!line.trim().isEmpty()) l.add(line);
+        } catch (Exception ignored) { }
+        kLines = l;
+        return l;
+    }
+
+    private String knowledge(String query) {
+        java.util.List<String> lines = kLoad();
+        if (lines.isEmpty()) return "Knowledge file nahi mila.";
+        java.util.List<String> toks = new java.util.ArrayList<>();
+        for (String t : query.toLowerCase(Locale.ROOT).split("[^\\p{L}\\p{N}]+")) if (t.length() >= 3) toks.add(t);
+        if (toks.isEmpty()) return "Query mein keywords do.";
+        int[] score = new int[lines.size()];
+        for (int i = 0; i < lines.size(); i++) {
+            String low = lines.get(i).toLowerCase(Locale.ROOT);
+            for (String t : toks) if (low.contains(t)) score[i] += 2;
+        }
+        StringBuilder sb = new StringBuilder();
+        java.util.Set<Integer> used = new java.util.HashSet<>();
+        for (int k = 0; k < 8; k++) {
+            int best = -1;
+            for (int i = 0; i < score.length; i++) if (score[i] > 0 && !used.contains(i) && (best < 0 || score[i] > score[best])) best = i;
+            if (best < 0) break;
+            for (int j = best; j <= Math.min(lines.size() - 1, best + 1); j++) {
+                if (used.add(j)) sb.append(lines.get(j)).append('\n');
+            }
+        }
+        if (sb.length() == 0) return "Is baare mein seekhi hui notes mein kuch nahi mila; apni general knowledge se jawab do.";
+        return sb.length() > 3000 ? sb.substring(0, 3000) : sb.toString();
     }
 }

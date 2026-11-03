@@ -1,0 +1,505 @@
+[BUSINESS] Google AI Studio — 30 Business Skills Master Catalog
+[BUSINESS] Complete Reference Guide for Business App Building, Strategy, Automation & Advisory Skills
+[BUSINESS] Ye document Google AI Studio ke app building aur prompt engineering environment ke andar available 30 specialized business skills ka complete aur exact catalog hai. Isme strategy, financial planning, marketing, operations, aur AI automation ke saare modules shamil hain.
+[BUSINESS] 1. STRATEGIC & BUSINESS MODEL SKILLS
+[BUSINESS] 1. Business Model Innovation & Canvas biz:business-model-canvas
+[BUSINESS] Designs, evaluates, and pivots business model structures, value propositions, and revenue streams.
+[BUSINESS] 2. Market Research & Competitive Intelligence biz:market-research Analyzes industry trends, competitor positioning, market gaps, and total addressable market (TAM).
+[BUSINESS] 3. PESTLE & SWOT Strategic Analysis biz:pestle-swot
+[BUSINESS] Performs comprehensive macroeconomic and internal capability assessments to guide long-term strategy.
+[BUSINESS] 4. Corporate Business Case Studies biz:case-studies Deconstructs successful and failed corporate strategies for actionable business insights.
+[BUSINESS] 5. Strategic Growth & Expansion Planning biz:growth-expansion
+[BUSINESS] Formulates multi-phase scaling roadmaps, market entry plans, and franchise/distribution models.
+[BUSINESS] 2. FINANCIAL PLANNING & UNIT ECONOMICS
+[BUSINESS] 6. Unit Economics & CAC/LTV Optimization fin:unit-economics
+[BUSINESS] Calculates customer acquisition cost, lifetime value, payback periods, and margin structures.
+[BUSINESS] 7. Financial Modeling & Cash Flow Forecasting fin:financial-modeling Builds P&L projections, break-even analysis models, and cash runway calculators.
+[BUSINESS] 8. Pricing Strategy & Monetization Frameworks fin:pricing-strategy
+[BUSINESS] Designs tiered pricing, value-based pricing, SaaS subscription models, and psychological pricing tactics.
+[BUSINESS] 9. Cost Optimization & Margin Expansion fin:cost-optimization
+[BUSINESS] Identifies operational inefficiencies, vendor negotiation tactics, and overhead reduction strategies.
+[BUSINESS] 10. Fundraising, Pitch Deck & Valuation fin:fundraising-valuation Drafts investor pitch decks, financial summaries, term sheet checklists, and startup valuation models.
+[BUSINESS] 3. MARKETING, SALES & FUNNEL OPTIMIZATION
+[BUSINESS] 11. Sales Funnel Architecture & Conversion Rate Optimization mkt:sales-funnel
+[BUSINESS] Builds high-converting landing page flows, email sequences, and checkout friction reducers.
+[BUSINESS] 12. Customer Persona & Buyer Journey Mapping mkt:buyer-persona Creates detailed psychographic customer profiles, pain-point matrices, and touchpoint maps.
+[BUSINESS] 13. Digital Marketing & Performance Media Strategy mkt:performance-media
+[BUSINESS] Plans Meta, Google, and YouTube ad campaigns, ROAS targets, and audience retargeting frameworks.
+[BUSINESS] 14. SEO & Organic Growth Strategy mkt:seo-strategy Develops keyword hierarchies, content pillars, technical SEO audits, and backlink growth plans.
+[BUSINESS] 15. Brand Positioning & Messaging Architecture mkt:brand-positioning
+[BUSINESS] Crafts unique value propositions (UVPs), brand voice guidelines, and competitive differentiation.
+[BUSINESS] 4. OPERATIONS, PROCESS AUTOMATION & AI ENGINEERING
+[BUSINESS] 16. Business Process Automation & Workflow Design ops:process-automation
+[BUSINESS] Maps manual workflows and designs Make.com / Zapier automation pipelines with error handling.
+[BUSINESS] 17. AI Integration & Custom Agent Architecture ops:ai-integration Designs enterprise LLM integration, function calling agents, and RAG knowledge systems.
+[BUSINESS] 18. Supply Chain & Inventory Management ops:supply-chain
+[BUSINESS] Optimizes stock levels, warehousing logistics, vendor management, and fulfillment lead times.
+[BUSINESS] 19. Standard Operating Procedures (SOPs) & Documentation ops:sops-documentation
+[BUSINESS] Writes crystal-clear operational manuals, employee handbooks, and task execution checklists.
+[BUSINESS] 20. Quality Assurance & Risk Management ops:risk-management Builds risk matrices, compliance checklists, mitigation protocols, and QA testing frameworks.
+[BUSINESS] 5. CONTENT CREATION, MEDIA & PERSONAL BRANDING
+[BUSINESS] 21. YouTube Channel Growth & Algorithm Strategy media:youtube-growth
+[BUSINESS] Optimizes video CTR, retention curves, thumbnail psychology, and upload programming.
+[BUSINESS] 22. High-Retention Video Scriptwriting media:scriptwriting Writes engaging video scripts utilizing psychological hook formulas and narrative pacing.
+[BUSINESS] 23. Content Repurposing & Multi-Platform Syndication media:content-repurposing
+[BUSINESS] Transforms long-form webinars or podcasts into viral Shorts, LinkedIn carousels, and threads.
+[BUSINESS] 24. Influencer Marketing & Creator Network Management media:influencer-marketing Manages brand-creator partnerships, campaign briefs, affiliate tracking, and payout structures.
+[BUSINESS] 25. Executive Voice & Personal Branding media:personal-branding
+[BUSINESS] Builds thought leadership content strategies across LinkedIn, newsletters, and X (Twitter).
+[BUSINESS] 6. LEADERSHIP, HR & ADVISORY FRAMEWORKS
+[BUSINESS] 26. Executive Decision-Making & Advisory Panel exec:advisory-panel
+[BUSINESS] Simulates multi-perspective board advisory debates (Operator, Skeptic, Visionary, Finance).
+[BUSINESS] 27. OKR & KPI Performance Management exec:okr-kpi-management Establishes quarterly objectives, key results scorecards, and departmental accountability metrics.
+[BUSINESS] 28. Hiring, Org Design & Team Structuring exec:org-design
+[BUSINESS] Designs reporting hierarchies, job descriptions, interview scorecards, and compensation bands.
+[BUSINESS] 29. Negotiation & Stakeholder Management exec:negotiation-tactics
+[BUSINESS] Formulates win-win negotiation strategies, contract dispute resolutions, and objection handling.
+[BUSINESS] 30. Executive Meeting Briefs & Action Planning exec:meeting-briefs Synthesizes complex briefs, meeting notes, action items, and follow-up accountability registers.
+[VIDEO-EDIT] 17 ✂️ Cuts — 🔀 Transitions 📋 Prompt recipes — 🎬 BEGINNER → ADVANCED · PRACTICAL REFERENCE Video Editing Vocabulary & AI Prompt Handbook 290+ 🎯 Keyframes 🔤 Captions — 10 1 🎧 Audio 🎨 Colour
+[VIDEO-EDIT] L E A R N FA S T E R W I T H V I D E O — Watch the tutorials & grab free resources Subscribe on YouTube — Join Telegram
+[VIDEO-EDIT] What's inside
+[VIDEO-EDIT] This guide explains editing vocabulary in simple English, with Hinglish explanations where useful, and phrases you can copy into AI editing prompts. It covers the main families of techniques rather than claiming every proprietary effect or preset ever made. Names vary between apps; descriptive instructions make your intent portable. AI editors differ in what they can execute. Ask for an edited file, an editable project, or an edit decision list explicitly.
+[VIDEO-EDIT] 🎬How to write a precise editing instruction🎧Compositing tracking and visual effects
+[VIDEO-EDIT] ✂️Foundations and timeline basics🎨Sound dialogue music and sound design
+[VIDEO-EDIT] 🎞️Cutting and timeline operations📦Colour image quality and finishing
+[VIDEO-EDIT] 🔀Storytelling cuts and pacing Professional workflow delivery and quality 💬 control
+[VIDEO-EDIT] 🎯Transition families Everyday requests translated into precise 📋 prompts ⏱️Keyframes and motion
+[VIDEO-EDIT] 🧩Copy-ready prompt recipes 🔤Speed time and freeze effects
+[VIDEO-EDIT] 🪜Master prompt template 🖼️Text captions and typography
+[VIDEO-EDIT] 📚Learning order ✨B-roll layouts branding and framing
+[VIDEO-EDIT] 🎬Research sources and scope
+[VIDEO-EDIT] How to write a precise editing instruction
+[VIDEO-EDIT] Use this formula:
+[VIDEO-EDIT] ACTION TARGET TIMING STYLE / VALUES CONSTRAINT
+[VIDEO-EDIT] 🎯 Example: “At the spoken words ‘AA JAO DOSTO’, reveal that exact text above the speaker’s head. Use a heavy condensed font, white fill, lime emphasis and dark outline. Scale from 85% to 105% to 100% over 0.3 seconds. Keep the face and both logos visible.”
+[VIDEO-EDIT] State whether timestamps refer to the SOURCE clip or the FINAL edited timeline. Use source timestamps to identify cuts, and final timestamps for placement after cuts. For speech, anchor an instruction to the exact
+[VIDEO-EDIT] spoken phrase as well as approximate time. Percentages need a reference: “logo width 12% of frame width”; “B-roll occupies the upper 30% of the frame.” “Add 50% B-roll” is ambiguous.
+[VIDEO-EDIT] The rows below use this format: term | simple meaning | example instruction. Examples are suggested creative starting points, not universal standards.
+[VIDEO-EDIT] Foundations and timeline basics
+[VIDEO-EDIT] Beginner
+[VIDEO-EDIT] Footage or source media — Original recorded material — Use the supplied footage as the source.
+[VIDEO-EDIT] Clip — One media item or timeline segment — Keep the complete reaction clip.
+[VIDEO-EDIT] Frame — One still image in a video — Move this cut two frames later.
+[VIDEO-EDIT] Frame rate or FPS — Frames displayed per second — Match the source frame rate.
+[VIDEO-EDIT] Timecode — Hours, minutes, seconds and frames — Identify the source in and out timecodes.
+[VIDEO-EDIT] Timeline or sequence — Arrangement of clips over time — Assemble clips in conversation order.
+[VIDEO-EDIT] Playhead — Current timeline position — Place a marker at the first spoken word.
+[VIDEO-EDIT] Track or layer — Separate lane for media — Put music on a separate audio track.
+[VIDEO-EDIT] In point and out point — Start and end of a selected range — Set the out point after the sentence ends.
+[VIDEO-EDIT] Duration — How long an item lasts — Hold this title for 1.5 seconds.
+[VIDEO-EDIT] Marker — Labelled point for reference — Mark every mention of “referral”.
+[VIDEO-EDIT] A-roll — Main story or speaker footage — Keep A-roll visible throughout the explanation.
+[VIDEO-EDIT] B-roll — Supporting footage illustrating the subject — Show a real spreadsheet during the Excel explanation.
+[VIDEO-EDIT] Voiceover or VO — Narration over visuals — Place the voiceover over the demonstration.
+[VIDEO-EDIT] Sync — Alignment between related media — Sync captions to the spoken words.
+[VIDEO-EDIT] Aspect ratio — Width to height relationship — Deliver a 9:16 vertical reel.
+[VIDEO-EDIT] Resolution — Image dimensions in pixels — Export at 1080 × 1920 pixels.
+[VIDEO-EDIT] Safe area — Space protected from cropping and interface overlays — Keep text clear of the platform’s buttons and caption area.
+[VIDEO-EDIT] Cutting and timeline operations
+[VIDEO-EDIT] Beginner to intermediate
+[VIDEO-EDIT] Cut or straight cut — Immediate change from one shot to another — Use a straight cut after the reaction.
+[VIDEO-EDIT] Split or blade — Divide a clip at a point; removes nothing by itself — Split before and after the unwanted noise.
+[VIDEO-EDIT] Trim — Adjust a clip’s beginning or end — Trim hesitation before the first word.
+[VIDEO-EDIT] Delete or lift — Remove a range while leaving a gap — Lift the selected clip and leave its space empty.
+[VIDEO-EDIT] Ripple delete — Remove a range and close the gap — Ripple-delete the silent section.
+[VIDEO-EDIT] Ripple trim — Change an edge and shift later material — Shorten the pause and move following clips earlier.
+[VIDEO-EDIT] Rolling edit — Move a shared cut while keeping combined duration — Move the cut later without changing sequence length.
+[VIDEO-EDIT] Slip edit — Change the visible source range inside a fixed timeline slot — Slip this B-roll to show the click, keeping its position and duration.
+[VIDEO-EDIT] Slide edit — Move a clip and adjust neighbouring boundaries — Slide the reaction earlier while keeping sequence length.
+[VIDEO-EDIT] Insert edit — Add media and push later media forward — Insert a one-second demonstration before the reply.
+[VIDEO-EDIT] Overwrite edit — Replace timeline material without pushing later clips — Overwrite this placeholder with the new B- roll.
+[VIDEO-EDIT] Replace edit — Substitute one shot for another — Replace the opening graphic with the original speaker shot.
+[VIDEO-EDIT] Append — Add at the end — Append the CTA after the final line.
+[VIDEO-EDIT] Extend edit — Move an edit boundary to a chosen — Extend this shot to the end of the sentence.
+[VIDEO-EDIT] point
+[VIDEO-EDIT] Gap removal — Close unwanted empty spaces — Remove accidental timeline gaps.
+[VIDEO-EDIT] Handles — Extra source frames around a used — Leave handles for a short dissolve.
+[VIDEO-EDIT] range
+[VIDEO-EDIT] Nudge — Move by a small fixed amount — Nudge this caption two frames earlier.
+[VIDEO-EDIT] Linked selection — Keep related video and audio together — Keep dialogue audio linked during cuts.
+[VIDEO-EDIT] Unlink or detach audio — Separate audio from its video — Detach audio to bridge the camera change.
+[VIDEO-EDIT] Nested sequence or compound clip — Group a sequence as one editable item — Group the CTA elements and animate them together.
+[VIDEO-EDIT] Multicam edit — Switch among synchronized camera views — Cut to the second camera during the response.
+[VIDEO-EDIT] Transcript based editing — Edit using recognized speech as a guide — Remove repeated phrases using the transcript, checking the audio.
+[VIDEO-EDIT] Silence removal — Shorten quiet regions — Shorten dead pauses but preserve breaths
+[VIDEO-EDIT] and comic timing.
+[VIDEO-EDIT] Storytelling cuts and pacing
+[VIDEO-EDIT] Intermediate
+[VIDEO-EDIT] Jump cut — Visible discontinuity within similar framing — Use a jump cut to remove a repeated explanation.
+[VIDEO-EDIT] J-cut — Incoming shot’s audio starts before its picture — Start the reply audio before switching cameras.
+[VIDEO-EDIT] L-cut — Outgoing shot’s audio continues over the next picture — Keep the speaker’s line over the listener reaction.
+[VIDEO-EDIT] Split edit — Audio and picture cut at different times — Use a split edit to smooth the conversation.
+[VIDEO-EDIT] Match cut — Link shots through similar shape, movement or idea — Match the circular coin to the circular chart.
+[VIDEO-EDIT] Cut on action — Cut during a movement — Switch angle as the hand hits the table.
+[VIDEO-EDIT] Eyeline match — Next shot follows a person’s gaze — Cut from the glance to the object being viewed.
+[VIDEO-EDIT] Reaction shot — Show someone responding — Preserve the surprised reaction after “Paisa?!”
+[VIDEO-EDIT] Cutaway — Brief related shot away from the main action — Cut away to the spreadsheet while keeping dialogue continuous.
+[VIDEO-EDIT] Insert shot — Close view of a relevant detail — Insert a close-up of the formula result.
+[VIDEO-EDIT] Crosscutting or parallel — Alternate related actions or scenes — Alternate the two students preparing for the
+[VIDEO-EDIT] editing — exam.
+[VIDEO-EDIT] Montage — Series of selected shots compressing an idea or time — Build a short study-progress montage.
+[VIDEO-EDIT] Establishing shot — Introduce the setting — Open with a brief classroom wide shot.
+[VIDEO-EDIT] Continuity editing — Maintain understandable space, time and action — Preserve hand positions across the camera change.
+[VIDEO-EDIT] Invisible cut — Hide a cut inside matching motion or obstruction — Hide the cut when the foreground object fills the frame.
+[VIDEO-EDIT] Smash cut — Abrupt contrasting change — Smash-cut from the confident claim to the funny failure.
+[VIDEO-EDIT] Pacing — Rhythm of shots, speech and pauses — Tighten pacing while keeping complete sentences.
+[VIDEO-EDIT] Beat cut — Cut on a musical beat — Align the montage cuts to the drum beats.
+[VIDEO-EDIT] Hold or breathing room — Allow a moment to land — Hold the reaction for half a second after the punchline.
+[VIDEO-EDIT] Hook — Opening reason to keep watching — Open with the strongest relevant question already in the dialogue.
+[VIDEO-EDIT] Cold open — Begin directly with action before an introduction — Start on the debate before showing the title.
+[VIDEO-EDIT] Pattern interrupt — Deliberate change that renews attention — Add one quick punch-in at the surprising claim.
+[VIDEO-EDIT] Open loop — Raise a question answered later — Introduce the challenge and resolve it before the ending.
+[VIDEO-EDIT] Payoff — Resolution to the setup — Keep the final answer that resolves the opening question.
+[VIDEO-EDIT] CTA — Call to action — End with “Comment FM or SM” and allow time to read it.
+[VIDEO-EDIT] Seamless loop — End connects smoothly to the start L E A R N FA S T E R W I T H V I D E O Watch the tutorials & grab free resources — Match the last movement to the opening movement.
+[VIDEO-EDIT] Subscribe on YouTube — Join Telegram
+[VIDEO-EDIT] 4 — Transition families Beginner to advanced
+[VIDEO-EDIT] every edit. — A cut is itself a transition. The following are common transition families, not a requirement to use effects at
+[VIDEO-EDIT] Cross dissolve — One shot fades into the next — Use a brief dissolve between the reflective scenes.
+[VIDEO-EDIT] Fade in or fade out — Appear from or disappear into a colour — Fade the final image to black.
+[VIDEO-EDIT] Dip to black or white — Pass through black or white between — Use a short dip to black for the time change.
+[VIDEO-EDIT] shots
+[VIDEO-EDIT] Wipe — A boundary reveals the next shot — Reveal the next shot with a left-to-right wipe.
+[VIDEO-EDIT] Slide or push transition — Incoming shot slides in, often pushing the outgoing one — Push upward into the next section.
+[VIDEO-EDIT] Whip pan transition — Fast directional blur bridges shots — Match the pan direction across the transition.
+[VIDEO-EDIT] Zoom transition — Scaling bridges shots — Use a quick zoom transition into the close-up.
+[VIDEO-EDIT] Spin transition — Rotating change between scenes — Use one restrained spin in the energetic montage.
+[VIDEO-EDIT] Blur transition — Blur conceals the change — Briefly defocus across the scene change.
+[VIDEO-EDIT] Flash transition — Bright pulse bridges shots — Add one mild flash at the reveal.
+[VIDEO-EDIT] Glitch transition — Digital distortion bridges shots — Use a brief glitch for the technology reveal.
+[VIDEO-EDIT] Luma wipe — Brightness controls the reveal — Reveal the next scene through the bright area.
+[VIDEO-EDIT] Mask or object wipe — An object or mask uncovers the next — Use the passing arm to reveal the next scene.
+[VIDEO-EDIT] shot
+[VIDEO-EDIT] Light leak transition — Light flare washes across the cut — Add a subtle warm light leak between memories.
+[VIDEO-EDIT] Film burn transition — Film-like flare or burn obscures the cut — Use one short film burn for the flashback.
+[VIDEO-EDIT] Morph transition — Warping blends similar shots — Test a morph between similar locked-off shots; reject face warping.
+[VIDEO-EDIT] Stinger — Short branded graphic transition — Use the supplied brand animation between sections.
+[VIDEO-EDIT] Audio transition — Sound smooths or motivates a picture change — Bridge the cut with room tone and an audio crossfade.
+[VIDEO-EDIT] Keyframes and motion
+[VIDEO-EDIT] Intermediate to advanced
+[VIDEO-EDIT] Term Meaning Prompt wording
+[VIDEO-EDIT] Keyframe A property value at a specific time › Keyframe text scale at the start and end of the reveal.
+[VIDEO-EDIT] Position animation — Change location over time — Move the label from the left edge to the upper-left safe area.
+[VIDEO-EDIT] Scale animation — Change size — Scale the title from 90% to 100%.
+[VIDEO-EDIT] Rotation animation — Turn around a pivot — Rotate the badge slightly as it lands.
+[VIDEO-EDIT] Opacity animation — Change transparency — Fade the B-roll from 0% to 100% opacity.
+[VIDEO-EDIT] Anchor point or pivot — Centre around which rotation or scaling happens — Scale the banner from its bottom- centre anchor.
+[VIDEO-EDIT] Linear interpolation — Change at a constant rate between values — Use a steady linear movement.
+[VIDEO-EDIT] Ease in — Motion slows as it arrives at a keyframe in common keyframe terminology — Ease into the final resting position.
+[VIDEO-EDIT] Ease out — Motion accelerates as it leaves a keyframe in common keyframe terminology — Ease out of the starting position.
+[VIDEO-EDIT] Ease in and out — Smooth departure and arrival — Begin slowly, accelerate, then settle slowly.
+[VIDEO-EDIT] Bezier curve — Adjustable curve shaping motion or timing — Use a Bezier speed curve for a smooth title arrival.
+[VIDEO-EDIT] Graph editor — Tool for editing animation value or speed curves — Adjust the speed graph to remove the abrupt stop.
+[VIDEO-EDIT] Hold keyframe — Keep a value unchanged until the next keyframe — Switch the counter discretely using hold keyframes.
+[VIDEO-EDIT] Spatial interpolation — Shape of the motion path — Move the icon along a curved path.
+[VIDEO-EDIT] Temporal interpolation — How property values change through time — Slow the movement near its endpoint.
+[VIDEO-EDIT] Motion path — Route an object follows — Send the pointer along the highlighted formula.
+[VIDEO-EDIT] Overshoot — Pass the endpoint before settling — Overshoot title scale to 105%, then settle at 100%.
+[VIDEO-EDIT] Bounce — Rebound at the endpoint — Add a small bounce when the badge lands.
+[VIDEO-EDIT] Spring or elastic motion — Oscillation that settles — Use a short spring animation on the sticker.
+[VIDEO-EDIT] Stagger — Offset start times across items — Reveal each bullet 0.15 seconds after the previous one.
+[VIDEO-EDIT] Loop animation — Repeat an animation — Loop the arrow pulse while the CTA is visible.
+[VIDEO-EDIT] Wiggle — Procedural irregular movement — Add subtle wiggle to the warning
+[VIDEO-EDIT] label.
+[VIDEO-EDIT] Motion blur — Blur suggesting movement during exposure — Apply motion blur to the fast-moving text.
+[VIDEO-EDIT] Parenting — Make one element inherit another’s motion — Parent the label to its moving graphic.
+[VIDEO-EDIT] Expression — Code-driven property behaviour — Drive the counter with an expression if supported.
+[VIDEO-EDIT] Null or controller layer — Invisible control for other layers — Use one controller to animate all CTA elements.
+[VIDEO-EDIT] Digital push-in or punch- in — Enlarge the recorded picture — Punch in to 112% on the key phrase, preserving both faces.
+[VIDEO-EDIT] Pull-out — Gradually widen the picture — Pull out to reveal the full whiteboard.
+[VIDEO-EDIT] Pan and scan — Move a crop across a larger image — Pan across the worksheet without cutting off headings.
+[VIDEO-EDIT] Ken Burns effect — Slow pan and zoom on a still — Add a gentle push-in to the still photograph.
+[VIDEO-EDIT] Parallax or 2.5D — Layers move at different rates to suggest depth 💡 Tip Naming caution: CSS and template libraries sometimes label “ease-in” and “ease-out” differently from keyframe interfaces. Describe the intended acceleration and settling, not just the preset name. — Separate foreground and background for subtle parallax.
+[VIDEO-EDIT] 6 Intermediate — Speed time and freeze effects
+[VIDEO-EDIT] Constant speed change — One playback rate for a range —  — Play the demonstration at 150% speed.
+[VIDEO-EDIT] Slow motion — Slower playback — supports it. — Slow the reaction to 50% where the footage
+[VIDEO-EDIT] Fast motion — Faster playback —  — Speed up the repetitive data entry.
+[VIDEO-EDIT] Speed ramp — Gradually change playback speed —  — Ramp into fast motion during the movement, then return to normal before speech.
+[VIDEO-EDIT] Time remapping — Control which source moment appears at each timeline time — acceleration. — Remap this segment for a pause and
+[VIDEO-EDIT] Freeze frame or frame hold — Hold one still video frame —  — Freeze the surprised expression for 0.7 seconds.
+[VIDEO-EDIT] Freeze and resume — Hold, then continue playback —  — Freeze on the result, add a label, then resume.
+[VIDEO-EDIT] Reverse — Play frames backward —  — Reverse only the non-speaking action shot.
+[VIDEO-EDIT] Rewind effect — Reverse styled as rewinding — Rewind the action with a short rewind sound.
+[VIDEO-EDIT] Ping-pong or boomerang — Forward then backward playback — Loop the gesture forward and backward once.
+[VIDEO-EDIT] Time-lapse — Time compressed through interval capture or acceleration — Use a short time-lapse of the room filling.
+[VIDEO-EDIT] Hyperlapse — Moving-camera time-lapse — Use a stabilized moving time-lapse between locations.
+[VIDEO-EDIT] Frame sampling — Repeat or drop frames for timing changes — Use frame sampling for the intentional stepped effect.
+[VIDEO-EDIT] Frame blending — Blend adjacent frames — Test blending and avoid ghosted hands.
+[VIDEO-EDIT] Optical flow — Estimate motion to generate intermediate frames — Test optical flow slow motion and inspect fingers and faces for warping.
+[VIDEO-EDIT] Posterize time or stepped motion — Reduce visible motion updates — Give only the graphic a stop-motion-like stepped movement.
+[VIDEO-EDIT] Text captions and typography
+[VIDEO-EDIT] Beginner to advanced
+[VIDEO-EDIT] Captions reproduce speech and useful sound information. Headlines, hook text and CTAs are separate graphic elements. Specify each independently.
+[VIDEO-EDIT] Verbatim captions — Preserve spoken wording — Caption the dialogue verbatim in Roman Hindi.
+[VIDEO-EDIT] Clean-read captions — Remove selected fillers for readability — Remove “umm” from captions without changing the meaning.
+[VIDEO-EDIT] Subtitles — Usually dialogue text, sometimes translated — Add English translations below the Hindi dialogue.
+[VIDEO-EDIT] Closed captions — Selectable caption data, format dependent — Deliver a separate caption file as well as the video.
+[VIDEO-EDIT] Burned-in or open captions — Text permanently visible in the picture — Burn the approved captions into the reel.
+[VIDEO-EDIT] SRT or WebVTT — Timed-text file formats — Export a corrected SRT with final-timeline timing.
+[VIDEO-EDIT] Word-level captions — Timing aligned to individual words — Highlight each word as it is spoken.
+[VIDEO-EDIT] Phrase-based captions — Display short meaningful groups — Use short phrase groups instead of flashing isolated words.
+[VIDEO-EDIT] Karaoke highlight — Current spoken word changes style — Turn the current word lime while other words stay
+[VIDEO-EDIT] white.
+[VIDEO-EDIT] Kinetic typography — Animated text expressing timing or meaning — Animate emphasis words with restrained scale movement.
+[VIDEO-EDIT] Pop-in or scale-pop — Text quickly scales into place — Pop in “50%” exactly when the speaker says it.
+[VIDEO-EDIT] Typewriter reveal — Letters appear one by one — Type the final CTA letter by letter with soft keyboard clicks.
+[VIDEO-EDIT] Word-by-word reveal — Whole words appear in sequence — Reveal the CTA one word at a time.
+[VIDEO-EDIT] Fade text — Opacity-based reveal or exit — Fade the lower-third out before the scene change.
+[VIDEO-EDIT] Slide text — Text moves into or out of frame — Slide the title upward from below.
+[VIDEO-EDIT] Wipe or mask reveal — A boundary uncovers text — Reveal the headline through a horizontal mask.
+[VIDEO-EDIT] Tracking reveal — Animate letter spacing — Tighten wide letter spacing as the title settles.
+[VIDEO-EDIT] Scramble or decode text — Random characters resolve into — Decode the section title, then hold it readable.
+[VIDEO-EDIT] words
+[VIDEO-EDIT] Bounce text — Text rebounds as it appears — Add one small bounce to the surprise word.
+[VIDEO-EDIT] Shake text — Brief vibration for emphasis — Shake “WARNING” once without affecting the video.
+[VIDEO-EDIT] Outline or stroke — Border around letter shapes — Add a dark stroke for contrast.
+[VIDEO-EDIT] Drop shadow — Offset shadow behind text — Use a soft dark shadow against the bright background.
+[VIDEO-EDIT] Glow or neon — Luminous halo around letters — Keep a sharp white core with a restrained cyan
+[VIDEO-EDIT] glow.
+[VIDEO-EDIT] Extruded 3D text — Letterforms have visible depth — Give the title shallow 3D extrusion and readable front faces.
+[VIDEO-EDIT] Bevel — Shaped edge giving dimensional highlights — Use a subtle bevel on the metallic title.
+[VIDEO-EDIT] Backplate or caption box — Shape behind text — Use a semi-transparent rounded dark backplate.
+[VIDEO-EDIT] Keyword highlight — Distinguish selected words — Highlight only “VISION” in cyan.
+[VIDEO-EDIT] Lower third — Graphic in the lower portion of the — Introduce the teacher with a compact lower third.
+[VIDEO-EDIT] frame
+[VIDEO-EDIT] Callout — Label drawing attention to a detail — Add a callout pointing to the Excel result cell.
+[VIDEO-EDIT] Title card — Screen or layout devoted to a title — Insert a short section title card.
+[VIDEO-EDIT] End card — Closing information screen — Hold the final CTA card for two seconds.
+[VIDEO-EDIT] Font weight — Thickness of letter strokes — Use a heavy or black font weight.
+[VIDEO-EDIT] Condensed font — Narrow letter proportions — Use a bold condensed headline font.
+[VIDEO-EDIT] Tracking — Overall letter spacing — Slightly tighten headline tracking.
+[VIDEO-EDIT] Kerning — Spacing between particular letter — Correct uneven letter spacing in the headline.
+[VIDEO-EDIT] pairs
+[VIDEO-EDIT] Leading — Space between lines — Increase leading so the two caption lines do not touch.
+[VIDEO-EDIT] Hierarchy — Relative emphasis of text elements — Make the main message larger than the supporting line.
+[VIDEO-EDIT] Text behind subject — Subject occludes part of the text — Put the title behind the speaker using an accurate subject matte.
+[VIDEO-EDIT] Text tracking — Text follows a moving subject or surface — Attach the label to the moving screen corner.
+[VIDEO-EDIT] Devanagari support — Correct Hindi shaping and glyph coverage — Use a font with proper Hindi matras and conjuncts.
+[VIDEO-EDIT] 💡 Tip Font examples to request, subject to installation and licensing: Anton, Bebas Neue, Oswald or Montserrat ExtraBold for Latin headlines; Noto Sans Devanagari or Mukta in a heavy weight for Hindi. A font name alone does not create a 3D, glow or animation effect. Give exact text, casing, language, placement, reveal, hold and exit instructions.
+[VIDEO-EDIT] B-roll layouts branding and framing
+[VIDEO-EDIT] Beginner to intermediate
+[VIDEO-EDIT] Full-screen B-roll — Supporting visual fills the screen — Show the worksheet full-screen while the explanation continues.
+[VIDEO-EDIT] Picture in picture or PiP — Small inset over the main footage — Place Excel B-roll in an upper-left inset, clear of the face.
+[VIDEO-EDIT] Split screen — Separate visible panels — Put the speaker on the left and the demo on the right.
+[VIDEO-EDIT] Top-bottom layout — Stacked panels — Use the upper third for the demonstration.
+[VIDEO-EDIT] Cutout overlay — Subject or object isolated from its background — Float a background-free Excel logo beside the teacher.
+[VIDEO-EDIT] Screen recording — Recorded software interface — Use a genuine screen recording of entering the formula.
+[VIDEO-EDIT] Screenshot — Still capture of a display — Hold the screenshot long enough to read the result.
+[VIDEO-EDIT] Stock footage — Pre-existing licensed footage — Use a relevant study shot and preserve visual
+[VIDEO-EDIT] consistency.
+[VIDEO-EDIT] Sticker or emoji overlay — Small decorative graphic — Add a small eyes emoji beside “Dekhiye”.
+[VIDEO-EDIT] Animated infographic — Data or process explained graphically — Animate three steps in the order the teacher explains them.
+[VIDEO-EDIT] Logo bug — Persistent small brand mark — Keep the supplied logo in the upper-right safe
+[VIDEO-EDIT] area.
+[VIDEO-EDIT] Watermark — Identifying overlay, often persistent — Use the approved watermark at subtle opacity.
+[VIDEO-EDIT] Crop — Remove outer image areas — Crop to vertical without cutting off either speaker.
+[VIDEO-EDIT] Reframe — Change composition within the source image — Reframe to keep the active speaker centred.
+[VIDEO-EDIT] Auto reframe — Automated crop following the subject — Review auto reframing so the second teacher stays visible.
+[VIDEO-EDIT] Fit or contain — Show the whole image, possibly leaving space — Fit the complete diagram inside the inset.
+[VIDEO-EDIT] Fill or cover — Fill the area, possibly cropping the — Fill the inset and crop only empty margins.
+[VIDEO-EDIT] image
+[VIDEO-EDIT] Letterbox or pillarbox — Bars caused by differing aspect ratios — Avoid accidental side bars in the vertical export.
+[VIDEO-EDIT] Background fill — Extend the layout behind the main image — Fill unused space with a blurred duplicate of the footage.
+[VIDEO-EDIT] Vignette — Darken or lighten edges gradually — Add a subtle dark edge vignette.
+[VIDEO-EDIT] Gradient scrim — Gradient overlay improving contrast — Add a soft black gradient behind the top text.
+[VIDEO-EDIT] Feathered blur band — Soft-edged blurred region — Blur top and bottom bands without blurring faces.
+[VIDEO-EDIT] Frosted glass panel — Translucent blurred panel behind content — Use a small frosted panel behind the CTA.
+[VIDEO-EDIT] Negative space — Unoccupied room for graphics — Place the offer text in the empty space above the
+[VIDEO-EDIT] speaker.
+[VIDEO-EDIT] 💡 Tip “Black blur” is imprecise. Choose a dark gradient overlay, blurred duplicate background, feathered blur region, or frosted panel, and state the affected area.
+[VIDEO-EDIT] L E A R N FA S T E R W I T H V I D E O
+[VIDEO-EDIT] Watch the tutorials & grab free resources
+[VIDEO-EDIT] Subscribe on YouTube Join Telegram
+[VIDEO-EDIT] Compositing tracking and visual effects
+[VIDEO-EDIT] Advanced
+[VIDEO-EDIT] Compositing — Combine visual layers into one image — Composite the small demonstration above the main footage.
+[VIDEO-EDIT] Mask — Shape controlling visibility or an effect region — Mask the blur away from the teacher’s face.
+[VIDEO-EDIT] Feather — Soften a mask boundary — Feather the mask edge so it blends naturally.
+[VIDEO-EDIT] Matte — Image or channel controlling transparency — Use the subject matte to place text behind the person.
+[VIDEO-EDIT] Alpha channel — Stored transparency information — Use the logo file’s alpha channel.
+[VIDEO-EDIT] Track matte — Another layer controls visibility — Reveal the title using an animated shape matte.
+[VIDEO-EDIT] Rotoscoping — Isolate moving subjects across frames — Rotoscope the speaker and inspect hair and hands.
+[VIDEO-EDIT] Chroma key — Remove a chosen background colour — Key out the green screen and preserve clothing edges.
+[VIDEO-EDIT] Luma key — Isolate using brightness — Remove the black background with a luma key where suitable.
+[VIDEO-EDIT] Spill suppression — Reduce key-background colour contamination — Remove green spill around the hair.
+[VIDEO-EDIT] Blend mode — Rule for combining layer pixel values — Use Screen for the light overlay and check its black areas.
+[VIDEO-EDIT] Motion tracking — Follow image features through time — Track the label to the moving object.
+[VIDEO-EDIT] Planar tracking — Track a flat surface with perspective changes — Track the replacement image onto the laptop screen.
+[VIDEO-EDIT] Corner pin — Fit an image to four corner positions — Corner-pin the demo to the monitor.
+[VIDEO-EDIT] Camera tracking — Estimate camera motion in 3D space — Anchor the 3D label in the room.
+[VIDEO-EDIT] Stabilization — Reduce unwanted camera movement — Stabilize gently without bending the background.
+[VIDEO-EDIT] Object removal or clean — Fill an unwanted region using surrounding — Remove the background distraction and
+[VIDEO-EDIT] plate — or reference imagery — inspect consistency.
+[VIDEO-EDIT] Content-aware or generative fill — Synthesize missing image areas — Extend empty background only; preserve the speaker’s identity.
+[VIDEO-EDIT] Particle system — Many animated small elements — Add a brief falling-money particle effect in
+[VIDEO-EDIT] the background.
+[VIDEO-EDIT] Motion trail or echo — Repeated delayed images suggest movement — Add a short trail only to the moving graphic.
+[VIDEO-EDIT] Displacement — Warp an image using another signal — Add subtle heat distortion behind the title.
+[VIDEO-EDIT] Lens distortion — Simulate or correct optical bending — Correct wide-angle distortion before adding graphics.
+[VIDEO-EDIT] Chromatic aberration or RGB split — Separate colour channels at edges — Use a slight RGB split for one glitch accent.
+[VIDEO-EDIT] Film grain — Fine texture resembling film — Add restrained grain without muddying captions.
+[VIDEO-EDIT] Light wrap — Background light blends around composited edges — Add light wrap to integrate the cutout.
+[VIDEO-EDIT] Depth of field — Distance-dependent focus softness — Keep the speaker sharp and soften the background.
+[VIDEO-EDIT] Rack focus — Shift focus between subjects or depths — Shift attention from the object to the speaker where feasible.
+[VIDEO-EDIT] 10 Beginner to advanced — Sound dialogue music and sound design
+[VIDEO-EDIT] Dialogue cleanup — Improve speech clarity —  — Clean the dialogue before adding music.
+[VIDEO-EDIT] Noise reduction or denoise — Reduce unwanted background noise —  — Reduce fan noise gently without metallic voice artifacts.
+[VIDEO-EDIT] De-reverb — Reduce room reflections —  — Reduce room echo while preserving a natural voice.
+[VIDEO-EDIT] De-esser — Reduce harsh sibilant sounds —  — Soften sharp “s” sounds.
+[VIDEO-EDIT] De-click or de-pop — Reduce clicks and plosive problems —  — Repair the click between these two words.
+[VIDEO-EDIT] EQ or equalization — Adjust frequency balance —  — Reduce muddy low-mid frequencies and preserve vocal warmth.
+[VIDEO-EDIT] High-pass filter — Reduce frequencies below a cutoff —  — Remove low rumble without thinning the voice.
+[VIDEO-EDIT] Compressor — Reduce dynamic range above a threshold —  — Compress gently to even out speech.
+[VIDEO-EDIT] Limiter — Constrain output peaks —  — Limit peaks without audible pumping.
+[VIDEO-EDIT] Gain — Signal level adjustment —  — Lower this clip’s gain by 3 dB.
+[VIDEO-EDIT] Volume automation — Change level through time — Raise the quiet final phrase with volume keyframes.
+[VIDEO-EDIT] Peak normalization — Set the highest peak to a chosen level — Normalize peaks, then assess perceived loudness separately.
+[VIDEO-EDIT] Loudness normalization — Adjust measured perceived loudness — Match dialogue loudness across clips.
+[VIDEO-EDIT] dBFS — Digital level relative to full scale — Keep audio peaks below 0 dBFS.
+[VIDEO-EDIT] LUFS — Unit for measured programme loudness — Measure integrated loudness on the complete export.
+[VIDEO-EDIT] True peak or dBTP — Estimate peaks including those between samples — Check true peaks after encoding.
+[VIDEO-EDIT] Audio clipping — Overload that can cause distortion — Prevent clipping in speech, effects and the final mix.
+[VIDEO-EDIT] Ducking — Lower background audio during speech — Duck music whenever dialogue is present.
+[VIDEO-EDIT] Sidechain compression — One signal controls another’s compression — Use the dialogue to drive music ducking.
+[VIDEO-EDIT] Fade in or out — Gradual level change — Fade music out after the CTA hold.
+[VIDEO-EDIT] Audio crossfade — Overlap fades between sounds — Crossfade the room tone across the edit.
+[VIDEO-EDIT] Room tone — Ambient sound of the recording space — Use room tone to smooth the dialogue cut.
+[VIDEO-EDIT] Ambience — Environmental sound bed — Add subtle classroom ambience beneath the montage.
+[VIDEO-EDIT] Foley — Performed sound matching physical actions — Add a soft paper sound to the page turn.
+[VIDEO-EDIT] SFX — Sound effects — Use one restrained accent at the reveal.
+[VIDEO-EDIT] Whoosh — Moving-air style transition sound — Add a quiet whoosh to the sliding label.
+[VIDEO-EDIT] Impact or hit — Short emphatic sound — Place a soft impact on the headline landing.
+[VIDEO-EDIT] Riser — Sound building tension — Build a short riser into the result reveal.
+[VIDEO-EDIT] Downlifter — Descending release sound — Use a short downlifter after the reveal.
+[VIDEO-EDIT] Stinger — Brief musical accent — Add a comic stinger after the reaction.
+[VIDEO-EDIT] Music bed — Background music supporting the content — Use a light rhythmic bed beneath the explanation.
+[VIDEO-EDIT] Beat drop — Strong rhythmic arrival or change — Align the drop with the challenge reveal.
+[VIDEO-EDIT] BPM — Musical tempo in beats per minute — Choose a moderate-tempo track suited to the delivery.
+[VIDEO-EDIT] Audio stems — Separate components such as voice, drums or melody — Deliver separate dialogue, music and effects stems.
+[VIDEO-EDIT] Mono compatibility — Mix remains clear when summed to — Check speech and music in mono.
+[VIDEO-EDIT] mono
+[VIDEO-EDIT] Lip sync or A/V sync — Audio matches visible mouth movement — Verify lip sync at the beginning and end.
+[VIDEO-EDIT] Audio pre-lap — Sound starts before the next scene’s image — Begin classroom ambience before the classroom shot.
+[VIDEO-EDIT] 💡 Tip Do not use “music at 20%” as a reliable loudness target: different files have different levels. Ask for intelligible dialogue, ducking and measured checks. A practical starting request is “keep music clearly below speech, adjust by ear, and leave headroom.” If specifying a web mix around −14 to −16 LUFS integrated with a true-peak ceiling near −1 dBTP, treat it as a starting range, not a universal platform requirement.
+[VIDEO-EDIT] Colour image quality and finishing
+[VIDEO-EDIT] Intermediate to advanced
+[VIDEO-EDIT] Colour correction — Fix technical colour and exposure issues — Correct exposure and white balance first.
+[VIDEO-EDIT] Colour grading — Create an intentional visual look — Apply a restrained warm motivational look.
+[VIDEO-EDIT] White balance — Neutrality of whites under the lighting — Remove the green cast while keeping natural
+[VIDEO-EDIT] skin.
+[VIDEO-EDIT] Temperature — Warm-blue colour adjustment — Warm the image slightly.
+[VIDEO-EDIT] Tint — Green-magenta adjustment — Reduce the green tint on the face.
+[VIDEO-EDIT] Exposure — Overall image brightness adjustment — Lift exposure slightly without clipping highlights.
+[VIDEO-EDIT] Contrast — Separation between bright and dark values — Add moderate contrast without crushing shadows.
+[VIDEO-EDIT] Highlights and shadows — Brighter and darker tonal regions — Recover bright shirt detail and lift facial shadows.
+[VIDEO-EDIT] Whites and blacks — Extremes of the tonal range — Set black levels without losing hair detail.
+[VIDEO-EDIT] Saturation — Overall colour intensity — Reduce excessive saturation.
+[VIDEO-EDIT] Vibrance — Selective saturation control, implementation varies — Raise muted colours gently while checking skin.
+[VIDEO-EDIT] Curves — Shape tonal or channel relationships — Use a gentle contrast curve.
+[VIDEO-EDIT] HSL secondary or qualifier — Select colours for targeted adjustment — Adjust the green background without changing skin.
+[VIDEO-EDIT] LUT — Lookup table transforming colour values — Apply the correct technical transform before a creative LUT.
+[VIDEO-EDIT] Shot matching — Align shots’ colour and exposure — Match both camera angles before styling.
+[VIDEO-EDIT] Colour space — Defined representation of colour — Use a consistent SDR Rec.709 workflow for this deliverable.
+[VIDEO-EDIT] Log footage — Flat encoding retaining tonal range — Apply the source camera’s proper Log conversion.
+[VIDEO-EDIT] HDR to SDR tone mapping — Adapt wider-range images for SDR — Tone-map HDR footage and inspect skin and highlights.
+[VIDEO-EDIT] Waveform — Scope showing signal levels spatially — Check exposure with the waveform.
+[VIDEO-EDIT] Vectorscope — Scope showing chroma distribution — Check saturation and skin hue with the vectorscope.
+[VIDEO-EDIT] RGB parade — Separate red, green and blue level displays — Check channel balance using RGB parade.
+[VIDEO-EDIT] Sharpening — Increase perceived edge contrast — Sharpen lightly without halos.
+[VIDEO-EDIT] Spatial or temporal — Reduce image noise within or across — Reduce low-light noise without smearing
+[VIDEO-EDIT] denoise — frames — moving faces.
+[VIDEO-EDIT] Banding — Visible steps in smooth gradients — Inspect dark gradients for banding after export.
+[VIDEO-EDIT] Crushed blacks — Lost detail in dark regions — Preserve detail in dark clothing.
+[VIDEO-EDIT] Clipped highlights — Lost detail in bright regions — Avoid blowing out the forehead and shirt.
+[VIDEO-EDIT] Upscaling — Increase pixel dimensions — Upscale only if needed and inspect invented
+[VIDEO-EDIT] detail.
+[VIDEO-EDIT] Professional workflow delivery and quality control
+[VIDEO-EDIT] Advanced
+[VIDEO-EDIT] Proxy — Lower-demand copy for editing — Edit with proxies and relink originals for export.
+[VIDEO-EDIT] Transcode — Convert media encoding — Transcode incompatible sources before editing.
+[VIDEO-EDIT] Codec — Method of encoding and decoding — Export H.264 video.
+[VIDEO-EDIT] media
+[VIDEO-EDIT] Container — File wrapper holding streams — Deliver the H.264 video in an MP4 container.
+[VIDEO-EDIT] Bitrate — Data used per second — Choose bitrate appropriate to detail, motion and file size.
+[VIDEO-EDIT] VBR or CBR — Variable or constant bitrate — Use VBR for efficient file delivery if supported.
+[VIDEO-EDIT] GOP — Group of pictures in compressed video — Use appropriate encoding settings for the destination workflow.
+[VIDEO-EDIT] Constant or variable — Even or variable spacing of captured — Convert problematic VFR footage if sync
+[VIDEO-EDIT] frame rate — frames — drifts.
+[VIDEO-EDIT] Progressive or interlaced — Whole-frame or alternating-field video — Deliver progressive video.
+[VIDEO-EDIT] Render — Calculate effects or final output frames — Render the final sequence and inspect it.
+[VIDEO-EDIT] Export — Create the deliverable media file — Export the completed reel as an MP4.
+[VIDEO-EDIT] Mezzanine master — High-quality intermediate master — Save a high-quality master before the smaller delivery version.
+[VIDEO-EDIT] Alpha export — Deliver video with transparency — Export the logo animation with alpha using a compatible codec.
+[VIDEO-EDIT] Sample rate — Audio samples per second — Use 48 kHz audio for this video workflow.
+[VIDEO-EDIT] Bit depth — Precision of stored values — Preserve available precision during colour
+[VIDEO-EDIT] work.
+[VIDEO-EDIT] EDL — Basic edit decision list — Provide an EDL where supported for basic cut reconstruction.
+[VIDEO-EDIT] XML or AAF interchange — Transfer project information between applications — Provide compatible interchange files and note unsupported effects.
+[VIDEO-EDIT] Conform or relink — Rebuild against the intended source — Relink the final timeline to full-quality originals.
+[VIDEO-EDIT] files
+[VIDEO-EDIT] Offline or online edit — Lightweight editorial stage or full- quality finishing stage — Finish colour and effects using the original media.
+[VIDEO-EDIT] Versioning — Track revisions — Label exports v01, v02 and FINAL only after approval.
+[VIDEO-EDIT] Burn-in review timecode — Visible reference timing for review — Export a review copy with final-timeline timecode.
+[VIDEO-EDIT] QC or quality control — Check technical and creative correctness — Watch the entire exported file with headphones and on a phone.
+[VIDEO-EDIT] L E A R N FA S T E R W I T H V I D E O
+[VIDEO-EDIT] Watch the tutorials & grab free resources
+[VIDEO-EDIT] Subscribe on YouTube Join Telegram
+[VIDEO-EDIT] 13 — Everyday requests translated into precise prompts
+[VIDEO-EDIT] What you might say — Better editing instruction
+[VIDEO-EDIT] Cut this part — Remove source 00:01.0–00:02.3, close the gap and preserve the following word.
+[VIDEO-EDIT] Make captions impactful — Use a heavy condensed font, short phrase groups, white fill, dark outline and one accent colour for key words.
+[VIDEO-EDIT] Add motion — Animate the badge upward over 0.25 seconds, slow into its final position, then hold.
+[VIDEO-EDIT] Freeze this — Hold the reaction frame for 0.7 seconds, keep the intended audio bed continuous, then resume.
+[VIDEO-EDIT] Put B-roll at the head — Place the inset above the speaker’s head in available negative space; keep clear of hair and logos.
+[VIDEO-EDIT] Add 50% B-roll — Use a B-roll panel occupying the upper half of the frame for the specified interval.
+[VIDEO-EDIT] Show 50% — Display “50%” once, at the spoken mention; do not duplicate it in another offer graphic.
+[VIDEO-EDIT] Make the song low — Duck music under every spoken line and check the quiet final words for intelligibility.
+[VIDEO-EDIT] Black blur at top and bottom — Add feathered blurred bands with a subtle black gradient; preserve the central speaker image.
+[VIDEO-EDIT] Add flying money — Add a brief money-particle overlay behind the subject at the spoken “referral”; keep the face unobstructed.
+[VIDEO-EDIT] Give it a smooth transition — Use a clean picture cut with a short audio crossfade; add a visual dissolve only if the scene needs one.
+[VIDEO-EDIT] Make a 3D title — Use extruded text with a readable front face, subtle bevel, shadow and a short scale reveal.
+[VIDEO-EDIT] Remove unwanted gaps — Shorten dead pauses and repeated footage without cutting syllables, meaningful breaths or reactions.
+[VIDEO-EDIT] Add hook and CTA — Start with a relevant question from the content; end with one clear next action tied to the topic.
+[VIDEO-EDIT] 14 — Copy-ready prompt recipes
+[VIDEO-EDIT] A Clean conversational reel — Edit the supplied clips into a coherent 9:16 reel. First listen to the complete dialogue and identify sentence boundaries. Remove dead time, false starts and repetitions without changing the meaning. Use straight cuts, J- cuts and L-cuts where they improve flow. Preserve complete words and reaction timing. Add corrected Roman Hindi phrase-based captions with word-level emphasis. Keep both speakers visible. Clean dialogue, duck background music and verify the last sentence remains audible. Export the edited MP4 and a separate SRT.
+[VIDEO-EDIT] B Bold caption style
+[VIDEO-EDIT] Use a heavy condensed Latin font for Roman Hindi captions. Use white text with a dark outline and lime emphasis on one important word per phrase. Keep captions to one or two short lines in a clear safe area. Sync text to speech. Use a short scale-pop only on selected emphasis words; hold ordinary captions steady. Correct names, amounts and technical terms manually.
+[VIDEO-EDIT] C Freeze frame comedy
+[VIDEO-EDIT] At the end of the surprised reaction, hold the cleanest source frame for 0.6 seconds. Place “YEH KYA HO GAYA?” above the face with a brief scale overshoot. Add a quiet comic stinger, then resume the next complete spoken line. Do not freeze mid-syllable or accidentally repeat dialogue.
+[VIDEO-EDIT] D Keyframed opening
+[VIDEO-EDIT] During the first 0.3 seconds of the title, animate scale from 85% to 105%, then settle at 100% by 0.4 seconds. Fade opacity from 0% to 100% during the first 0.1 seconds. Hold for 1.2 seconds. Use a readable dark stroke and restrained motion blur. Keep the speaker’s eyes unobstructed.
+[VIDEO-EDIT] E Educational Excel B-roll
+[VIDEO-EDIT] When the teacher explains the calculation, show a genuine spreadsheet demonstration in a small inset above the shoulder. Highlight the exact cell being discussed with a tracked callout. Keep the teacher’s face and gestures visible. Enlarge the demonstration only when the cell contents need to be read. Do not invent values or formulas.
+[VIDEO-EDIT] F Motivational reel
+[VIDEO-EDIT] Open with the strongest relevant line from the supplied speech. Tighten empty pauses but retain emotional breathing room. Use gentle push-ins at key ideas, relevant supporting study footage and restrained keyword captions. Build instrumental music gradually while keeping dialogue clear. End on the speaker’s complete conclusion, followed by one readable action statement.
+[VIDEO-EDIT] G Offer and logo placement
+[VIDEO-EDIT] Place the supplied VC Gurukul logo in the upper-right safe area and the Excel logo in the upper-left safe area, with clear margins and proportional sizing. Show “50%” and the spoken price only at their respective dialogue mentions. Avoid duplicate promotional graphics at the same moment. Put “AA JAO DOSTO” above the speaker’s head at that spoken phrase, using a bold scale-pop reveal.
+[VIDEO-EDIT] H Audio repair and mix
+[VIDEO-EDIT] Listen to the complete original audio first. Reduce steady background noise gently, tame harsh sibilance and even out dialogue levels with clip gain and light compression. Use short crossfades at edits and room tone where needed. Duck instrumental music beneath speech; automate the quiet ending separately. Check clipping, lip sync and the complete exported file on headphones and a phone speaker.
+[VIDEO-EDIT] I CTA with typewriter animation
+[VIDEO-EDIT] After the final spoken sentence, reveal “[EXACT CTA]” letter by letter over about one second. Use a heavy readable font with a bright accent and dark outline. Add quiet keyboard clicks during the reveal only. Hold the completed message for two seconds. Keep music continuous through the hold, then fade out cleanly.
+[VIDEO-EDIT] J Precise revision request
+[VIDEO-EDIT] Change only these items in the latest supplied edit: [1] remove the specified source range, [2] reposition the named text above the head, and [3] lower music during the final sentence. Preserve all other approved cuts, graphics and timing where possible. State any unavoidable timing shifts. Deliver a new version without overwriting the supplied original.
+[VIDEO-EDIT] Master prompt template
+[VIDEO-EDIT] ROLE AND GOAL Act as a short-form video editor. Produce the edited video file, not only suggestions. Audience: [who]. Purpose: [teach / entertain / motivate / promote]. Format: [9:16 / 16:9 / 1:1]. Target duration: [range].
+[VIDEO-EDIT] SOURCE AND STORY Use [filenames and sequence]. First review all footage and dialogue. Open with [exact line or relevant moment]. Preserve [essential sentences, humour and reactions]. Remove [specific repetitions, dead time or source ranges]. Timestamp convention: [source timestamps / final timeline].
+[VIDEO-EDIT] CUTS AND MOTION Use [straight cuts / J-cuts / L-cuts / cutaways]. At [moment], apply [effect], lasting [duration], with [values and direction]. Preserve [faces, gestures, continuity and complete speech].
+[VIDEO-EDIT] TEXT Caption language and script: [English / Hindi / Roman Hindi]. Exact headline: [text]. Font style: [weight and family if available]. Colours: [hex values or named colours]. Placement: [safe area or coordinates]. Animation: [reveal, duration, hold, exit]. Highlight [specific words]. Correct names, numbers and formulas.
+[VIDEO-EDIT] B-ROLL AND BRANDING Use [provided or accurately sourced assets]. Place [layout and size] during [spoken phrase or interval]. Keep [protected people, objects and text] unobstructed. Logo: [asset, position, width relative to frame, margin].
+[VIDEO-EDIT] AUDIO Prioritize dialogue intelligibility. Use [music mood, instrumentation and energy]. Duck music under speech and automate quiet lines. Place [SFX] only at [specific moments]. Preserve natural voice and check the complete ending.
+[VIDEO-EDIT] COLOUR AND DELIVERY Correct exposure and white balance; preserve natural skin. Export [resolution], [source-matched or explicitly chosen FPS], [codec and container]. Deliver [edited video / captions / editable project if supported]. Check spelling, caption sync, cuts, black frames, duplicate overlays, lip sync and audio clipping. If an effect is unsupported, identify it and use the closest clearly described alternative.
+[VIDEO-EDIT] Learning order
+[VIDEO-EDIT] 1 Learn clip, frame, timeline, split, trim, cut 2 Add continuity, reaction timing, J-cuts, L- and ripple delete. cuts and basic pacing.
+[VIDEO-EDIT] 3 Learn readable captions, layouts, safe areas 4 Learn dialogue cleanup, music ducking and and B-roll. sound effects.
+[VIDEO-EDIT] 5 Learn position, scale, opacity, keyframes 6 Add speed ramps, freeze frames and and easing. motivated transitions.
+[VIDEO-EDIT] 7 Learn masks, tracking, rotoscoping and 8 Finish with colour management, scopes, compositing. interchange, export and QC.
+[VIDEO-EDIT] Research sources and scope
+[VIDEO-EDIT] Research checked 21 October 2026. Definitions are paraphrased and examples are original suggested prompts. Established terminology is drawn from the documentation below; creative wording and suggested settings are practical recommendations. Software-specific labels and AI capabilities can vary.
+[VIDEO-EDIT] Apple Final Cut Pro Glossary — editing operations and general terminology: <u>[https://support.apple.com/en-b](https://support.apple.com/en-b)</u> <u>y/guide/final-cut-pro/ver90ba496f/12.4/mac/26.6</u> Apple Intro to video keyframing — properties animated through time: <u>[https://support.apple.com/guide/final-c](https://support.apple.com/guide/final-c)</u> <u>ut-pro/intro-to-video-keyframing-ver8e3f2325/12.4/mac/26.6</u> Adobe Certified Professional Premiere — scope of cuts, sequencing, audio, text and compositing: <u>http</u> <u>s://certifiedprofessional.adobe.com/premiere</u>
+[VIDEO-EDIT] Adobe Types of film transitions — transition families: es-of-film-transitions.html Adobe After Effects Animating shape paths and masks: Adobe Premiere Export settings reference: ort-files/overview-of-export-settings.html — Adobe After Effects Keyframe interpolation — temporal and spatial animation: r-effects/desktop/animate-in-after-effects/animation-keyframes/keyframe-interpolation.html -in-after-effects/animate-shape-paths-and-masks/animating-shape-paths-masks.html Adobe Premiere Automatically duck audio — dialogue-controlled music reduction: m/be_en/premiere/desktop/add-audio-effects/adjust-volume-and-levels/automatically-duck-audio.html Adobe Premiere Use video scopes — colour and signal inspection: ktop/correct-color/color-mode-fundamentals/working-with-video-scopes.html — [https://www.adobe.com/creativecloud/video/discover/typ](https://www.adobe.com/creativecloud/video/discover/typ) [https://helpx.adobe.com/afte](https://helpx.adobe.com/afte) [https://helpx.adobe.com/after-effects/desktop/animate](https://helpx.adobe.com/after-effects/desktop/animate) [https://helpx.adobe.co](https://helpx.adobe.co) [https://helpx.adobe.com/uk/premiere/des](https://helpx.adobe.com/uk/premiere/des) [https://helpx.adobe.com/uk/premiere/desktop/render-and-export/exp — ](https://helpx.adobe.com/uk/premiere/desktop/render-and-export/exp — )
+[VIDEO-EDIT] Video Editing Vocabulary & AI Prompt Handbook — ▶ YouTube @mandeepchauhanai · ✈ Telegram @mannchauhanai · Page 24
+[VIDEO-EDIT] Keep learning!
+[VIDEO-EDIT] Watch step-by-step tutorial videos and download free editing resources.
+[VIDEO-EDIT] Subscribe on YouTube
+[VIDEO-EDIT] Join our Telegram
+[VIDEO-EDIT] <u>[https://youtube.com/@mandeepchauhanai?si=nOimRkU4kYP-a8dv](https://youtube.com/@mandeepchauhanai?si=nOimRkU4kYP-a8dv)</u> <u>[https://t.me/mannchauhanai](https://t.me/mannchauhanai)</u>

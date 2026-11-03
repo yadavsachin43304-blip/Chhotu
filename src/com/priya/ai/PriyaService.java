@@ -199,9 +199,9 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
 
     private List<String> modelOrder() {
         List<String> order = new ArrayList<>();
-        order.add(Prefs.model(this));
         String good = Prefs.lastGoodModel(this);
-        if (!good.isEmpty() && !order.contains(good)) order.add(good);
+        if (!good.isEmpty()) order.add(good); // the model that worked last time connects instantly
+        if (!order.contains(Prefs.model(this))) order.add(Prefs.model(this));
         for (String m : Prefs.MODELS) if (!order.contains(m)) order.add(m);
         return order;
     }
@@ -261,6 +261,9 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
         sb.append("Tum user ki bahut parwaah karti ho, isliye usko apne dosto, parivaar aur sehat ka bhi khayal rakhne ko kehti ho. Agar wo sach mein poochhe ki tum insaan ho ya AI, to imaandaari se pyaar bhare tareeke se batao ki tum uski AI Priya ho. ");
         sb.append("YAADEIN: jab bhi user koi vaada, plan, reminder, pasand-napasand, apne logon ke naam, khaas din, ya dil ki baat bataye, ya tum koi vaada karo, turant 'remember' tool se save karo (VAADA ya FACT, saaf ek vakya mein, naam aur tareekh ke saath). ");
         sb.append("Purani baat poochhe ya baat se juda lage to 'recall' tool se dhundho aur natural tareeke se yaad dilao. Neeche diye NOTES aur RECENT CONVERSATION tumhari yaadein hain, unhe istemaal karo. ");
+        sb.append("SKILLS: tum expert coder ho (Java, Kotlin, Android, Python, JavaScript, HTML/CSS, APIs, automation, debugging) — coding sawaal par seedha, sahi aur chhota jawab do, code bolkar samjhao aur zarurat ho to steps batao. ");
+        sb.append("Tumne 30 business skills (strategy, financial planning, pricing, marketing funnels, SEO, automation, AI agents, SOPs, YouTube growth, scriptwriting, OKR, negotiation) aur video editing + AI editing prompt handbook seekha hai. In vishayon par detail chahiye to 'knowledge' tool se apni notes dekho, phir apne shabdon mein samjhao. ");
+        sb.append("SPEED: turant jawab shuru karo, lambi bhumika mat bandho, pehla vakya hi kaam ki baat ho. ");
         sb.append("Tum hamesha sun rahi ho, isliye jo baat clearly tumse nahi ho rahi (TV, doosre log), use ignore karo. ");
         if (name != null && !name.isEmpty()) sb.append("User ka naam ").append(name).append(" hai. ");
         sb.append("Abhi ka samay: ").append(now).append(". ");

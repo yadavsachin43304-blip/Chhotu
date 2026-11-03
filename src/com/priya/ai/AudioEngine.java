@@ -41,7 +41,7 @@ public class AudioEngine {
     private static final int OUT_RATE = 24000;
     private static final int FRAME = 320;          // 20 ms @ 16 kHz
     private static final int PREROLL_FRAMES = 10;  // 200 ms
-    private static final int HANG_FRAMES = 45;     // 900 ms of silence ends the utterance
+    private static final int HANG_FRAMES = 28;     // 560 ms of silence ends the utterance (fast replies)
     private static final float MIN_THR = 500f;     // absolute RMS floor (16-bit scale)
     private static final long TAIL_MS = 350;       // keep mic closed a bit after Priya stops
 
@@ -135,6 +135,7 @@ public class AudioEngine {
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build();
         track.play();
+        setCommMode(true); // stays on for the whole session: no audio-route switch at every reply
 
         running = true;
         micThread = new Thread(() -> micLoop(sink), "priya-mic");
@@ -216,8 +217,8 @@ public class AudioEngine {
                 if (playIdle) {
                     java.io.ByteArrayOutputStream acc = new java.io.ByteArrayOutputStream();
                     acc.write(b, 0, b.length);
-                    long until = SystemClock.elapsedRealtime() + 300;
-                    while (acc.size() < OUT_RATE / 2 && SystemClock.elapsedRealtime() < until && running) {
+                    long until = SystemClock.elapsedRealtime() + 180;
+                    while (acc.size() < OUT_RATE * 3 / 10 && SystemClock.elapsedRealtime() < until && running) {
                         byte[] more = playQueue.poll(20, TimeUnit.MILLISECONDS);
                         if (more != null) acc.write(more, 0, more.length);
                     }
@@ -355,7 +356,6 @@ public class AudioEngine {
             PriyaBus.micLevel = smooth;
 
             boolean speaking = isSpeaking();
-            if (!speaking && commMode && SystemClock.elapsedRealtime() > speakEnd + 800) setCommMode(false);
 
             if (speaking && strictEcho) {
                 // Barge-in (roka-toki): a clearly loud, sustained voice cuts Priya off right away.

@@ -154,6 +154,10 @@ public class GeminiLiveClient {
             setup.put("inputAudioTranscription", new JSONObject());
             setup.put("outputAudioTranscription", new JSONObject());
 
+            if (model != null && model.startsWith("gemini-2.5")) {
+                // no hidden "thinking" pass: replies start much faster
+                gen.put("thinkingConfig", new JSONObject().put("thinkingBudget", 0));
+            }
             if (full && affective()) {
                 // Emotion-aware voice: tone follows the user's mood (native-audio models, v1alpha).
                 gen.put("enableAffectiveDialog", true);
@@ -215,6 +219,8 @@ public class GeminiLiveClient {
                 new JSONObject().put("name_or_number", str("Contact name or phone number")), "name_or_number"));
         a.put(fn("web_search", "Open a Google search for the query in the browser.",
                 new JSONObject().put("query", str("Search query")), "query"));
+        a.put(fn("knowledge", "Search Priya's learned skill notes: 30 business skills (strategy, finance, pricing, marketing, funnels, SEO, automation, AI agents, SOPs, YouTube growth, scriptwriting, OKRs, negotiation) and the video editing + AI editing prompt handbook (cuts, transitions, keyframes, captions, colour, audio, prompt recipes).",
+                new JSONObject().put("query", str("Keywords, e.g. 'ripple delete', 'pricing strategy', 'J cut', 'unit economics'")), "query"));
         a.put(fn("remember", "Save something to Priya's permanent memory: a promise (VAADA) the user made or Priya made, a fact about the user, or a note.",
                 new JSONObject()
                         .put("kind", enumStr("Type of memory", "VAADA", "FACT", "NOTE"))
