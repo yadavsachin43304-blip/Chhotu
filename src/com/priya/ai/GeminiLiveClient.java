@@ -102,18 +102,6 @@ public class GeminiLiveClient {
 
     // ------------------------------------------------------------------ outgoing
 
-    /** Sends a text turn (used for system notes, e.g. a stranger's voice gave a command). */
-    public void sendText(String text) {
-        if (!isReady()) return;
-        try {
-            JSONObject turn = new JSONObject().put("role", "user")
-                    .put("parts", new JSONArray().put(new JSONObject().put("text", text)));
-            JSONObject msg = new JSONObject().put("clientContent",
-                    new JSONObject().put("turns", new JSONArray().put(turn)).put("turnComplete", true));
-            ws.send(msg.toString());
-        } catch (Exception ignored) { }
-    }
-
     public void sendAudio(byte[] pcm16k, int len) {
         if (!isReady()) return;
         String b64 = Base64.encodeToString(pcm16k, 0, len, Base64.NO_WRAP);
