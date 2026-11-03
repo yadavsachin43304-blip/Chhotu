@@ -214,13 +214,14 @@ public class AudioEngine {
         while (running) {
             byte[] b;
             try {
-                b = playQueue.poll(200, TimeUnit.MILLISECONDS);
+                b = playQueue.poll(60, TimeUnit.MILLISECONDS);
+                // queue ran dry (network hiccup): build a fresh cushion before playing on, instead of stuttering
                 if (b == null) { playIdle = true; continue; }
                 if (playIdle) {
                     java.io.ByteArrayOutputStream acc = new java.io.ByteArrayOutputStream();
                     acc.write(b, 0, b.length);
-                    long until = SystemClock.elapsedRealtime() + 180;
-                    while (acc.size() < OUT_RATE * 3 / 10 && SystemClock.elapsedRealtime() < until && running) {
+                    long until = SystemClock.elapsedRealtime() + 260;
+                    while (acc.size() < OUT_RATE / 2 && SystemClock.elapsedRealtime() < until && running) { // ~250 ms cushion
                         byte[] more = playQueue.poll(20, TimeUnit.MILLISECONDS);
                         if (more != null) acc.write(more, 0, more.length);
                     }
@@ -337,14 +338,20 @@ public class AudioEngine {
 
     /** Pitch (Hz) of a 40 ms window by normalised autocorrelation; 0 when unvoiced. */
     static float pitch(short[] prev, short[] cur) {
-        int n = prev.length + cur.length;
+        // work at 8 kHz (average sample pairs): 4x cheaper, so the audio threads never starve
+        int n = (prev.length + cur.length) / 2;
         float[] x = new float[n];
-        for (int i = 0; i < prev.length; i++) x[i] = prev[i];
-        for (int i = 0; i < cur.length; i++) x[prev.length + i] = cur[i];
+        for (int i = 0; i < n; i++) {
+            int a = 2 * i, b = a + 1;
+            float va = a < prev.length ? prev[a] : cur[a - prev.length];
+            float vb = b < prev.length ? prev[b] : cur[b - prev.length];
+            x[i] = (va + vb) * 0.5f;
+        }
         double e0 = 0;
         for (float v : x) e0 += v * v;
-        if (e0 < 1e6) return 0f;
-        int minLag = IN_RATE / 450, maxLag = IN_RATE / 65;
+        if (e0 < 5e5) return 0f;
+        final int SR = IN_RATE / 2;
+        int minLag = SR / 450, maxLag = SR / 65;
         double best = 0; int bestLag = 0;
         for (int lag = minLag; lag <= maxLag; lag++) {
             double c = 0, e1 = 0, e2 = 0;
@@ -352,7 +359,7 @@ public class AudioEngine {
             double r = c / Math.sqrt(e1 * e2 + 1e-9);
             if (r > best) { best = r; bestLag = lag; }
         }
-        return (best > 0.55 && bestLag > 0) ? (float) IN_RATE / bestLag : 0f;
+        return (best > 0.55 && bestLag > 0) ? (float) SR / bestLag : 0f;
     }
 
     static float median(java.util.List<Float> v) {
@@ -367,7 +374,7 @@ public class AudioEngine {
         float m = median(pitches);
         if (m <= 0f) return false;
         float r = m / ownerF0;
-        return r > 0.80f && r < 1.25f;
+        return r > 0.70f && r < 1.45f; // wide: a command said louder/excited raises the pitch
     }
 
     /** Records the owner's voice for a few seconds and returns its typical pitch (Hz), or 0 on failure. */
@@ -433,7 +440,8 @@ public class AudioEngine {
             float rms = (float) Math.sqrt(sum / n);
             smooth += (Math.min(1f, rms / 6000f) - smooth) * 0.35f;
             PriyaBus.micLevel = smooth;
-            float f0 = ownerF0 > 0f ? pitch(prevFrame, frame) : 0f;
+            boolean needPitch = ownerF0 > 0f && rms > MIN_THR && (deciding || !inSpeech || isSpeaking());
+            float f0 = needPitch ? pitch(prevFrame, frame) : 0f;
             System.arraycopy(frame, 0, prevFrame, 0, FRAME);
             if (f0 > 0) { recentPitch.addLast(f0); if (recentPitch.size() > 12) recentPitch.removeFirst(); }
 

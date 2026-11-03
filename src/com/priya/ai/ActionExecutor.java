@@ -227,15 +227,30 @@ public class ActionExecutor {
             return "YouTube par '" + q + "' ka search khul gaya, par Accessibility service band hai "
                     + "isliye gana khud play nahi hua. Menu > Permissions mein Accessibility on karein.";
         }
-        for (int attempt = 0; attempt < 6; attempt++) {
-            SystemClock.sleep(1300);
+        boolean clicked = false;
+        for (int attempt = 0; attempt < 7 && !clicked; attempt++) {
+            SystemClock.sleep(1200);
             PriyaAccessibilityService a = PriyaAccessibilityService.get();
             if (a == null) break;
-            if (a.clickFirstVideoResult()) return "YouTube par '" + q + "' play ho raha hai.";
+            clicked = a.clickFirstVideoResult();
         }
         PriyaAccessibilityService a = PriyaAccessibilityService.get();
-        if (a != null) a.tapFractional(0.5f, 0.30f);
-        return "YouTube par '" + q + "' search karke pehle video par tap kiya. Agar play na ho to batao.";
+        if (!clicked || a == null) {
+            return "YouTube par '" + q + "' search khul gaya, par sahi video (bina ad ke) pehchaan nahi paayi. "
+                    + "read_screen karke video ka title dekho aur click_on_screen se usi title par tap karo. Ad par tap mat karna.";
+        }
+        // verify + skip pre-roll ads for up to ~12 s
+        boolean playing = false;
+        for (int i = 0; i < 12; i++) {
+            SystemClock.sleep(1000);
+            a = PriyaAccessibilityService.get();
+            if (a == null) break;
+            a.skipAdIfShown();
+            if (!playing) playing = a.videoPlayerOpen();
+            if (playing && i >= 5) break;
+        }
+        return playing ? "VERIFIED: YouTube par '" + q + "' ka video chal raha hai (ad aaya to skip kiya)."
+                : "Video par tap kiya par pakka nahi ki player khula. read_screen se check karo, aur zarurat ho to sahi title par tap karo.";
     }
 
     private String clickOnScreen(String text) {

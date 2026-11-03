@@ -170,21 +170,81 @@ public class PriyaAccessibilityService extends AccessibilityService {
         return hit != null && clickNode(hit);
     }
 
-    private static final String[] VIDEO_HINTS = {"views", "view", "watching", "minutes", "seconds", "मिनट", "बार देखा", "व्यूज़"};
+    private static final String[] AD_HINTS = {"sponsored", "promoted", "ad ·", "ad •", "advertisement", "विज्ञापन", "प्रायोजित"};
+    private static final java.util.Set<String> AD_BADGES = new java.util.HashSet<>(java.util.Arrays.asList(
+            "ad", "sponsored", "install", "shop now", "learn more", "visit site", "विज्ञापन", "इंस्टॉल करें", "प्रायोजित"));
+    private static final String[] DURATION_HINTS = {"minute", "second", "hour", "मिनट", "सेकंड", "घंटे"};
+    private static final String[] SKIP_TEXT = {"Skip ad", "Skip ads", "Skip", "विज्ञापन छोड़ें", "छोड़ें"};
+
+    private static boolean has(String low, String[] words) {
+        for (String w : words) if (low.contains(w)) return true;
+        return false;
+    }
+
+    /** True when this result card (or anything inside it) is marked as an ad. */
+    private static boolean isAd(AccessibilityNodeInfo n, int depth) {
+        if (n == null || depth > 6) return false;
+        CharSequence t = n.getText(), d = n.getContentDescription();
+        String a = t == null ? "" : t.toString().trim().toLowerCase(Locale.ROOT);
+        String b = d == null ? "" : d.toString().trim().toLowerCase(Locale.ROOT);
+        if (AD_BADGES.contains(a) || AD_BADGES.contains(b)) return true;
+        if (has(a, AD_HINTS) || has(b, AD_HINTS)) return true;
+        for (int i = 0; i < n.getChildCount(); i++) if (isAd(n.getChild(i), depth + 1)) return true;
+        return false;
+    }
 
     private AccessibilityNodeInfo findVideoNode(AccessibilityNodeInfo n) {
         if (n == null) return null;
         CharSequence d = n.getContentDescription();
         if (d != null && d.length() > 15 && n.isVisibleToUser()) {
             String low = d.toString().toLowerCase(Locale.ROOT);
-            for (String h : VIDEO_HINTS) {
-                if (low.contains(h) && !low.contains("shorts")) return n;
-            }
+            // a real video card says how long it is (e.g. "3 minutes, 20 seconds") and is not an ad, Short or Mix
+            if (has(low, DURATION_HINTS) && !has(low, AD_HINTS) && !low.contains("shorts")
+                    && !low.contains("mix") && !low.contains("playlist") && !isAd(n, 0)) return n;
         }
         for (int i = 0; i < n.getChildCount(); i++) {
             AccessibilityNodeInfo r = findVideoNode(n.getChild(i));
             if (r != null) return r;
         }
         return null;
+    }
+
+    /** Presses YouTube's "Skip ad" button if it is showing. */
+    public boolean skipAdIfShown() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+        for (String s : SKIP_TEXT) {
+            List<AccessibilityNodeInfo> f = root.findAccessibilityNodeInfosByText(s);
+            if (f == null) continue;
+            for (AccessibilityNodeInfo n : f) {
+                CharSequence t = n.getText();
+                String tt = t == null ? "" : t.toString().toLowerCase(Locale.ROOT);
+                if (tt.contains("skip") || tt.contains("छोड़ें")) {
+                    if (n.isVisibleToUser() && clickNode(n)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Rough check that a video player is open (watch page) in the YouTube app. */
+    public boolean videoPlayerOpen() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+        CharSequence pkg = root.getPackageName();
+        if (pkg == null || !pkg.toString().contains("youtube")) return false;
+        List<AccessibilityNodeInfo> p = root.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/player_view");
+        if (p != null && !p.isEmpty()) return true;
+        p = root.findAccessibilityNodeInfosByViewId("com.google.android.youtube:id/watch_player");
+        if (p != null && !p.isEmpty()) return true;
+        return descContains(root, "pause video", 0) || descContains(root, "play video", 0) || descContains(root, "video player", 0);
+    }
+
+    private static boolean descContains(AccessibilityNodeInfo n, String needle, int depth) {
+        if (n == null || depth > 25) return false;
+        CharSequence d = n.getContentDescription();
+        if (d != null && d.toString().toLowerCase(Locale.ROOT).contains(needle)) return true;
+        for (int i = 0; i < n.getChildCount(); i++) if (descContains(n.getChild(i), needle, depth + 1)) return true;
+        return false;
     }
 }
