@@ -86,6 +86,9 @@ public final class Prefs {
 
     public static boolean floatingFace(Context c) { return sp(c).getBoolean("floating_face", true); }
     public static void setFloatingFace(Context c, boolean v) { sp(c).edit().putBoolean("floating_face", v).apply(); }
+    /** Live 3D avatar (GLES 2.0) instead of the flat pictures; default ON, pictures are the fallback. */
+    public static boolean avatar3D(Context c) { return sp(c).getBoolean("avatar_3d", true); }
+    public static void setAvatar3D(Context c, boolean v) { sp(c).edit().putBoolean("avatar_3d", v).apply(); }
 
     public static String lastCrash(Context c) { return sp(c).getString("last_crash", ""); }
     public static void setLastCrash(Context c, String v) { sp(c).edit().putString("last_crash", v == null ? "" : v).commit(); }

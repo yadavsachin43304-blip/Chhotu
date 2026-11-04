@@ -64,6 +64,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         view.setListener(this);
         root.addView(view, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        view.setAvatarRectListener(this::placeAvatar3D);
         buildPowerButton();
         buildDrawer();
         setContentView(root);
@@ -88,6 +89,53 @@ public class MainActivity extends Activity implements ThemeView.Listener {
             }
             if (!need.isEmpty()) requestPermissions(need.toArray(new String[0]), REQ_BOOT_PERMS);
         } catch (Exception ignored) { }
+    }
+
+    // ------------------------------------------------------------------ live 3D avatar (falls back to pictures)
+
+    private Avatar3DView av3d;
+
+    /** Adds / removes the 3D avatar to match the Settings toggle; pictures are used if GL is off or broke. */
+    private void ensureAvatar3D() {
+        boolean want = Prefs.avatar3D(this) && Avatar3DView.supported(this);
+        if (want && av3d == null) {
+            try {
+                av3d = new Avatar3DView(this, false);
+                av3d.setStyle(Prefs.theme(this));
+                av3d.setFailListener(this::dropAvatar3D);
+                root.addView(av3d, 1, new FrameLayout.LayoutParams(1, 1));
+                view.setAvatar3D(true);
+                placeAvatar3D();
+            } catch (Throwable t) {
+                Avatar3DView.failed = true;
+                dropAvatar3D();
+            }
+        } else if (!want && av3d != null) {
+            dropAvatar3D();
+        }
+    }
+
+    private void dropAvatar3D() {
+        if (av3d != null) {
+            try { av3d.onPause(); } catch (Throwable ignored) { }
+            try { root.removeView(av3d); } catch (Throwable ignored) { }
+            av3d = null;
+        }
+        view.setAvatar3D(false);
+    }
+
+    private void placeAvatar3D() {
+        if (av3d == null) return;
+        android.graphics.RectF r = view.avatarRect();
+        if (r.width() < 2 || r.height() < 2) return;
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) av3d.getLayoutParams();
+        int w = Math.round(r.width()), h = Math.round(r.height());
+        int l = Math.round(r.left), t = Math.round(r.top);
+        if (lp.width == w && lp.height == h && lp.leftMargin == l && lp.topMargin == t) return;
+        lp.width = w; lp.height = h;
+        lp.gravity = Gravity.TOP | Gravity.START;
+        lp.leftMargin = l; lp.topMargin = t;
+        av3d.setLayoutParams(lp);
     }
 
     // ------------------------------------------------------------------ front ON / OFF button
@@ -136,11 +184,14 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         super.onPause();
         PriyaBus.appVisible = false;
         ui.removeCallbacks(powerTick);
+        if (av3d != null) av3d.onPause();
     }
 
     @Override protected void onResume() {
         super.onResume();
         PriyaBus.appVisible = true;
+        ensureAvatar3D();
+        if (av3d != null) av3d.onResume();
         applyTheme(Prefs.theme(this));
         ui.removeCallbacks(powerTick);
         ui.post(powerTick);
@@ -166,6 +217,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
 
     private void applyTheme(int t) {
         view.setTheme(t);
+        if (av3d != null) { av3d.setStyle(t); placeAvatar3D(); }
         getWindow().setStatusBarColor(ThemeView.BG_TOP[t]);
         getWindow().setNavigationBarColor(ThemeView.BG_BOTTOM[t]);
         for (int i = 0; i < tiles.length; i++) {
@@ -371,6 +423,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
     private void openDrawer() {
         drawerOpen = true;
         drawer.setVisibility(View.VISIBLE);
+        if (av3d != null) av3d.setVisibility(View.INVISIBLE); // its surface sits above the window: hide under the menu
         panel.setTranslationX(-panelW);
         panel.animate().translationX(0).setDuration(210).start();
         scrim.animate().alpha(1f).setDuration(210).start();
@@ -381,7 +434,12 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         drawerOpen = false;
         scrim.animate().alpha(0f).setDuration(180).start();
         panel.animate().translationX(-panelW).setDuration(180)
-                .withEndAction(() -> { if (!drawerOpen) drawer.setVisibility(View.GONE); }).start();
+                .withEndAction(() -> {
+                    if (!drawerOpen) {
+                        drawer.setVisibility(View.GONE);
+                        if (av3d != null) av3d.setVisibility(View.VISIBLE);
+                    }
+                }).start();
     }
 
     private Bitmap loadAsset(String name, int sample) {

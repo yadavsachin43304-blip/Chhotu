@@ -90,6 +90,22 @@ public class ThemeView extends View {
 
     public void setListener(Listener l) { listener = l; }
 
+    // ---- 3D avatar hook: when a live 3D Priya is shown on top, skip the flat picture (glow and rings stay)
+    private boolean avatar3D = false;
+    private Runnable avatarRectListener;
+    private final RectF avatarBox = new RectF();
+
+    public void setAvatar3D(boolean on) {
+        if (avatar3D == on) return;
+        avatar3D = on;
+        invalidate();
+    }
+
+    public void setAvatarRectListener(Runnable r) { avatarRectListener = r; }
+
+    /** Where the avatar artwork sits (px, in this view), clipped clear of the top icons and the text below it. */
+    public RectF avatarRect() { return avatarBox; }
+
     public void setTheme(int newTheme) {
         if (newTheme == theme) return;
         theme = newTheme;
@@ -145,6 +161,9 @@ public class ThemeView extends View {
         }
         avH = avW * ratio;
         textTop = avCy + avH / 2f + dp(2);
+        avatarBox.set(Math.max(0, avCx - avW / 2f), Math.max(dp(76), avCy - avH / 2f),
+                Math.min(W, avCx + avW / 2f), Math.min(textTop, theme == 1 ? panelT : H));
+        if (avatarRectListener != null) post(avatarRectListener);
 
         int acc = ACCENT[theme];
         glowShader = new RadialGradient(avCx, avCy, avW * 0.62f,
@@ -228,7 +247,7 @@ public class ThemeView extends View {
         glowPaint.setAlpha((int) (255 * Math.min(1f, (0.30f + cur * 0.9f) * acc)));
         c.drawCircle(avCx, avCy, avW * 0.62f, glowPaint);
 
-        if (avatar != null) {
+        if (avatar != null && !avatar3D) {
             float breathe = 1f + 0.010f * (float) Math.sin(t * 1.6f) + (on ? 0.035f * cur : 0f);
             rf.set(avCx - avW / 2f * breathe, avCy - avH / 2f * breathe,
                     avCx + avW / 2f * breathe, avCy + avH / 2f * breathe);

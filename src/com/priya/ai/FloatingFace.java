@@ -43,6 +43,9 @@ public class FloatingFace extends View {
     private int loadedTheme = -1;
     private float mouth = 0f;
     private final int size;
+    /** The view actually in the window: the live 3D face, or this picture view (fallback). */
+    private View shown;
+    private Avatar3DView gl;
 
     public FloatingFace(Context c) {
         super(c.getApplicationContext());
@@ -62,7 +65,8 @@ public class FloatingFace extends View {
     private final Runnable frame = new Runnable() {
         @Override public void run() {
             if (!attached) return;
-            invalidate();
+            if (shown == gl && gl != null) gl.setStyle(Prefs.theme(getContext()));
+            else invalidate();
             h.postDelayed(this, 40);
         }
     };
@@ -76,19 +80,48 @@ public class FloatingFace extends View {
     }
 
     private void show() {
+        if (Prefs.avatar3D(getContext()) && Avatar3DView.supported(getContext())) {
+            try {
+                if (gl == null) {
+                    gl = new Avatar3DView(getContext(), true);
+                    gl.setFailListener(this::fallbackToPicture);
+                    gl.setOnTouchListener((v, e) -> handleTouch(e));
+                }
+                gl.setStyle(Prefs.theme(getContext()));
+                wm.addView(gl, lp);
+                shown = gl;
+                attached = true;
+                h.post(frame);
+                return;
+            } catch (Throwable t) {
+                Avatar3DView.failed = true;
+                gl = null;
+            }
+        }
         try {
             loadTheme(Prefs.theme(getContext()));
             wm.addView(this, lp);
+            shown = this;
             attached = true;
             h.post(frame);
-        } catch (Throwable ignored) { attached = false; }
+        } catch (Throwable ignored) { attached = false; shown = null; }
+    }
+
+    /** GL failed on this device: swap the 3D face for the picture face in place. */
+    private void fallbackToPicture() {
+        if (!attached || shown != gl) { gl = null; return; }
+        hide();
+        gl = null;
+        update();
     }
 
     public void hide() {
         if (!attached) return;
         attached = false;
         h.removeCallbacks(frame);
-        try { wm.removeView(this); } catch (Throwable ignored) { }
+        View v = shown == null ? this : shown;
+        shown = null;
+        try { wm.removeView(v); } catch (Throwable ignored) { }
     }
 
     private Bitmap load(String name) {
@@ -146,6 +179,11 @@ public class FloatingFace extends View {
     private boolean moved;
 
     @Override public boolean onTouchEvent(MotionEvent e) {
+        return handleTouch(e);
+    }
+
+    private boolean handleTouch(MotionEvent e) {
+        View target = shown == null ? this : shown;
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 downX = e.getRawX(); downY = e.getRawY();
@@ -155,7 +193,7 @@ public class FloatingFace extends View {
                 int dx = (int) (e.getRawX() - downX), dy = (int) (e.getRawY() - downY);
                 if (Math.abs(dx) + Math.abs(dy) > Ui.dp(getContext(), 6)) moved = true;
                 lp.x = startX + dx; lp.y = startY + dy;
-                try { wm.updateViewLayout(this, lp); } catch (Throwable ignored) { }
+                try { wm.updateViewLayout(target, lp); } catch (Throwable ignored) { }
                 return true;
             case MotionEvent.ACTION_UP:
                 if (!moved) {
@@ -166,7 +204,7 @@ public class FloatingFace extends View {
                 }
                 return true;
             default:
-                return super.onTouchEvent(e);
+                return target == this && super.onTouchEvent(e);
         }
     }
 }

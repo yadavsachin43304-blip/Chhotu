@@ -669,6 +669,9 @@ public class PanelActivity extends Activity {
                         start(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:" + getPackageName())));
                     }
                 }));
+        cf.addView(Ui.switchRow(this, "3D avatar",
+                "Priya ka live 3D chehra (palak jhapakna, sir hilana, bolte waqt honth). Band karo ya phone support na kare to purani tasveer dikhegi.",
+                Prefs.avatar3D(this), (b, on) -> Prefs.setAvatar3D(this, on)));
         content.addView(cf);
 
         LinearLayout c4 = Ui.card(this);
