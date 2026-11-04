@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
@@ -525,39 +526,111 @@ public class PanelActivity extends Activity {
 
         LinearLayout cv = Ui.card(this);
         cv.addView(Ui.text(this, "Voice Lock (sirf meri awaaz)", 16, Ui.TEXT, true));
-        final TextView vInfo = Ui.text(this, Prefs.voiceF0(this) > 0
-                ? "Aapki awaaz save hai (" + Math.round(Prefs.voiceF0(this)) + " Hz). ON hone par Priya baaki awaazein ignore karegi."
-                : "Pehle neeche button dabakar 8 second normal awaaz mein boliye.", 12.5f, Ui.SUB, false);
+        final TextView vInfo = Ui.text(this, voiceLockInfo(), 12.5f, Ui.SUB, false);
         vInfo.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
         cv.addView(vInfo);
         cv.addView(Ui.switchRow(this, "Voice Lock ON", "Doosre logon / TV ki awaaz par kaam nahi karegi.",
                 Prefs.voiceLock(this), (b, on) -> {
-                    if (on && Prefs.voiceF0(this) <= 0) { toast("Pehle apni awaaz record karo."); b.setChecked(false); return; }
+                    if (on && !SpeakerVerifier.hasVoiceprint(this) && Prefs.voiceF0(this) <= 0) {
+                        toast("Pehle apni awaaz enroll karo."); b.setChecked(false); return;
+                    }
                     Prefs.setVoiceLock(this, on);
                 }));
-        Button rec = Ui.button(this, "🎙  Meri awaaz record karo (8 sec)", Ui.ACCENT, 0xFF06202A);
+
+        cv.addView(Ui.text(this, "Owner ka naam", 13.5f, Ui.TEXT, true), Ui.matchWrap(this, 10));
+        final EditText owner = new EditText(this);
+        owner.setText(Prefs.ownerName(this));
+        owner.setHint("Sachin");
+        owner.setHintTextColor(Ui.SUB);
+        owner.setTextColor(Ui.TEXT);
+        owner.setSingleLine(true);
+        cv.addView(owner, Ui.matchWrap(this, 2));
+        Button osv = Ui.button(this, "Owner naam save karo", Ui.LINE, Ui.TEXT);
+        osv.setOnClickListener(v -> {
+            Prefs.setOwnerName(this, owner.getText().toString());
+            owner.setText(Prefs.ownerName(this));
+            toast("Save ✓ Anjaan awaaz par: 'Main sirf " + Prefs.ownerName(this) + " ki baat sunti hoon, kisi aur ki nahi.'");
+        });
+        cv.addView(osv, Ui.matchWrap(this, 4));
+
+        cv.addView(Ui.text(this, "Strictness", 13.5f, Ui.TEXT, true), Ui.matchWrap(this, 10));
+        LinearLayout strictRow = new LinearLayout(this);
+        strictRow.setOrientation(LinearLayout.HORIZONTAL);
+        final String[] sl = {"Low", "Medium", "High"};
+        final Button[] sbtn = new Button[3];
+        for (int k = 0; k < 3; k++) {
+            final int lvl = k;
+            sbtn[k] = Ui.button(this, sl[k], Ui.LINE, Ui.TEXT);
+            sbtn[k].setAlpha(Prefs.voiceStrictness(this) == k ? 1f : 0.45f);
+            sbtn[k].setOnClickListener(v -> {
+                Prefs.setVoiceStrictness(this, lvl);
+                for (int q = 0; q < 3; q++) sbtn[q].setAlpha(q == lvl ? 1f : 0.45f);
+                toast("Strictness: " + sl[lvl] + (lvl == 2 ? " (kabhi-kabhi aapko bhi dobara bolna pad sakta hai)" : ""));
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp.setMargins(k == 0 ? 0 : Ui.dp(this, 4), 0, 0, 0);
+            strictRow.addView(sbtn[k], lp);
+        }
+        cv.addView(strictRow, Ui.matchWrap(this, 4));
+        cv.addView(Ui.text(this, "Low = aasaan (shor wali jagah), High = sabse sakht (koi aur bilkul nahi).", 12, Ui.SUB, false));
+
+        final String[] phrases = {
+                "Priya, mera naam " + Prefs.ownerName(this) + " hai aur ye meri awaaz hai.",
+                "Aaj ka mausam kaisa hai, zara bata do.",
+                "WhatsApp kholo aur Rahul ko message bhejo.",
+                "Ek, do, teen, chaar, paanch, chhe, saat, aath, nau, das.",
+                "Mujhe kal subah saat baje yaad dila dena, theek hai?"};
+        Button rec = Ui.button(this, SpeakerVerifier.hasVoiceprint(this)
+                ? "🎙  Dobara enroll karo (5 lines)" : "🎙  Meri awaaz enroll karo (5 lines)", Ui.ACCENT, 0xFF06202A);
+        Button restore = Ui.button(this, "↺  Original enrollment wapas lao", Ui.LINE, Ui.TEXT);
         rec.setOnClickListener(v -> {
             if (PriyaBus.running()) { toast("Pehle Priya OFF karo."); return; }
             if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 7); return;
             }
             rec.setEnabled(false);
-            vInfo.setText("Boliye… (8 second tak normal baat karo, jaise Priya se karte ho)");
+            restore.setEnabled(false);
             new Thread(() -> {
-                float f0 = AudioEngine.enroll(8);
+                List<SpeakerVerifier.Phrase> got = new ArrayList<>();
+                String fail = null;
+                for (int k = 0; k < phrases.length && fail == null; k++) {
+                    SpeakerVerifier.Phrase best = null;
+                    for (int tryN = 0; tryN < 3; tryN++) {
+                        final String say = "Line " + (k + 1) + "/5 — normal awaaz mein boliye:\n\n\"" + phrases[k] + "\""
+                                + (tryN > 0 ? "\n\n(Awaaz kam aayi, ek baar aur boliye)" : "");
+                        ui.post(() -> vInfo.setText(say));
+                        SystemClock.sleep(700);
+                        SpeakerVerifier.Phrase ph = AudioEngine.recordPhrase(5);
+                        if (ph == null) { fail = "Mic nahi khul paya. Microphone permission check karo."; break; }
+                        if (ph.mfcc.size() >= 50) { best = ph; break; }
+                    }
+                    if (fail == null && best == null) fail = "Line " + (k + 1) + " mein awaaz saaf nahi mili. Shaant jagah mein dobara try karo.";
+                    if (best != null) got.add(best);
+                }
+                SpeakerVerifier vp = fail == null ? SpeakerVerifier.enroll(this, got) : null;
+                final String err = fail;
                 ui.post(() -> {
                     rec.setEnabled(true);
-                    if (f0 > 0) {
-                        Prefs.setVoiceF0(this, f0);
+                    restore.setEnabled(true);
+                    if (vp != null) {
+                        if (vp.ownerPitch() > 0) Prefs.setVoiceF0(this, vp.ownerPitch());
                         Prefs.setVoiceLock(this, true);
-                        vInfo.setText("Ho gaya ✓ Aapki awaaz save hai (" + Math.round(f0) + " Hz). Voice Lock ON.");
+                        rec.setText("🎙  Dobara enroll karo (5 lines)");
+                        vInfo.setText("Ho gaya ✓ Aapka voiceprint save hai. Voice Lock ON. Priya ko OFF/ON karo.");
                     } else {
-                        vInfo.setText("Awaaz saaf nahi mili. Shaant jagah mein dobara try karo.");
+                        vInfo.setText(err != null ? err : "Awaaz kaafi nahi mili. Shaant jagah mein dobara try karo.");
                     }
                 });
             }).start();
         });
-        cv.addView(rec, Ui.matchWrap(this, 6));
+        cv.addView(rec, Ui.matchWrap(this, 10));
+        restore.setOnClickListener(v -> {
+            if (SpeakerVerifier.restoreBackup(this)) {
+                vInfo.setText(voiceLockInfo());
+                toast("Original enrollment wapas aa gaya ✓ Priya ko OFF/ON karo.");
+            } else toast("Abhi koi backup nahi hai — pehle enroll karo.");
+        });
+        cv.addView(restore, Ui.matchWrap(this, 6));
         content.addView(cv);
 
         LinearLayout cf = Ui.card(this);
@@ -584,6 +657,18 @@ public class PanelActivity extends Activity {
         note.setPadding(0, Ui.dp(this, 8), 0, 0);
         c4.addView(note);
         content.addView(c4);
+    }
+
+    private String voiceLockInfo() {
+        if (SpeakerVerifier.hasVoiceprint(this)) {
+            return "Voiceprint save hai (MFCC + pitch). Roz aapki saaf awaaz se thoda seekhti hai: aaj "
+                    + SpeakerVerifier.adaptCountToday(this) + "/50, kul " + SpeakerVerifier.adaptTotal(this) + " update."
+                    + (AudioEngine.lastConfidence >= 0 ? " Last match: " + Math.round(AudioEngine.lastConfidence * 100) + "%." : "");
+        }
+        if (Prefs.voiceF0(this) > 0) {
+            return "Purana pitch-lock (" + Math.round(Prefs.voiceF0(this)) + " Hz) hai. Behtar lock ke liye neeche 5 lines enroll karo.";
+        }
+        return "Neeche button dabakar 5 chhoti lines normal awaaz mein boliye.";
     }
 
     // ================================================================== skills

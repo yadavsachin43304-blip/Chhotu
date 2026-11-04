@@ -208,14 +208,35 @@ public class AudioEngine {
     public void interruptPlayback() {
         playQueue.clear();
         playIdle = true;
+        boolean wasPlaying = SystemClock.elapsedRealtime() < speakEnd;
         speakEnd = SystemClock.elapsedRealtime();
         try {
+            AudioTrack t = track;
+            if (t != null && wasPlaying) {
+                // ~15 ms fade-out before stopping, so a cut-off reply ends without a click
+                for (int k = 5; k >= 0; k--) {
+                    t.setVolume(k / 5f);
+                    SystemClock.sleep(3);
+                }
+            }
             if (track != null) {
                 track.pause();
                 track.flush();
+                track.setVolume(1f);
                 track.play();
             }
         } catch (Exception ignored) { }
+    }
+
+    /** Linear fade-in over the first ms of 24 kHz 16-bit mono PCM (in place). */
+    private static void fadeIn(byte[] b, int ms) {
+        int n = Math.min(b.length / 2, OUT_RATE / 1000 * ms);
+        for (int i = 0; i < n; i++) {
+            int s = (short) ((b[2 * i] & 0xff) | (b[2 * i + 1] << 8));
+            s = s * i / n;
+            b[2 * i] = (byte) (s & 0xff);
+            b[2 * i + 1] = (byte) ((s >> 8) & 0xff);
+        }
     }
 
     private volatile boolean playIdle = true;
@@ -243,6 +264,8 @@ public class AudioEngine {
                     }
                     b = acc.toByteArray();
                     playIdle = false;
+                    fadeIn(b, newReply ? 15 : 5); // no click when the voice starts
+
                 }
             } catch (InterruptedException e) {
                 break;
@@ -360,8 +383,27 @@ public class AudioEngine {
     // ------------------------------------------------------------------ voice lock (owner's voice only)
 
     private float ownerF0 = 0f; // 0 = voice lock off
+    /** MFCC voiceprint (null = old pitch-only lock or lock off). */
+    private volatile SpeakerVerifier verifier = null;
+    private volatile float acceptConf = 0.5f;
+    /** Confidence of the last utterance check (shown in Settings / debugging). */
+    public static volatile float lastConfidence = -1f;
 
-    public void setVoiceLock(float f0) { ownerF0 = f0; }
+    /** Pitch-only lock (old voiceprints): f0 = owner pitch, 0 = off. */
+    public void setVoiceLock(float f0) { ownerF0 = f0; verifier = null; }
+
+    /**
+     * Voice lock with the MFCC voiceprint. Pitch stays one of the features.
+     * @param strictness 0 low, 1 medium, 2 high
+     */
+    public void setVoiceLock(boolean on, SpeakerVerifier v, float fallbackF0, int strictness) {
+        if (!on) { ownerF0 = 0f; verifier = null; return; }
+        verifier = v;
+        acceptConf = SpeakerVerifier.threshold(strictness);
+        ownerF0 = v != null && v.ownerPitch() > 0f ? v.ownerPitch() : (fallbackF0 > 0f ? fallbackF0 : (v != null ? 150f : 0f));
+    }
+
+    private boolean lockOn() { return ownerF0 > 0f || verifier != null; }
 
     /** Pitch (Hz) of a 40 ms window by normalised autocorrelation; 0 when unvoiced. */
     static float pitch(short[] prev, short[] cur) {
@@ -396,6 +438,18 @@ public class AudioEngine {
         return c.get(c.size() / 2);
     }
 
+    /** Owner check: MFCC voiceprint when enrolled (pitch is one of its features), else the old pitch range. */
+    private boolean ownerVoice(java.util.List<Float> pitches, java.util.List<float[]> mfcc) {
+        if (!lockOn()) return true;
+        SpeakerVerifier v = verifier;
+        if (v != null && mfcc != null && mfcc.size() >= 4) {
+            float c = v.confidence(mfcc, median(pitches));
+            lastConfidence = c;
+            return c >= acceptConf;
+        }
+        return ownerVoice(pitches);
+    }
+
     private boolean ownerVoice(java.util.List<Float> pitches) {
         if (ownerF0 <= 0f) return true;
         float m = median(pitches);
@@ -404,29 +458,54 @@ public class AudioEngine {
         return r > 0.70f && r < 1.45f; // wide: a command said louder/excited raises the pitch
     }
 
-    /** Records the owner's voice for a few seconds and returns its typical pitch (Hz), or 0 on failure. */
-    public static float enroll(int seconds) {
+    /**
+     * Records one enrollment phrase through the SAME mic path as live listening (voice-communication source +
+     * NS/AGC), so the voiceprint matches what the live check hears. Returns null on mic failure.
+     */
+    public static SpeakerVerifier.Phrase recordPhrase(int seconds) {
         AudioRecord r = null;
+        NoiseSuppressor ns = null;
+        AutomaticGainControl agc = null;
         try {
             int minBuf = AudioRecord.getMinBufferSize(IN_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-            r = new AudioRecord(MediaRecorder.AudioSource.MIC, IN_RATE, AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT, Math.max(minBuf * 2, IN_RATE));
-            if (r.getState() != AudioRecord.STATE_INITIALIZED) return 0f;
+            int[] sources = {MediaRecorder.AudioSource.VOICE_COMMUNICATION, MediaRecorder.AudioSource.MIC};
+            for (int src : sources) {
+                try {
+                    AudioRecord t = new AudioRecord(src, IN_RATE, AudioFormat.CHANNEL_IN_MONO,
+                            AudioFormat.ENCODING_PCM_16BIT, Math.max(minBuf * 2, IN_RATE));
+                    if (t.getState() == AudioRecord.STATE_INITIALIZED) { r = t; break; }
+                    t.release();
+                } catch (Exception ignored) { }
+            }
+            if (r == null) return null;
+            try { if (NoiseSuppressor.isAvailable()) { ns = NoiseSuppressor.create(r.getAudioSessionId()); if (ns != null) ns.setEnabled(true); } } catch (Exception ignored) { }
+            try { if (AutomaticGainControl.isAvailable()) { agc = AutomaticGainControl.create(r.getAudioSessionId()); if (agc != null) agc.setEnabled(true); } } catch (Exception ignored) { }
             r.startRecording();
             short[] prev = new short[FRAME], cur = new short[FRAME];
-            java.util.List<Float> ps = new java.util.ArrayList<>();
+            SpeakerVerifier.Phrase ph = new SpeakerVerifier.Phrase();
+            float floor = 300f;
+            int i = 0;
             long end = SystemClock.elapsedRealtime() + seconds * 1000L;
             while (SystemClock.elapsedRealtime() < end) {
                 int off = 0;
-                while (off < FRAME) { int k = r.read(cur, off, FRAME - off); if (k < 0) return 0f; off += k; }
-                float f = pitch(prev, cur);
-                if (f > 0) ps.add(f);
+                while (off < FRAME) { int k = r.read(cur, off, FRAME - off); if (k < 0) return null; off += k; }
+                double sum = 0;
+                for (short v : cur) sum += (double) v * v;
+                float rms = (float) Math.sqrt(sum / FRAME);
+                if (i++ < 10) floor = Math.max(120f, Math.min(floor, rms)); // first 200 ms: room noise
+                if (rms > Math.max(MIN_THR, floor * 2.5f)) {
+                    ph.mfcc.add(SpeakerVerifier.mfcc(prev, cur));
+                    float f = pitch(prev, cur);
+                    if (f > 0) ph.pitch.add(f);
+                }
                 short[] t = prev; prev = cur; cur = t;
             }
-            return ps.size() >= 40 ? median(ps) : 0f;
+            return ph;
         } catch (Throwable e) {
-            return 0f;
+            return null;
         } finally {
+            try { if (ns != null) ns.release(); } catch (Throwable ignored) { }
+            try { if (agc != null) agc.release(); } catch (Throwable ignored) { }
             try { if (r != null) { r.stop(); r.release(); } } catch (Throwable ignored) { }
         }
     }
@@ -439,6 +518,9 @@ public class AudioEngine {
         java.util.List<byte[]> pending = new java.util.ArrayList<>();
         java.util.List<Float> uttPitch = new java.util.ArrayList<>();
         java.util.ArrayDeque<Float> recentPitch = new java.util.ArrayDeque<>();
+        java.util.List<float[]> uttMfcc = new java.util.ArrayList<>();
+        java.util.ArrayDeque<float[]> recentMfcc = new java.util.ArrayDeque<>();
+        boolean ownerUtt = false;
         boolean inSpeech = false, deciding = false, rejected = false;
         int uttFrames = 0;
         long lastStranger = 0;
@@ -467,10 +549,12 @@ public class AudioEngine {
             float rms = (float) Math.sqrt(sum / n);
             smooth += (Math.min(1f, rms / 6000f) - smooth) * 0.35f;
             PriyaBus.micLevel = smooth;
-            boolean needPitch = ownerF0 > 0f && rms > MIN_THR && (deciding || !inSpeech || isSpeaking());
+            boolean needPitch = lockOn() && rms > MIN_THR && (deciding || ownerUtt || !inSpeech || isSpeaking());
             float f0 = needPitch ? pitch(prevFrame, frame) : 0f;
+            float[] mf = (needPitch && verifier != null) ? SpeakerVerifier.mfcc(prevFrame, frame) : null;
             System.arraycopy(frame, 0, prevFrame, 0, FRAME);
             if (f0 > 0) { recentPitch.addLast(f0); if (recentPitch.size() > 12) recentPitch.removeFirst(); }
+            if (mf != null) { recentMfcc.addLast(mf); if (recentMfcc.size() > 25) recentMfcc.removeFirst(); }
 
             boolean speaking = isSpeaking();
 
@@ -479,10 +563,10 @@ public class AudioEngine {
                 float bargeThr = Math.max(MIN_THR * 5f, Math.max(floor * mult * 6f, outRms * (natural ? 2.0f : 1.3f)));
                 boolean grace = SystemClock.elapsedRealtime() - replyStart < 900;
                 bargeLoud = (!grace && rms > bargeThr) ? bargeLoud + 1 : Math.max(0, bargeLoud - 2);
-                if (bargeLoud >= (natural ? 30 : 25) && (ownerF0 <= 0f || ownerVoice(new java.util.ArrayList<>(recentPitch)))) {
+                if (bargeLoud >= (natural ? 30 : 25) && (!lockOn() || ownerVoice(new java.util.ArrayList<>(recentPitch), new java.util.ArrayList<>(recentMfcc)))) {
                     bargeLoud = 0;
                     bargeIn();
-                    inSpeech = true; deciding = false; rejected = false; uttFrames = 0;
+                    inSpeech = true; deciding = false; rejected = false; uttFrames = 0; ownerUtt = false;
                     hang = HANG_FRAMES;
                     loud = 0;
                     PriyaBus.userTalking = true;
@@ -497,7 +581,7 @@ public class AudioEngine {
                 if (inSpeech) {
                     inSpeech = false;
                     if (!deciding && !rejected) { flushSend(sink); sink.onSpeechEnd(); }
-                    deciding = false; rejected = false; pending.clear();
+                    deciding = false; rejected = false; ownerUtt = false; pending.clear();
                     PriyaBus.userTalking = false;
                 }
                 loud = 0;
@@ -521,13 +605,18 @@ public class AudioEngine {
                     loud = 0;
                     uttFrames = 0;
                     rejected = false;
-                    if (ownerF0 > 0f) {
+                    ownerUtt = false;
+                    if (lockOn()) {
                         // hold the audio until we know whose voice it is (~250-400 ms); then it streams instantly
                         deciding = true;
                         pending.clear();
                         pending.addAll(preroll);
                         uttPitch.clear();
                         uttPitch.addAll(recentPitch);
+                        uttMfcc.clear();
+                        // only the pre-roll's own frames (the last few), not older room noise
+                        int skip = Math.max(0, recentMfcc.size() - 6), q = 0;
+                        for (float[] m : recentMfcc) if (q++ >= skip) uttMfcc.add(m);
                     } else {
                         deciding = false;
                         PriyaBus.userTalking = true;
@@ -545,9 +634,14 @@ public class AudioEngine {
                 if (deciding) {
                     pending.add(toBytes(frame));
                     if (f0 > 0) uttPitch.add(f0);
-                    if (uttPitch.size() >= 12 || (ended && uttPitch.size() >= 4)) {
+                    if (mf != null) uttMfcc.add(mf);
+                    boolean enough = verifier != null
+                            ? (uttMfcc.size() >= 20 || (ended && uttMfcc.size() >= 6))
+                            : (uttPitch.size() >= 12 || (ended && uttPitch.size() >= 4));
+                    if (enough) {
                         deciding = false;
-                        if (ownerVoice(uttPitch)) {
+                        if (ownerVoice(uttPitch, uttMfcc)) {
+                            ownerUtt = verifier != null;
                             PriyaBus.userTalking = true;
                             sink.onSpeechStart();
                             for (byte[] b : pending) emit(sink, b);
@@ -562,6 +656,10 @@ public class AudioEngine {
                     }
                 } else if (!rejected) {
                     emit(sink, toBytes(frame));
+                    if (ownerUtt) {
+                        if (f0 > 0) uttPitch.add(f0);
+                        if (mf != null && uttMfcc.size() < 300) uttMfcc.add(mf);
+                    }
                 }
 
                 if (ended) {
@@ -575,7 +673,16 @@ public class AudioEngine {
                     } else {
                         flushSend(sink);
                         sink.onSpeechEnd();
+                        // daily adaptation: a clearly-owner utterance gently refreshes the voiceprint
+                        SpeakerVerifier v = verifier;
+                        if (ownerUtt && v != null && uttMfcc.size() >= 40) {
+                            try {
+                                float c = v.confidence(uttMfcc, median(uttPitch));
+                                v.adapt(new java.util.ArrayList<>(uttMfcc), median(uttPitch), c);
+                            } catch (Throwable ignored) { }
+                        }
                     }
+                    ownerUtt = false;
                     rejected = false;
                     deciding = false;
                     PriyaBus.userTalking = false;
