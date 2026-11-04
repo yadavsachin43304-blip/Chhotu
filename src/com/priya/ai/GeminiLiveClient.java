@@ -172,8 +172,10 @@ public class GeminiLiveClient {
 
             setup.put("systemInstruction", new JSONObject().put("parts",
                     new JSONArray().put(new JSONObject().put("text", systemText))));
-            setup.put("tools", new JSONArray().put(new JSONObject().put("functionDeclarations",
-                    toolDeclarations(asyncByDefault()))));
+            JSONArray decl = toolDeclarations(asyncByDefault());
+            JSONArray toolsArr = new JSONArray().put(new JSONObject().put("functionDeclarations", decl));
+            if (full) toolsArr.put(new JSONObject().put("googleSearch", new JSONObject()));
+            setup.put("tools", toolsArr);
             setup.put("inputAudioTranscription", new JSONObject());
             setup.put("outputAudioTranscription", new JSONObject());
 
@@ -243,6 +245,7 @@ public class GeminiLiveClient {
 
     static JSONArray toolDeclarations(boolean forceBlocking) throws JSONException {
         JSONArray a = declarations();
+        BrainTools.declare(a);
         if (forceBlocking) {
             for (int i = 0; i < a.length(); i++) a.getJSONObject(i).put("behavior", "BLOCKING");
         }

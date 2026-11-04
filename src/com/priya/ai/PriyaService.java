@@ -162,6 +162,10 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
         PriyaBus.echoInfo = echo;
         audio.setVoiceLock(Prefs.voiceLock(this) ? Prefs.voiceF0(this) : 0f);
         main.post(ticker);
+        PriyaJobs.live = note -> {
+            GeminiLiveClient lc = client;
+            if (lc != null) lc.sendText(note);
+        };
         connect();
     }
 
@@ -172,6 +176,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
             return;
         }
         running = false;
+        PriyaJobs.live = null;
         main.removeCallbacksAndMessages(null);
         if (face != null) face.hide();
         if (client != null) {
@@ -327,6 +332,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
         if (PriyaAccessibilityService.get() == null) {
             sb.append("NOTE: Accessibility service abhi OFF hai, isliye tap/type/scroll/YouTube-play/CapCut tab tak kaam nahi karenge; user ko Menu > Permissions mein on karne ko bolo. ");
         }
+        sb.append("\n\n").append(Brain.prompt(this));
         String sk = skills.summaryForPrompt();
         if (!sk.isEmpty()) sb.append("\n\nSKILLS (saved):\n").append(sk);
         String mem = memory.contextForPrompt();
@@ -426,7 +432,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
         pool.execute(() -> {
             String result;
             long now = System.currentTimeMillis();
-            boolean acts = !READ_ONLY_TOOLS.contains(name);
+            boolean acts = !READ_ONLY_TOOLS.contains(name) && !BrainTools.READ_ONLY.contains(name);
             if (acts && Prefs.voiceLock(this) && now - lastStrangerMs < 10000) {
                 result = "BLOCKED: abhi anjaan awaaz suni gayi thi. Bina owner ke saaf order ke koi kaam nahi. Owner se confirm karo.";
             } else if (acts && now - lastUserInputMs > ORDER_WINDOW_MS) {

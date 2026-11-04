@@ -139,8 +139,10 @@ public class ActionExecutor {
                     String r = memory.search(args.optString("query", ""), 8);
                     return r.isEmpty() ? "Memory mein kuch nahi mila." : r;
                 }
-                default:
-                    return "Unknown tool: " + name;
+                default: {
+                    String br = BrainTools.run(ctx, name, args);
+                    return br != null ? br : "Unknown tool: " + name;
+                }
             }
         } catch (Exception e) {
             return "Error: " + e.getClass().getSimpleName() + ": " + e.getMessage();
