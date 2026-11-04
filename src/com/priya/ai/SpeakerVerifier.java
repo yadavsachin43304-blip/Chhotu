@@ -33,6 +33,9 @@ public class SpeakerVerifier {
     public static final float ADAPT_CONF = 0.80f;
     private static final float ADAPT_W = 0.02f;
     private static final int ADAPT_MAX_PER_DAY = 50;
+    /** |ln(utterance pitch / owner pitch)| above this (~1.6x or ~0.62x) caps confidence at PITCH_VETO_CAP. */
+    private static final double PITCH_VETO_LR = Math.log(1.6);
+    private static final float PITCH_VETO_CAP = 0.49f;
 
     private static final String PREFS = "priya_voiceprint";
 
@@ -265,6 +268,9 @@ public class SpeakerVerifier {
             double lr = Math.log(pitchMedian / pitchHz);
             float pConf = (float) Math.exp(-(lr * lr) / (2 * 0.16 * 0.16));
             conf = 0.55f * lConf + 0.25f * cConf + 0.20f * pConf;
+            // A voice ~60%+ away from the owner's pitch (e.g. a woman vs a male owner) must not pass Medium/High
+            // on MFCC similarity alone (pitch has only 20% weight above). Still allowed at Low strictness.
+            if (Math.abs(lr) > PITCH_VETO_LR) conf = Math.min(conf, PITCH_VETO_CAP);
         } else {
             conf = 0.65f * lConf + 0.35f * cConf;
         }
