@@ -58,6 +58,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         installCrashGuard(this);
+        try { AiTools.armLearning(this); } catch (Throwable ignored) { }
         root = new FrameLayout(this);
         root.setBackgroundColor(Ui.BG);
         view = new ThemeView(this);

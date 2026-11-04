@@ -21,7 +21,7 @@ final class HeadlessAgent {
 
     static final Set<String> ALWAYS = new HashSet<>(Arrays.asList(
             "knowledge", "recall", "use_skill", "remember", "task_plan", "task_progress",
-            "research", "web_fetch", "generate_text", "notify_owner", "job_status"));
+            "research", "web_fetch", "generate_text", "notify_owner", "job_status", "find_best_tool"));
     static final Set<String> PHONE = new HashSet<>(Arrays.asList(
             "open_app", "list_apps", "read_screen", "click_on_screen", "tap_at", "swipe", "scroll_until", "wait_for_text",
             "dismiss_popup", "type_text", "phone_control", "youtube_play", "open_link", "web_search", "set_alarm"));

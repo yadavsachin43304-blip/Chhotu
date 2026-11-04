@@ -38,6 +38,21 @@ public final class SkillStore {
         seedV2();
         seedV3();
         seedV4();
+        seedV5(c);
+    }
+
+    /** v33: built-in, editable AI Tools Guide (manager mode catalog) seeded from assets — only if missing. */
+    private void seedV5(Context c) {
+        File marker = new File(dir, ".seeded_v5");
+        if (marker.exists()) return;
+        if (!new File(dir, idFor(AiTools.SKILL_NAME) + ".skill").exists()) {
+            String body = AiTools.seedBody(c);
+            if (body.isEmpty()) return; // asset unreadable: try again next start
+            save(AiTools.SKILL_NAME,
+                    "Manager mode: 30+ AI tools/apps/websites — kaunsa kaam kis tool mein best, package/URL, free/paid, phone par step-by-step. find_best_tool isi se chunta hai.",
+                    body);
+        }
+        try { marker.createNewFile(); } catch (Exception ignored) { }
     }
 
     /** v29: built-in GrowthPilot Manager skill (added only if missing). */

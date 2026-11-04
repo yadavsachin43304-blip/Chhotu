@@ -25,7 +25,7 @@ final class BrainTools {
 
     /** Tools that only read/think (no phone action): allowed without a fresh owner order. */
     static final Set<String> READ_ONLY = new HashSet<>(Arrays.asList(
-            "web_fetch", "research", "generate_text", "job_status", "list_schedules", "list_recent_audio"));
+            "web_fetch", "research", "generate_text", "job_status", "list_schedules", "list_recent_audio", "find_best_tool"));
 
     // ------------------------------------------------------------------ declaration helpers (Live API schema, upper-case types)
 
@@ -52,20 +52,22 @@ final class BrainTools {
     }
 
     static void declare(JSONArray a) throws JSONException {
+        a.put(fn("find_best_tool", "MANAGER MODE, call FIRST for any creative/production job (image, thumbnail, poster, video/reel edit, voiceover, song, script, presentation, website, research, leads). Returns the top 2 AI apps/websites for the job from Priya's AI Tools Guide, whether each app is INSTALLED on this phone, step-by-step phone steps, and the latest learned AI-tool notes.",
+                new JSONObject().put("task", str("The job in Sachin's words, e.g. 'YouTube thumbnail banana', 'reel edit with captions', 'Hindi voiceover'")), "task"));
         a.put(fn("research", "Research the web with Google Search and get a factual answer with source links. Use whenever you lack knowledge, need latest info, prices, how-to steps, business leads (e.g. 'cafes in Pune with email'), or are unsure how to do a task.",
                 new JSONObject().put("question", str("Exact question, with place/time/details")), "question"));
         a.put(fn("web_fetch", "Open a web page (HTTP GET) and read its text (title + readable content, capped). Use to check a website, read an article, find a contact email on a business site, verify facts.",
                 new JSONObject().put("url", str("Full URL"))
                         .put("max_chars", integer("Max characters to return, default 6000, max 20000")), "url"));
-        a.put(fn("generate_text", "Write long or polished text with a Gemini text model: video scripts, voiceover scripts, captions, hashtags, emails, proposals, reports, image/video prompts, plans. Long results are also saved to Documents/Priya.",
+        a.put(fn("generate_text", "Write text with a Gemini text model (scripts, captions, emails, proposals, reports, prompts for other AI apps, plans); long results saved to Documents/Priya. OK for prompts/briefs that Priya then types into an AI app, and for emails. For big creative deliverables Sachin wants made in an app (ChatGPT/Claude/Canva...), operate that app instead unless he asks Priya to write it herself.",
                 new JSONObject().put("task", str("Exactly what to write, with topic, language (Hinglish/Hindi/English), length, tone, audience"))
                         .put("kind", str("script | caption | email | prompt | report | plan | other"))
                         .put("save_file", bool("true = also save as a .txt file")), "task"));
-        a.put(fn("generate_image", "Create an AI image (Nano Banana) from a prompt and save it to Pictures/Priya. Use for thumbnails, posts, scene images, wallpapers, designs. You CAN generate images with this tool.",
+        a.put(fn("generate_image", "FALLBACK image maker (Nano Banana API), saves to Pictures/Priya. Manager rule: for images first use find_best_tool and operate the right app/website (Canva, Gemini, ChatGPT, Leonardo, Designer...). Use this only when Sachin asks Priya to make it herself, or no suitable app/website is available/working.",
                 new JSONObject().put("prompt", str("Detailed English prompt: subject, setting, lighting, camera, style; say 'no text' if no text wanted"))
                         .put("aspect", str("9:16 (shorts/reels, default), 16:9 (YouTube), 1:1, 4:5"))
                         .put("folder", str("Optional sub-folder name")), "prompt"));
-        a.put(fn("text_to_speech", "Make a voiceover audio file (WAV) in Priya's own voice from text, saved to Music/Priya. Use when Sachin wants narration but has no recording.",
+        a.put(fn("text_to_speech", "FALLBACK voiceover (WAV, Priya's own voice) saved to Music/Priya. Manager rule: for voiceovers first find_best_tool (ElevenLabs app etc.); use this only if Sachin asks for Priya's voice or no app is available/working.",
                 new JSONObject().put("text", str("Exact words to speak"))
                         .put("style", str("Delivery, e.g. 'warm and energetic', 'calm storyteller'")), "text"));
         a.put(fn("list_recent_audio", "List recent audio files on the phone (Downloads, WhatsApp audio/voice notes, Recordings, Music, picked files) with full paths, newest first.",
@@ -116,6 +118,7 @@ final class BrainTools {
                 try { return "RESEARCH RESULT:\n" + GeminiRest.research(ctx, q); }
                 catch (Exception e) { return "FAILED: research nahi hua — " + e.getMessage() + ". web_fetch se kisi site ko seedha padho ya web_search se browser kholo."; }
             }
+            case "find_best_tool":   return AiTools.findBest(ctx, args.optString("task", ""));
             case "web_fetch":        return Studio.webFetch(args.optString("url", ""), args.optInt("max_chars", 6000));
             case "generate_text":    return Studio.generateText(ctx, args.optString("task", ""), args.optString("kind", ""), args.optBoolean("save_file", false));
             case "generate_image":   return Studio.generateImage(ctx, args.optString("prompt", ""), args.optString("aspect", "9:16"), args.optString("folder", ""));

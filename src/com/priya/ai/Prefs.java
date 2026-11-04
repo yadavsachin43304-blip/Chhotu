@@ -90,6 +90,20 @@ public final class Prefs {
     public static boolean avatar3D(Context c) { return sp(c).getBoolean("avatar_3d", true); }
     public static void setAvatar3D(Context c, boolean v) { sp(c).edit().putBoolean("avatar_3d", v).apply(); }
 
+    /** v33 "Roz AI tools seekho": daily research of new AI tools, default ON at 09:00 Asia/Kolkata. */
+    public static boolean aiLearn(Context c) { return sp(c).getBoolean("ai_learn", true); }
+    public static void setAiLearn(Context c, boolean v) { sp(c).edit().putBoolean("ai_learn", v).apply(); }
+    public static int aiLearnHour(Context c) { return sp(c).getInt("ai_learn_h", 9); }
+    public static int aiLearnMinute(Context c) { return sp(c).getInt("ai_learn_m", 0); }
+    public static void setAiLearnTime(Context c, int h, int m) {
+        sp(c).edit().putInt("ai_learn_h", Math.max(0, Math.min(23, h))).putInt("ai_learn_m", Math.max(0, Math.min(59, m))).apply();
+    }
+    public static long aiLearnLast(Context c) { return sp(c).getLong("ai_learn_last", 0L); }
+    public static void setAiLearnLast(Context c, long v) { sp(c).edit().putLong("ai_learn_last", v).apply(); }
+    /** Last attempt (success or not) — limits the missed-day catch-up to one retry per 6 h. */
+    public static long aiLearnTry(Context c) { return sp(c).getLong("ai_learn_try", 0L); }
+    public static void setAiLearnTry(Context c, long v) { sp(c).edit().putLong("ai_learn_try", v).apply(); }
+
     public static String lastCrash(Context c) { return sp(c).getString("last_crash", ""); }
     public static void setLastCrash(Context c, String v) { sp(c).edit().putString("last_crash", v == null ? "" : v).commit(); }
 }

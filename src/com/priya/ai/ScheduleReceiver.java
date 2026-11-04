@@ -13,7 +13,12 @@ public class ScheduleReceiver extends BroadcastReceiver {
             if (id != null) TaskRunnerService.runSchedule(c, id);
             return;
         }
+        if (AiTools.ACTION_LEARN.equals(a)) {
+            TaskRunnerService.runLearning(c, false);
+            return;
+        }
         // BOOT_COMPLETED, LOCKED_BOOT_COMPLETED, MY_PACKAGE_REPLACED, SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
         try { Scheduler.rearmAll(c.getApplicationContext()); } catch (Throwable ignored) { }
+        try { AiTools.armLearning(c.getApplicationContext()); } catch (Throwable ignored) { }
     }
 }

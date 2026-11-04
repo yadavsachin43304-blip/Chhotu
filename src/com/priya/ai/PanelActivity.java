@@ -111,6 +111,14 @@ public class PanelActivity extends Activity {
         PriyaBus.appVisible = false;
     }
 
+    private String aiLearnInfo() {
+        long last = Prefs.aiLearnLast(this);
+        java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("d MMM, HH:mm", new Locale("en", "IN"));
+        f.setTimeZone(AiTools.IST);
+        return (Prefs.aiLearn(this) ? "Roz " + String.format(Locale.ROOT, "%02d:%02d", Prefs.aiLearnHour(this), Prefs.aiLearnMinute(this)) + " baje (India time)" : "Band hai")
+                + " • Pichhli baar seekha: " + (last > 0 ? f.format(new java.util.Date(last)) : "abhi tak nahi");
+    }
+
     private void toast(String s) { Toast.makeText(this, s, Toast.LENGTH_SHORT).show(); }
 
     private void start(Intent i) {
@@ -673,6 +681,34 @@ public class PanelActivity extends Activity {
                 "Priya ka live 3D chehra (palak jhapakna, sir hilana, bolte waqt honth). Band karo ya phone support na kare to purani tasveer dikhegi.",
                 Prefs.avatar3D(this), (b, on) -> Prefs.setAvatar3D(this, on)));
         content.addView(cf);
+
+        // ---- v33: daily AI tools learning
+        LinearLayout cl = Ui.card(this);
+        final TextView lInfo = Ui.text(this, aiLearnInfo(), 12.5f, Ui.SUB, false);
+        cl.addView(Ui.switchRow(this, "Roz AI tools seekho",
+                "ON: Priya roz tay time par naye AI tools / updates research karke apni AI Tools Guide mein notes jodti hai (purane notes archive hote hain, delete nahi).",
+                Prefs.aiLearn(this), (b, on) -> {
+                    Prefs.setAiLearn(this, on);
+                    AiTools.armLearning(this);
+                    lInfo.setText(aiLearnInfo());
+                }));
+        lInfo.setPadding(0, Ui.dp(this, 4), 0, 0);
+        cl.addView(lInfo);
+        Button lTime = Ui.button(this, "⏰  Time badlo", Ui.LINE, Ui.TEXT);
+        lTime.setOnClickListener(v -> new android.app.TimePickerDialog(this, (tp, h, m) -> {
+            Prefs.setAiLearnTime(this, h, m);
+            AiTools.armLearning(this);
+            lInfo.setText(aiLearnInfo());
+            toast("Roz " + String.format(Locale.ROOT, "%02d:%02d", h, m) + " baje (India time) ✓");
+        }, Prefs.aiLearnHour(this), Prefs.aiLearnMinute(this), true).show());
+        cl.addView(lTime, Ui.matchWrap(this, 10));
+        Button lNow = Ui.button(this, "📚  Abhi seekho", Ui.LINE, Ui.TEXT);
+        lNow.setOnClickListener(v -> {
+            TaskRunnerService.runLearning(this, true);
+            toast("Priya abhi seekh rahi hai — result notification mein aayega.");
+        });
+        cl.addView(lNow, Ui.matchWrap(this, 6));
+        content.addView(cl);
 
         LinearLayout c4 = Ui.card(this);
         c4.addView(Ui.text(this, "Status", 16, Ui.TEXT, true));

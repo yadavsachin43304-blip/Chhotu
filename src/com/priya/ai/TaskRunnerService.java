@@ -24,6 +24,7 @@ public class TaskRunnerService extends Service {
     static final String ACTION_SCHEDULE = "com.priya.ai.TASK_SCHEDULE";
     static final String ACTION_KEEPALIVE = "com.priya.ai.TASK_KEEPALIVE";
     static final String ACTION_RELEASE = "com.priya.ai.TASK_RELEASE";
+    static final String ACTION_LEARN = "com.priya.ai.TASK_LEARN";
     private static final int NOTIF_ID = 2;
 
     private static final AtomicInteger ACTIVE_RUNS = new AtomicInteger();
@@ -44,6 +45,17 @@ public class TaskRunnerService extends Service {
             PriyaJobs.notifyOwner(c, "⏰ Scheduled task nahi chal paaya", "\"" + GeminiRest.clip(task, 120)
                     + "\" — Android ne background start roka (" + e.getClass().getSimpleName() + "). Priya app kholo ya Schedules > 'Abhi chalao'.", id.hashCode());
             Scheduler.finished(c, id, "FAILED", "Android ne background start roka: " + e.getMessage(), manual);
+        }
+    }
+
+    /** Daily "Roz AI tools seekho" run (alarm) or a manual "Abhi seekho" from Settings. */
+    static void runLearning(Context c, boolean manual) {
+        Intent i = new Intent(c, TaskRunnerService.class).setAction(ACTION_LEARN).putExtra("manual", manual);
+        try {
+            if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i); else c.startService(i);
+        } catch (Throwable e) {
+            // background start refused: try again at the next daily time
+            try { AiTools.armLearning(c.getApplicationContext()); } catch (Throwable ignored) { }
         }
     }
 
@@ -79,7 +91,8 @@ public class TaskRunnerService extends Service {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? "" : String.valueOf(intent.getAction());
         try {
-            foreground(ACTION_SCHEDULE.equals(action) ? "Scheduled task chal raha hai…" : "Background kaam: " + (intent == null ? "" : intent.getStringExtra("what")));
+            foreground(ACTION_SCHEDULE.equals(action) ? "Scheduled task chal raha hai…"
+                    : ACTION_LEARN.equals(action) ? "Priya naye AI tools seekh rahi hai…" : "Background kaam: " + (intent == null ? "" : intent.getStringExtra("what")));
         } catch (Throwable e) {
             stopSelf();
             return START_NOT_STICKY;
@@ -98,6 +111,23 @@ public class TaskRunnerService extends Service {
                 try {
                     runOne(id, manual);
                 } finally {
+                    ACTIVE_RUNS.decrementAndGet();
+                    maybeStop();
+                }
+            });
+        } else if (ACTION_LEARN.equals(action)) {
+            final boolean manual = intent.getBooleanExtra("manual", false);
+            ACTIVE_RUNS.incrementAndGet();
+            pool.execute(() -> {
+                try {
+                    String r;
+                    try { r = AiTools.learnNow(this); } catch (Throwable e) { r = "FAILED: " + e.getMessage(); }
+                    if (manual || r.startsWith("VERIFIED")) {
+                        PriyaJobs.notifyOwner(this, r.startsWith("VERIFIED") ? "📚 Priya ne aaj naye AI tools seekhe" : "📚 AI tools seekhna fail hua",
+                                GeminiRest.clip(r.replaceFirst("^VERIFIED: [^\\n]*\\n?", ""), 600), 0x41494c);
+                    }
+                } finally {
+                    try { AiTools.armLearning(this); } catch (Throwable ignored) { }
                     ACTIVE_RUNS.decrementAndGet();
                     maybeStop();
                 }
