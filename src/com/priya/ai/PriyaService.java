@@ -462,7 +462,10 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
     @Override public void onClosed(int code, String reason, boolean afterSetup) {
         if (!running) return;
         thinking = false;
-        audio.interruptPlayback();
+        // A normal session rotation (goAway / reconnect after setup) must not cut her off mid-sentence:
+        // let the audio already received finish playing. Only a failed connect clears playback.
+        if (!afterSetup) audio.interruptPlayback();
+        audio.setGenerating(false);
         String low = reason == null ? "" : reason.toLowerCase(Locale.ROOT);
 
         if (afterSetup) {

@@ -75,7 +75,7 @@ public class AudioEngine {
     }
 
     public boolean isSpeaking() {
-        return SystemClock.elapsedRealtime() < speakEnd + TAIL_MS;
+        return SystemClock.elapsedRealtime() < speakEnd + TAIL_MS || !playQueue.isEmpty();
     }
 
     /** @return human readable echo-cancel status, or null if the microphone could not be opened. */
@@ -143,13 +143,21 @@ public class AudioEngine {
                         .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build())
-                .setBufferSizeInBytes(Math.max(outMin * 2, OUT_RATE))
+                // >= 4x min buffer and >= 400 ms: a late network packet or a GC pause can't drain the speaker
+                .setBufferSizeInBytes(Math.max(outMin * 4, OUT_RATE / 1000 * 400 * 2))
                 .setTransferMode(AudioTrack.MODE_STREAM)
+                // NONE (not LOW_LATENCY): the fast path's tiny buffers underrun on many phones = chopped voice
+                .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_NONE)
                 .build();
         track.play();
         if (natural) ensureMediaVolume();
         else setCommMode(true); // stays on for the whole session: no audio-route switch at every reply
 
+        framesWritten = 0;
+        headBase = 0;
+        lvlR = lvlW = 0;
+        cushionMs = CUSHION_START_MS;
+        flushReq++;
         running = true;
         micThread = new Thread(() -> micLoop(sink), "priya-mic");
         playThread = new Thread(this::playLoop, "priya-play");
@@ -173,11 +181,42 @@ public class AudioEngine {
     }
 
     // ------------------------------------------------------------------ playback
+    //
+    // Smooth playback design (v30):
+    //  * Network (ws-reader) thread only enqueues decoded PCM. ALL AudioTrack calls (write, fade, pause,
+    //    flush) happen on ONE dedicated URGENT_AUDIO thread, so an interruption can never race a write.
+    //  * Writes go out in 20 ms slices, so an interrupt / barge-in is honoured within ~20 ms and no stale
+    //    tail of an old reply is written after a flush.
+    //  * "Is Priya speaking?" comes from the real playback head (frames written - frames played), not from
+    //    when packets arrived. The old arrival-based estimate ended ~0.3-0.6 s early, the mic re-opened while
+    //    her last words were still coming out of the speaker, her own echo was sent to Gemini as user speech,
+    //    and the server "interrupted" her -> she stopped/stuttered mid-sentence.
+    //  * Adaptive jitter buffer: rebuffer ONLY when the AudioTrack has really drained (not when one network
+    //    packet is a bit late while 400 ms is still queued). Start cushion 250 ms; every real underrun grows
+    //    it by 100 ms up to 600 ms; a clean reply shrinks it back by 50 ms.
+    //  * Fades only at reply start (10 ms), resume after a real underrun (3 ms, from silence) and on
+    //    interruption (15 ms fade-out) - never at ordinary chunk boundaries.
+    //  * No allocations per chunk on the audio thread (reused cushion buffer, level ring).
+
+    private static final String TAG = "PriyaAudio";
+    private static final int FPMS = OUT_RATE / 1000;          // frames per ms (24)
+    private static final int SLICE_BYTES = 20 * FPMS * 2;     // 20 ms write slices
+    private static final int CUSHION_START_MS = 250, CUSHION_MAX_MS = 600, CUSHION_MIN_MS = 200;
 
     /** True while the server is still sending audio for the current reply. */
     private volatile boolean generating = false;
     /** After the user cuts Priya off, drop the rest of that old reply. */
     private volatile boolean dropOld = false;
+    /** Bumped by interruptPlayback(); the play thread fades out + flushes when it changes. */
+    private volatile int flushReq = 0;
+    /** Smoothed level of what is actually leaving the speaker now (16-bit RMS scale); barge-in reference. */
+    private volatile float outRms = 0f;
+    private volatile long replyStart = 0;
+    private volatile int cushionMs = CUSHION_START_MS;
+    /** Underruns detected by this engine (real drains mid-reply). */
+    public static volatile int underruns = 0;
+    /** AudioTrack.getUnderrunCount() (framework-level), for debugging. */
+    public static volatile int trackUnderruns = 0;
 
     public void setGenerating(boolean g) {
         generating = g;
@@ -189,48 +228,31 @@ public class AudioEngine {
         interruptPlayback();
     }
 
-    private volatile float outRms = 0f;
-    private volatile long replyStart = 0;
+    /** Output level 0..1 of the audio playing right now (also published as PriyaBus.outLevel). */
+    public float outputLevel() { return PriyaBus.outLevel; }
 
+    /** Called on the WebSocket thread: only bookkeeping + enqueue, never touches the AudioTrack. */
     public void playChunk(byte[] pcm24k) {
-        if (!running || pcm24k == null || pcm24k.length == 0 || dropOld) return;
-        float r = rmsBytes(pcm24k);
-        outRms = Math.max(r, outRms * 0.9f);
-        if (SystemClock.elapsedRealtime() > speakEnd + 300) replyStart = SystemClock.elapsedRealtime();
-        if (!natural) setCommMode(true);
+        if (!running || pcm24k == null || pcm24k.length < 2 || dropOld) return;
         long now = SystemClock.elapsedRealtime();
-        long ms = pcm24k.length / 2 / (OUT_RATE / 1000);
-        speakEnd = Math.max(speakEnd, now) + ms;
-        PriyaBus.outLevel = Math.min(1f, rmsBytes(pcm24k) / 7000f);
+        if (now > speakEnd + 300) replyStart = now;
+        if (!natural) setCommMode(true);
+        // mark "speaking" right away (echo guard closes the mic); the play thread then keeps speakEnd
+        // in step with the real playback head.
+        speakEnd = Math.max(speakEnd, now + 120);
         playQueue.offer(pcm24k);
     }
 
+    /** Thread-safe, non-blocking: the play thread fades out + flushes within ~20 ms. */
     public void interruptPlayback() {
         playQueue.clear();
-        playIdle = true;
-        boolean wasPlaying = SystemClock.elapsedRealtime() < speakEnd;
+        flushReq++;
         speakEnd = SystemClock.elapsedRealtime();
-        try {
-            AudioTrack t = track;
-            if (t != null && wasPlaying) {
-                // ~15 ms fade-out before stopping, so a cut-off reply ends without a click
-                for (int k = 5; k >= 0; k--) {
-                    t.setVolume(k / 5f);
-                    SystemClock.sleep(3);
-                }
-            }
-            if (track != null) {
-                track.pause();
-                track.flush();
-                track.setVolume(1f);
-                track.play();
-            }
-        } catch (Exception ignored) { }
     }
 
     /** Linear fade-in over the first ms of 24 kHz 16-bit mono PCM (in place). */
-    private static void fadeIn(byte[] b, int ms) {
-        int n = Math.min(b.length / 2, OUT_RATE / 1000 * ms);
+    private static void fadeIn(byte[] b, int len, int ms) {
+        int n = Math.min(len / 2, FPMS * ms);
         for (int i = 0; i < n; i++) {
             int s = (short) ((b[2 * i] & 0xff) | (b[2 * i + 1] << 8));
             s = s * i / n;
@@ -239,50 +261,166 @@ public class AudioEngine {
         }
     }
 
-    private volatile boolean playIdle = true;
-    private volatile long lastWriteMs = 0;
+    // play-thread state
+    private long framesWritten = 0;
+    private long headBase = 0;
+    private byte[] cushion = new byte[64 * 1024];
+    private static final int RING = 128;
+    private final long[] lvlFrame = new long[RING];
+    private final float[] lvlVal = new float[RING];
+    private int lvlW = 0, lvlR = 0;
+
+    private long head(AudioTrack t) {
+        try { return (t.getPlaybackHeadPosition() & 0xFFFFFFFFL) - headBase; } catch (Throwable e) { return framesWritten; }
+    }
+
+    /** Frames written but not yet played. */
+    private long pendingFrames(AudioTrack t) {
+        long p = framesWritten - head(t);
+        return p < 0 ? 0 : Math.min(p, framesWritten);
+    }
+
+    /** Publish the level of the slice now at the playback head (lip-sync for the face / 3D avatar). */
+    private void publishLevel(AudioTrack t, long now) {
+        long h = framesWritten - pendingFrames(t);
+        float lv = -1f;
+        while (lvlR != lvlW && lvlFrame[lvlR % RING] <= h) { lv = lvlVal[lvlR % RING]; lvlR++; }
+        if (lv >= 0f) {
+            outRms = Math.max(lv, outRms * 0.97f); // slow decay: echo between her words never looks like a barge-in
+            PriyaBus.outLevel = Math.min(1f, lv / 7000f);
+        }
+        long pend = pendingFrames(t);
+        if (pend > 0) speakEnd = Math.max(speakEnd, now + pend / FPMS);
+    }
+
+    private void doFlush(AudioTrack t, boolean audible) {
+        try {
+            if (audible) {
+                for (int k = 5; k >= 0; k--) { t.setVolume(k / 5f); SystemClock.sleep(3); } // ~15 ms fade-out
+            }
+            t.pause();
+            t.flush();
+            headBase = t.getPlaybackHeadPosition() & 0xFFFFFFFFL;
+            framesWritten = 0;
+            t.setVolume(1f);
+            t.play();
+        } catch (Throwable ignored) { }
+        lvlR = lvlW;
+        outRms = 0f;
+        PriyaBus.outLevel = 0f;
+        speakEnd = SystemClock.elapsedRealtime();
+    }
+
+    /** Writes len bytes in 20 ms slices. Returns false if an interrupt arrived (rest dropped). */
+    private boolean writeSliced(AudioTrack t, byte[] b, int len, int myFlush) {
+        int off = 0;
+        while (off < len && running) {
+            if (flushReq != myFlush) return false;
+            int n = Math.min(SLICE_BYTES, len - off);
+            n &= ~1;
+            if (n <= 0) break;
+            // level of this slice, stamped with the frame index where it will play
+            double sum = 0;
+            for (int i = off; i + 1 < off + n; i += 2) {
+                int s = (short) ((b[i] & 0xff) | (b[i + 1] << 8));
+                sum += (double) s * s;
+            }
+            lvlFrame[lvlW % RING] = framesWritten;
+            lvlVal[lvlW % RING] = (float) Math.sqrt(sum / (n / 2));
+            lvlW++;
+            if (lvlW - lvlR > RING) lvlR = lvlW - RING;
+            int w = t.write(b, off, n); // blocking; at most ~one slice of waiting
+            if (w < 0) return false;
+            off += w;
+            framesWritten += w / 2;
+            publishLevel(t, SystemClock.elapsedRealtime());
+        }
+        return true;
+    }
 
     private void playLoop() {
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
+        int handledFlush = flushReq;
+        boolean started = false;     // false = track drained, next audio needs a cushion
+        boolean hadUnderrun = false; // in the current reply
+        long lastAudioEnd = 0;       // when the track last drained
+        boolean drainedWhileGen = false;
         while (running) {
-            byte[] b;
-            try {
-                b = playQueue.poll(60, TimeUnit.MILLISECONDS);
-                // queue ran dry (network hiccup): build a fresh cushion before playing on, instead of stuttering
-                if (b == null) { playIdle = true; continue; }
-                if (playIdle) {
-                    // Start of a reply: build a ~300 ms cushion so the first words never stutter.
-                    // Mid-reply network hiccup: only a short ~120 ms cushion, so no long robotic gaps.
-                    boolean newReply = SystemClock.elapsedRealtime() - lastWriteMs > 600;
-                    int wantBytes = (newReply ? 300 : 120) * (OUT_RATE / 1000) * 2;
-                    java.io.ByteArrayOutputStream acc = new java.io.ByteArrayOutputStream();
-                    acc.write(b, 0, b.length);
-                    long until = SystemClock.elapsedRealtime() + (newReply ? 320 : 140);
-                    while (acc.size() < wantBytes && SystemClock.elapsedRealtime() < until && running) {
-                        byte[] more = playQueue.poll(20, TimeUnit.MILLISECONDS);
-                        if (more != null) acc.write(more, 0, more.length);
-                    }
-                    b = acc.toByteArray();
-                    playIdle = false;
-                    fadeIn(b, newReply ? 15 : 5); // no click when the voice starts
-
-                }
-            } catch (InterruptedException e) {
-                break;
-            }
-            if (b == null) continue;
             AudioTrack t = track;
             if (t == null) break;
-            int off = 0;
-            try {
-                while (off < b.length && running) {
-                    int w = t.write(b, off, b.length - off);
-                    if (w < 0) break;
-                    off += w;
+            long now = SystemClock.elapsedRealtime();
+            if (flushReq != handledFlush) {
+                handledFlush = flushReq;
+                doFlush(t, pendingFrames(t) > 0);
+                started = false;
+                hadUnderrun = false;
+                lastAudioEnd = now;
+                continue;
+            }
+            publishLevel(t, now);
+
+            byte[] b;
+            try { b = playQueue.poll(10, TimeUnit.MILLISECONDS); } catch (InterruptedException e) { break; }
+
+            if (b == null) {
+                if (started && pendingFrames(t) < FPMS * 15) {
+                    // the track has (almost) run dry: either the reply ended or the network fell behind
+                    started = false;
+                    lastAudioEnd = SystemClock.elapsedRealtime();
+                    drainedWhileGen = generating;
+                    PriyaBus.outLevel = 0f;
+                    try { trackUnderruns = t.getUnderrunCount(); } catch (Throwable ignored) { }
                 }
-                lastWriteMs = SystemClock.elapsedRealtime() + (b.length / 2) / (OUT_RATE / 1000);
-            } catch (Throwable ignored) { break; }
+                continue;
+            }
+            int len = b.length & ~1;
+            byte[] data = b;
+            if (!started) {
+                // Build a cushion before (re)starting, so the voice never chops. Stops early when the reply has
+                // fully arrived (short replies start at once) or after a timeout.
+                boolean newReply = SystemClock.elapsedRealtime() - lastAudioEnd > 600 || lastAudioEnd == 0;
+                if (!newReply && drainedWhileGen) {
+                    // audio of the SAME reply came back after the speaker ran dry = a real underrun
+                    hadUnderrun = true;
+                    underruns++;
+                    cushionMs = Math.min(CUSHION_MAX_MS, cushionMs + 100);
+                    android.util.Log.w(TAG, "underrun #" + underruns + " (AudioTrack " + trackUnderruns + "), cushion -> " + cushionMs + " ms");
+                } else if (newReply && lastAudioEnd != 0) {
+                    if (!hadUnderrun) cushionMs = Math.max(CUSHION_MIN_MS, cushionMs - 50);
+                    android.util.Log.i(TAG, "new reply; underruns=" + underruns + " AudioTrack=" + trackUnderruns + " cushion=" + cushionMs + " ms");
+                    hadUnderrun = false;
+                }
+                drainedWhileGen = false;
+                int want = (newReply ? cushionMs : Math.max(150, cushionMs)) * FPMS * 2;
+                long until = SystemClock.elapsedRealtime() + want / (FPMS * 2) + 150;
+                int clen = 0;
+                clen = append(clen, b, len);
+                boolean cut = false;
+                while (clen < want && running && SystemClock.elapsedRealtime() < until) {
+                    if (flushReq != handledFlush) { cut = true; break; }
+                    byte[] more;
+                    try { more = playQueue.poll(10, TimeUnit.MILLISECONDS); } catch (InterruptedException e) { more = null; }
+                    if (more != null) clen = append(clen, more, more.length & ~1);
+                    else if (!generating && playQueue.isEmpty()) break; // whole reply is here
+                }
+                if (cut || !running) continue;
+                fadeIn(cushion, clen, newReply ? 10 : 3); // from silence only: no click
+                data = cushion;
+                len = clen;
+                started = true;
+            }
+            if (!writeSliced(t, data, len, handledFlush)) continue; // interrupted: loop top flushes
         }
+    }
+
+    private int append(int clen, byte[] src, int n) {
+        if (clen + n > cushion.length) {
+            byte[] c = new byte[Math.max(cushion.length * 2, clen + n)];
+            System.arraycopy(cushion, 0, c, 0, clen);
+            cushion = c;
+        }
+        System.arraycopy(src, 0, cushion, clen, n);
+        return clen + n;
     }
 
     private static float rmsBytes(byte[] b) {
@@ -450,6 +588,18 @@ public class AudioEngine {
         return ownerVoice(pitches);
     }
 
+    /** Barge-in check while Priya speaks: owner voice at a raised threshold (verifier) / normal pitch range. */
+    private boolean bargeOwner(java.util.List<Float> pitches, java.util.List<float[]> mfcc) {
+        SpeakerVerifier v = verifier;
+        if (v != null) {
+            if (mfcc == null || mfcc.size() < 10) return false;
+            float c = v.confidence(mfcc, median(pitches));
+            lastConfidence = c;
+            return c >= Math.min(0.9f, acceptConf + 0.1f);
+        }
+        return ownerVoice(pitches);
+    }
+
     private boolean ownerVoice(java.util.List<Float> pitches) {
         if (ownerF0 <= 0f) return true;
         float m = median(pitches);
@@ -560,10 +710,12 @@ public class AudioEngine {
 
             if (speaking && strictEcho) {
                 // Barge-in (roka-toki): a clearly loud, sustained voice (the owner's, if voice lock is on) cuts Priya off.
-                float bargeThr = Math.max(MIN_THR * 5f, Math.max(floor * mult * 6f, outRms * (natural ? 2.0f : 1.3f)));
+                float bargeThr = Math.max(MIN_THR * 5f, Math.max(floor * mult * 6f, outRms * (natural ? 2.4f : 1.5f)));
                 boolean grace = SystemClock.elapsedRealtime() - replyStart < 900;
                 bargeLoud = (!grace && rms > bargeThr) ? bargeLoud + 1 : Math.max(0, bargeLoud - 2);
-                if (bargeLoud >= (natural ? 30 : 25) && (!lockOn() || ownerVoice(new java.util.ArrayList<>(recentPitch), new java.util.ArrayList<>(recentMfcc)))) {
+                // sustained (~0.7 s) loud speech, and with voice lock: the owner's voice at a STRICTER confidence
+                // than normal listening, so her own echo through the speaker can't cut her off.
+                if (bargeLoud >= (natural ? 35 : 28) && (!lockOn() || bargeOwner(new java.util.ArrayList<>(recentPitch), new java.util.ArrayList<>(recentMfcc)))) {
                     bargeLoud = 0;
                     bargeIn();
                     inSpeech = true; deciding = false; rejected = false; uttFrames = 0; ownerUtt = false;
