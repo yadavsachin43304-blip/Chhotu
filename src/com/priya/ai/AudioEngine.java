@@ -65,6 +65,8 @@ public class AudioEngine {
 
     private boolean strictEcho = true;
     private boolean forceSpeaker = true;
+    /** true = play through the normal assistant/media path (full-quality 24 kHz, no call processing). */
+    private boolean natural = true;
     private float mult = 2.15f;
 
     public AudioEngine(Context ctx) {
@@ -78,7 +80,12 @@ public class AudioEngine {
 
     /** @return human readable echo-cancel status, or null if the microphone could not be opened. */
     public String start(MicSink sink, boolean strictEcho, int sensitivity, boolean forceSpeaker) {
+        return start(sink, strictEcho, sensitivity, forceSpeaker, true);
+    }
+
+    public String start(MicSink sink, boolean strictEcho, int sensitivity, boolean forceSpeaker, boolean naturalVoice) {
         this.strictEcho = strictEcho;
+        this.natural = naturalVoice;
         this.forceSpeaker = forceSpeaker;
         this.mult = Math.max(1.3f, 3.0f - 0.17f * sensitivity);
 
@@ -120,12 +127,15 @@ public class AudioEngine {
         info.append("AEC ").append(aec != null ? "on" : "n/a")
                 .append(" | NS ").append(ns != null ? "on" : "n/a")
                 .append(" | AGC ").append(agc != null ? "on" : "n/a")
-                .append(strictEcho ? " | echo guard on" : " | echo guard off");
+                .append(strictEcho ? " | echo guard on" : " | echo guard off")
+                .append(natural ? " | HD voice 24kHz" : " | call-mode voice");
 
         int outMin = AudioTrack.getMinBufferSize(OUT_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
         track = new AudioTrack.Builder()
                 .setAudioAttributes(new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        // Call path (VOICE_COMMUNICATION) band-limits + processes speech on many phones,
+                        // which makes Priya sound tinny/robotic. HD mode keeps her real 24 kHz voice untouched.
+                        .setUsage(natural ? AudioAttributes.USAGE_ASSISTANT : AudioAttributes.USAGE_VOICE_COMMUNICATION)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build())
                 .setAudioFormat(new AudioFormat.Builder()
@@ -137,7 +147,8 @@ public class AudioEngine {
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build();
         track.play();
-        setCommMode(true); // stays on for the whole session: no audio-route switch at every reply
+        if (natural) ensureMediaVolume();
+        else setCommMode(true); // stays on for the whole session: no audio-route switch at every reply
 
         running = true;
         micThread = new Thread(() -> micLoop(sink), "priya-mic");
@@ -186,7 +197,7 @@ public class AudioEngine {
         float r = rmsBytes(pcm24k);
         outRms = Math.max(r, outRms * 0.9f);
         if (SystemClock.elapsedRealtime() > speakEnd + 300) replyStart = SystemClock.elapsedRealtime();
-        setCommMode(true);
+        if (!natural) setCommMode(true);
         long now = SystemClock.elapsedRealtime();
         long ms = pcm24k.length / 2 / (OUT_RATE / 1000);
         speakEnd = Math.max(speakEnd, now) + ms;
@@ -208,6 +219,7 @@ public class AudioEngine {
     }
 
     private volatile boolean playIdle = true;
+    private volatile long lastWriteMs = 0;
 
     private void playLoop() {
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
@@ -218,10 +230,14 @@ public class AudioEngine {
                 // queue ran dry (network hiccup): build a fresh cushion before playing on, instead of stuttering
                 if (b == null) { playIdle = true; continue; }
                 if (playIdle) {
+                    // Start of a reply: build a ~300 ms cushion so the first words never stutter.
+                    // Mid-reply network hiccup: only a short ~120 ms cushion, so no long robotic gaps.
+                    boolean newReply = SystemClock.elapsedRealtime() - lastWriteMs > 600;
+                    int wantBytes = (newReply ? 300 : 120) * (OUT_RATE / 1000) * 2;
                     java.io.ByteArrayOutputStream acc = new java.io.ByteArrayOutputStream();
                     acc.write(b, 0, b.length);
-                    long until = SystemClock.elapsedRealtime() + 260;
-                    while (acc.size() < OUT_RATE / 2 && SystemClock.elapsedRealtime() < until && running) { // ~250 ms cushion
+                    long until = SystemClock.elapsedRealtime() + (newReply ? 320 : 140);
+                    while (acc.size() < wantBytes && SystemClock.elapsedRealtime() < until && running) {
                         byte[] more = playQueue.poll(20, TimeUnit.MILLISECONDS);
                         if (more != null) acc.write(more, 0, more.length);
                     }
@@ -241,6 +257,7 @@ public class AudioEngine {
                     if (w < 0) break;
                     off += w;
                 }
+                lastWriteMs = SystemClock.elapsedRealtime() + (b.length / 2) / (OUT_RATE / 1000);
             } catch (Throwable ignored) { break; }
         }
     }
@@ -257,6 +274,16 @@ public class AudioEngine {
     }
 
     // ------------------------------------------------------------------ audio routing
+
+    /** HD mode plays on the media/assistant stream: make sure it is audible (only raises a very low volume). */
+    private void ensureMediaVolume() {
+        try {
+            int max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+            if (am.getStreamVolume(AudioManager.STREAM_MUSIC) < max * 0.3) {
+                am.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (max * 0.6), 0);
+            }
+        } catch (Exception ignored) { }
+    }
 
     private synchronized void setCommMode(boolean on) {
         if (am == null || on == commMode) return;
@@ -449,10 +476,10 @@ public class AudioEngine {
 
             if (speaking && strictEcho) {
                 // Barge-in (roka-toki): a clearly loud, sustained voice (the owner's, if voice lock is on) cuts Priya off.
-                float bargeThr = Math.max(MIN_THR * 5f, Math.max(floor * mult * 6f, outRms * 1.3f));
+                float bargeThr = Math.max(MIN_THR * 5f, Math.max(floor * mult * 6f, outRms * (natural ? 2.0f : 1.3f)));
                 boolean grace = SystemClock.elapsedRealtime() - replyStart < 900;
                 bargeLoud = (!grace && rms > bargeThr) ? bargeLoud + 1 : Math.max(0, bargeLoud - 2);
-                if (bargeLoud >= 25 && (ownerF0 <= 0f || ownerVoice(new java.util.ArrayList<>(recentPitch)))) {
+                if (bargeLoud >= (natural ? 30 : 25) && (ownerF0 <= 0f || ownerVoice(new java.util.ArrayList<>(recentPitch)))) {
                     bargeLoud = 0;
                     bargeIn();
                     inSpeech = true; deciding = false; rejected = false; uttFrames = 0;

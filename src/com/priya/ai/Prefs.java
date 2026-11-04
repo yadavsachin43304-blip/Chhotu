@@ -11,8 +11,13 @@ public final class Prefs {
             "gemini-3.1-flash-live-preview",
             "gemini-2.5-flash-native-audio-preview-12-2025"
     };
-    /** Female prebuilt Gemini voices. */
-    public static final String[] VOICES = {"Sulafat", "Aoede", "Kore", "Leda", "Zephyr", "Autonoe", "Achernar", "Vindemiatrix"};
+    /**
+     * Priya has exactly ONE voice. Every setup / reconnect / fallback / test uses this same female voice,
+     * so she never sounds like a different person between sessions.
+     */
+    public static final String VOICE = "Kore";
+    /** Kept only so old code paths compile; the voice is pinned to VOICE. */
+    public static final String[] VOICES = {VOICE};
     public static final String[] THEME_NAMES = {"Hologram", "Cyber", "Anime"};
 
     private Prefs() {}
@@ -33,8 +38,9 @@ public final class Prefs {
         sp(c).edit().putString("good_model", model).putBoolean("good_full", full).apply();
     }
 
-    public static String voice(Context c) { return sp(c).getString("voice", VOICES[0]); }
-    public static void setVoice(Context c, String v) { sp(c).edit().putString("voice", v).apply(); }
+    /** Always the one pinned female voice (an old saved choice is ignored on purpose). */
+    public static String voice(Context c) { return VOICE; }
+    public static void setVoice(Context c, String v) { /* voice is pinned */ }
 
     public static int theme(Context c) { return sp(c).getInt("theme", 0); }
     public static void setTheme(Context c, int t) { sp(c).edit().putInt("theme", t).apply(); }
@@ -45,6 +51,13 @@ public final class Prefs {
     /** While Priya is speaking the mic is not streamed (no echo loop). */
     public static boolean strictEcho(Context c) { return sp(c).getBoolean("strict_echo", true); }
     public static void setStrictEcho(Context c, boolean v) { sp(c).edit().putBoolean("strict_echo", v).apply(); }
+
+    /**
+     * Natural HD voice: play Priya through the normal (assistant/media) audio path at full 24 kHz quality
+     * instead of the phone-call path, which on many phones band-limits and processes speech (tinny/robotic).
+     */
+    public static boolean naturalVoice(Context c) { return sp(c).getBoolean("natural_voice", true); }
+    public static void setNaturalVoice(Context c, boolean v) { sp(c).edit().putBoolean("natural_voice", v).apply(); }
 
     public static boolean forceSpeaker(Context c) { return sp(c).getBoolean("force_speaker", true); }
     public static void setForceSpeaker(Context c, boolean v) { sp(c).edit().putBoolean("force_speaker", v).apply(); }

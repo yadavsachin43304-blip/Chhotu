@@ -31,6 +31,26 @@ public final class SkillStore {
         if (!dir.exists()) dir.mkdirs();
         seed();
         seedV2();
+        seedV3();
+    }
+
+    /** v26: truthful phone control (verify every step, press_send for messages, problem-solving loop). */
+    private void seedV3() {
+        File marker = new File(dir, ".seeded_v3");
+        if (marker.exists()) return;
+        save("Phone Control",
+                "Phone Manager: kisi bhi app mein koi bhi kaam step-by-step — app kholna, tap, type, message bhejna, scroll, drag, popups, verify, sach wali report.",
+                "Sachin ka koi bhi phone order (sirf unke saaf order par):\n"
+                        + "1. SAMJHO: order shabd-ba-shabd suno. Goal aur 'done' ki pehchaan tay karo (kaam ke baad screen par kya dikhna chahiye). Kuch adhoora ho to EK chhota sawaal.\n"
+                        + "2. PLAN: 2 se zyada steps ho to task_plan, Sachin ko ek line mein plan.\n"
+                        + "3. Har step: DEKHO (read_screen / look_at_screen) > KARO (open_app, click_on_screen, tap_at, swipe, type_text, scroll_until) > JAANCHO (tool result + read_screen / wait_for_text) > task_progress.\n"
+                        + "4. Sirf 'VERIFIED' / 'VERIFIED_SENT' result hi kaam hone ka saboot hai. FAILED / NOT_SENT / NO_CHANGE / UNVERIFIED = kaam nahi hua — 'ho gaya' kabhi mat bolo.\n"
+                        + "5. MESSAGE / PROMPT BHEJNA: sahi chat kholo > read_screen se sahi contact pakka > type_text (Sachin ke exact shabd) > Sachin ki haan (agar pehle se 'bhej do' na kaha ho) > press_send(expect_text) > VERIFIED_SENT aaye tabhi 'bhej diya'.\n"
+                        + "6. FAIL ho to wajah socho (popup? galat screen? label Hindi mein? scroll? load ho raha?) aur doosra tareeka: dismiss_popup, back, scroll_until, doosra label, index, look_at_screen + tap_at, wait_for_text. Same cheez same tareeke se dobara nahi. Ek step 3 alag koshish ke baad bhi fail > ruk kar Sachin ko batao kya try kiya.\n"
+                        + "7. Popup: dismiss_popup. Ad/Sponsored/Install/Buy/Subscribe kabhi nahi. Call, post, payment, account/settings: aakhri button se pehle Sachin se haan.\n"
+                        + "8. Delete/remove/reset/uninstall/format/clear data hamesha mana.\n"
+                        + "9. Beech mein 1 line status; aakhir mein 1-2 line professional report: kya kiya, kya verify hua, kya bacha. Order ke bahar kuch extra mat karo.");
+        try { marker.createNewFile(); } catch (Exception ignored) { }
     }
 
     /** v25: manager-mode skills (CapCut, coding agent, phone manager). Runs once on existing installs too. */

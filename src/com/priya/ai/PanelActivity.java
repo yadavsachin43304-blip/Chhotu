@@ -315,26 +315,11 @@ public class PanelActivity extends Activity {
 
         LinearLayout c3 = Ui.card(this);
         c3.addView(Ui.text(this, "Priya ki awaaz (female voice)", 16, Ui.TEXT, true));
-        chosenVoice = Prefs.voice(this);
-        voiceChips = new TextView[Prefs.VOICES.length];
-        LinearLayout row = null;
-        for (int i = 0; i < Prefs.VOICES.length; i++) {
-            if (i % 3 == 0) {
-                row = new LinearLayout(this);
-                row.setOrientation(LinearLayout.HORIZONTAL);
-                c3.addView(row, Ui.matchWrap(this, 8));
-            }
-            final String v = Prefs.VOICES[i];
-            final TextView ch = chip(v, v.equals(chosenVoice));
-            voiceChips[i] = ch;
-            ch.setOnClickListener(x -> {
-                chosenVoice = v;
-                for (int k = 0; k < voiceChips.length; k++) styleChip(voiceChips[k], Prefs.VOICES[k].equals(v));
-            });
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-            lp.setMargins(Ui.dp(this, 3), 0, Ui.dp(this, 3), 0);
-            row.addView(ch, lp);
-        }
+        chosenVoice = Prefs.VOICE;
+        TextView vh = Ui.text(this, "Ek hi pakki female awaaz: " + Prefs.VOICE
+                + ". Har connection / reconnect par yahi awaaz rehti hai, kabhi nahi badalti.", 12.5f, Ui.SUB, false);
+        vh.setPadding(0, Ui.dp(this, 4), 0, 0);
+        c3.addView(vh);
         content.addView(c3);
 
         Button save = Ui.button(this, "Save karo", Ui.ACCENT, 0xFF06202A);
@@ -498,6 +483,10 @@ public class PanelActivity extends Activity {
         c1.addView(Ui.switchRow(this, "Speaker se bolna",
                 "Headphone ya Bluetooth laga ho to wahi use hota hai.",
                 Prefs.forceSpeaker(this), (b, on) -> Prefs.setForceSpeaker(this, on)));
+        c1.addView(Ui.switchRow(this, "Natural HD awaaz",
+                "ON (best): Priya ki asli 24 kHz awaaz, bina phone-call wali processing ke — robotic nahi lagegi. "
+                        + "Agar Priya apni hi awaaz sun kar khud ko rokne lage to OFF karo (call mode, strong echo cancel).",
+                Prefs.naturalVoice(this), (b, on) -> Prefs.setNaturalVoice(this, on)));
         content.addView(c1);
 
         LinearLayout c2 = Ui.card(this);

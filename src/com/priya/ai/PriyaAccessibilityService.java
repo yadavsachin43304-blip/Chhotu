@@ -208,8 +208,15 @@ public class PriyaAccessibilityService extends AccessibilityService {
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text);
         boolean ok = target.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args);
         if (!ok) return "SET_TEXT_FAILED";
-        String extra = "";
+        // VERIFY: read the field back and check our text is really in it
+        SystemClock.sleep(200);
+        String now = fieldText(target);
+        if (!sameText(now, text)) {
+            return "SET_TEXT_UNVERIFIED: field mein ab '" + clip(now, 80) + "' dikh raha hai, '" + clip(text, 40) + "' nahi";
+        }
+        String extra = " VERIFIED: field mein '" + clip(text, 60) + "' likha dikh raha hai";
         if (pressEnter) {
+            String sigBefore = screenSig();
             SystemClock.sleep(250);
             boolean entered = false;
             if (Build.VERSION.SDK_INT >= 30) {
@@ -217,7 +224,14 @@ public class PriyaAccessibilityService extends AccessibilityService {
                     entered = target.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId());
                 } catch (Throwable ignored) { }
             }
-            extra = entered ? " +ENTER" : " (Enter nahi dab paya: keyboard ke search/enter button ya 'Search' par tap karo)";
+            if (!entered) {
+                extra += "; ENTER NAHI DABA (keyboard ka search/enter ya 'Search'/'Send' button tap karo)";
+            } else {
+                SystemClock.sleep(900);
+                boolean changed = !screenSig().equals(sigBefore);
+                extra += changed ? "; Enter dabaya aur screen badli (read_screen se result dekho)"
+                        : "; Enter dabaya par SCREEN NAHI BADLI — submit shayad nahi hua, read_screen se check karo";
+            }
         }
         return "OK" + extra;
     }
@@ -357,6 +371,172 @@ public class PriyaAccessibilityService extends AccessibilityService {
         String d = str(n.getContentDescription()).trim();
         if (!d.isEmpty()) return d;
         return hint(n).trim();
+    }
+
+
+    // ------------------------------------------------------------------ truth checks (no false "ho gaya")
+
+    static String clip(String s, int n) {
+        if (s == null) return "";
+        s = s.replace('\n', ' ').trim();
+        return s.length() <= n ? s : s.substring(0, n) + "…";
+    }
+
+    private static String normText(String s) {
+        if (s == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (char c : s.toLowerCase(Locale.ROOT).toCharArray()) if (Character.isLetterOrDigit(c)) sb.append(c);
+        return sb.toString();
+    }
+
+    /** true when `have` really contains (the start of) `want`, ignoring spaces/punctuation/case. */
+    static boolean sameText(String have, String want) {
+        String h = normText(have), w = normText(want);
+        if (w.isEmpty()) return h.isEmpty();
+        if (w.length() > 24) w = w.substring(0, 24);
+        return h.contains(w);
+    }
+
+    /** Real text inside an input (empty when it only shows its hint). */
+    private static String fieldText(AccessibilityNodeInfo n) {
+        if (n == null) return "";
+        try { n.refresh(); } catch (Throwable ignored) { }
+        if (Build.VERSION.SDK_INT >= 26) {
+            try { if (n.isShowingHintText()) return ""; } catch (Throwable ignored) { }
+        }
+        String t = str(n.getText());
+        String h = hint(n);
+        if (!h.isEmpty() && t.equals(h)) return "";
+        return t;
+    }
+
+    /** The message/prompt input on screen now: focused one first, else the lowest visible editable. Null if none. */
+    public AccessibilityNodeInfo messageInput() {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        AccessibilityNodeInfo f = root == null ? null : root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (f != null && f.isEditable()) return f;
+        AccessibilityNodeInfo best = null;
+        int bestY = -1;
+        for (AccessibilityNodeInfo r : roots()) {
+            List<AccessibilityNodeInfo> eds = new ArrayList<>();
+            collectEditables(r, eds, 0);
+            for (AccessibilityNodeInfo e : eds) {
+                int y = bounds(e).centerY();
+                if (y > bestY) { bestY = y; best = e; }
+            }
+        }
+        return best;
+    }
+
+    private void collectEditables(AccessibilityNodeInfo n, List<AccessibilityNodeInfo> out, int depth) {
+        if (n == null || depth > 45) return;
+        if (n.isEditable() && n.isVisibleToUser()) out.add(n);
+        for (int i = 0; i < n.getChildCount(); i++) collectEditables(n.getChild(i), out, depth + 1);
+    }
+
+    public String inputText() {
+        AccessibilityNodeInfo in = messageInput();
+        return in == null ? null : fieldText(in);
+    }
+
+    /** Is the text visible somewhere that is NOT an input box (i.e. as a sent message bubble / result)? */
+    public boolean visibleOutsideInput(String text) {
+        String w = normText(text);
+        if (w.isEmpty()) return false;
+        if (w.length() > 24) w = w.substring(0, 24);
+        for (AccessibilityNodeInfo r : roots()) if (findNonEditable(r, w, 0)) return true;
+        return false;
+    }
+
+    private boolean findNonEditable(AccessibilityNodeInfo n, String w, int depth) {
+        if (n == null || depth > 45) return false;
+        if (n.isVisibleToUser() && !n.isEditable()) {
+            String t = normText(str(n.getText()) + " " + str(n.getContentDescription()));
+            if (t.contains(w)) return true;
+        }
+        for (int i = 0; i < n.getChildCount(); i++) if (findNonEditable(n.getChild(i), w, depth + 1)) return true;
+        return false;
+    }
+
+    /** Cheap fingerprint of what is on screen, to tell whether an action changed anything. */
+    public String screenSig() {
+        String d = dumpScreen(3500);
+        int k = d.indexOf('\n');
+        return currentPackage + ":" + (k >= 0 ? d.substring(k + 1) : d).hashCode();
+    }
+
+    private static final String[] SEND_IDS = {"send", "send_button", "btn_send", "sendbutton", "send_btn", "button_send",
+            "composer_send_button", "send_message_button", "entry_send", "send_container", "submit", "fab_send"};
+    private static final String[] SEND_WORDS = {"send", "send message", "send prompt", "submit", "भेजें", "भेजो", "bhejo", "भेजें बटन"};
+
+    static boolean sendLike(String label) {
+        if (label == null) return false;
+        String l = label.trim().toLowerCase(Locale.ROOT);
+        if (l.isEmpty() || l.length() > 30) return false;
+        for (String w : SEND_WORDS) if (l.equals(w)) return true;
+        return l.startsWith("send ") || l.equals("send") || l.contains("भेज");
+    }
+
+    private void collectSend(AccessibilityNodeInfo n, List<AccessibilityNodeInfo> out, int depth) {
+        if (n == null || depth > 45) return;
+        if (n.isVisibleToUser() && !n.isEditable()) {
+            String id = shortId(n).toLowerCase(Locale.ROOT);
+            boolean idHit = false;
+            for (String s : SEND_IDS) if (id.equals(s)) { idHit = true; break; }
+            if (idHit || sendLike(str(n.getContentDescription())) || sendLike(str(n.getText()))) out.add(n);
+        }
+        for (int i = 0; i < n.getChildCount(); i++) collectSend(n.getChild(i), out, depth + 1);
+    }
+
+    /**
+     * Presses the Send button of the open chat/prompt box and checks the screen afterwards.
+     * VERIFIED_SENT only when the input emptied AND the text shows up outside the input.
+     */
+    public String pressSendVerified(String expect) {
+        String before = inputText();
+        String pending = (expect != null && !expect.trim().isEmpty()) ? expect.trim() : (before == null ? "" : before.trim());
+        if (before != null && before.trim().isEmpty() && (expect == null || expect.trim().isEmpty())) {
+            return "NOT_SENT: message box khali hai — bhejne ke liye kuch likha hi nahi hai. Pehle type_text karo.";
+        }
+        List<AccessibilityNodeInfo> cands = new ArrayList<>();
+        for (AccessibilityNodeInfo r : roots()) collectSend(r, cands, 0);
+        AccessibilityNodeInfo best = null;
+        int bestY = -1;
+        for (AccessibilityNodeInfo c : cands) {
+            if (checkTarget(c) != null) continue;
+            Rect b = bounds(c);
+            if (!onScreen(b)) continue;
+            if (b.centerY() > bestY) { bestY = b.centerY(); best = c; }
+        }
+        if (best == null) {
+            return "NO_SEND_BUTTON: Send button nahi mila. look_at_screen karke send arrow ki jagah tap_at karo, phir press_send dobara (ya read_screen se check).";
+        }
+        Rect b = bounds(best);
+        AccessibilityNodeInfo click = clickableAncestor(best);
+        boolean tapped = click != null && click.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        if (!tapped) tapped = tap(b.centerX(), b.centerY());
+        if (!tapped) return "NOT_SENT: Send button (@" + b.centerX() + "," + b.centerY() + ") dab nahi paya.";
+        return verifySent(before, pending);
+    }
+
+    /** After a send tap: poll the screen up to ~4 s and say honestly what happened. */
+    public String verifySent(String before, String pending) {
+        boolean cleared = false, bubble = false;
+        String after = before;
+        long end = SystemClock.uptimeMillis() + 4000;
+        while (SystemClock.uptimeMillis() < end) {
+            SystemClock.sleep(350);
+            after = inputText();
+            cleared = after == null || after.trim().isEmpty()
+                    || (!pending.isEmpty() && !sameText(after, pending));
+            bubble = !pending.isEmpty() && visibleOutsideInput(pending);
+            if (cleared && bubble) break;
+        }
+        if (cleared && bubble) return "VERIFIED_SENT: message box khali ho gaya aur '" + clip(pending, 60) + "' chat mein dikh raha hai.";
+        if (cleared) return "LIKELY_SENT_UNCONFIRMED: box khali ho gaya par message chat mein dikh nahi raha. "
+                + "read_screen/look_at_screen se pakka karo, tab tak 'bhej diya' mat bolna.";
+        return "NOT_SENT: box mein abhi bhi '" + clip(after, 60) + "' likha hai — message NAHI gaya. "
+                + "Send button sahi se dhundo (look_at_screen) aur dobara try karo, ya Sachin ko sach batao.";
     }
 
     /** Active window first, then every other interactive window (popups, dialogs, keyboards), never Priya's own. */

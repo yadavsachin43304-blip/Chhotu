@@ -97,6 +97,7 @@ public class ActionExecutor {
                         args.optInt("index", 1), args.optBoolean("long_press", false));
                 case "type_text":       return typeText(args.optString("text", ""), args.optString("field", ""),
                         args.optBoolean("press_enter", false));
+                case "press_send":      return pressSend(args.optString("expect_text", ""));
                 case "read_screen":     return readScreen();
                 case "look_at_screen":  return lookAtScreen();
                 case "tap_at":          return tapAt(args.optDouble("x", -1), args.optDouble("y", -1),
@@ -181,14 +182,14 @@ public class ActionExecutor {
                 .putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, label)
                 .putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        try { ctx.startActivity(i); return String.format(Locale.ROOT, "Alarm %02d:%02d par laga diya.", hour, minute); }
+        try { ctx.startActivity(i); return String.format(Locale.ROOT, "Alarm app ko %02d:%02d ka alarm lagane ki request bheji (clock app ne confirm nahi kiya; zarurat ho to read_screen se dekho).", hour, minute); }
         catch (Exception e) { return "Alarm app nahi khula."; }
     }
 
     private String openLink(String url) {
         if (url.trim().isEmpty()) return "Link nahi mila.";
         if (!url.startsWith("http")) url = "https://" + url.trim();
-        try { ctx.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return "Link khol diya."; }
+        try { ctx.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return "Link kholne ki request bheji (read_screen se dekho ki page khula)."; }
         catch (Exception e) { return "Link nahi khula."; }
     }
 
@@ -197,9 +198,22 @@ public class ActionExecutor {
         if (digits.length() == 10) digits = "91" + digits;
         String url = "https://wa.me/" + digits + (text.isEmpty() ? "" : "?text=" + Uri.encode(text));
         try {
-            ctx.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            return "WhatsApp chat khul gaya, message type ho gaya hai. User ki haan ke baad hi 'Send' par click karna.";
-        } catch (Exception e) { return "WhatsApp nahi khula."; }
+            if (!launch(new Intent(Intent.ACTION_VIEW, Uri.parse(url)))) return "FAILED: WhatsApp nahi khula.";
+        } catch (Exception e) { return "FAILED: WhatsApp nahi khula."; }
+        PriyaAccessibilityService a = PriyaAccessibilityService.get();
+        if (a == null) return "UNVERIFIED: WhatsApp kholne ki request bheji, par Accessibility band hai isliye check nahi kar sakti. Message bheja NAHI gaya.";
+        boolean inWa = false, typed = text.isEmpty();
+        for (int i = 0; i < 16; i++) {
+            SystemClock.sleep(500);
+            String pkg = PriyaAccessibilityService.currentPackage;
+            inWa = pkg.startsWith("com.whatsapp");
+            if (inWa && !typed) { String in = a.inputText(); typed = in != null && PriyaAccessibilityService.sameText(in, text); }
+            if (inWa && typed) break;
+        }
+        if (!inWa) return "FAILED: WhatsApp chat screen par nahi khula (abhi app: " + PriyaAccessibilityService.currentPackage
+                + "). read_screen se dekho — number galat ho sakta hai ya WhatsApp ne 'invite' dikhaya.";
+        if (!typed) return "PARTIAL: WhatsApp chat khula par message box mein text nahi dikha. type_text se likho, phir Sachin ki haan ke baad press_send.";
+        return "VERIFIED: WhatsApp chat khula aur message box mein text likha hai. Abhi BHEJA NAHI gaya — Sachin ki haan ke baad press_send karo, tabhi 'bhej diya' bolna.";
     }
 
     private String openApp(String query) throws Exception {
@@ -211,7 +225,12 @@ public class ActionExecutor {
         PackageManager pm = ctx.getPackageManager();
         if (query.trim().matches("[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)+")) { // a package name, e.g. com.lemon.lvoverseas
             Intent byPkg = pm.getLaunchIntentForPackage(query.trim());
-            if (byPkg != null && launch(byPkg)) { SystemClock.sleep(1600); return query.trim() + " khol diya. read_screen se check karo."; }
+            if (byPkg != null && launch(byPkg)) {
+                SystemClock.sleep(1600);
+                return query.trim().equals(PriyaAccessibilityService.currentPackage)
+                        ? "VERIFIED: " + query.trim() + " screen par khul gaya."
+                        : "UNVERIFIED: " + query.trim() + " kholne ki request bheji, screen par confirm nahi hua. read_screen se check karo.";
+            }
         }
         Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
         List<ResolveInfo> apps = pm.queryIntentActivities(main, 0);
@@ -240,12 +259,15 @@ public class ActionExecutor {
         PriyaAccessibilityService a = PriyaAccessibilityService.get();
         if (a != null) {
             SystemClock.sleep(1600);
+            for (int i = 0; i < 4 && !pkg.equals(PriyaAccessibilityService.currentPackage); i++) SystemClock.sleep(500);
             if (!pkg.equals(PriyaAccessibilityService.currentPackage)) {
-                return bestLabel + " kholne ki request bheji, par screen par confirm nahi hua. "
+                return "FAILED: " + bestLabel + " kholne ki request bheji, par screen par nahi khula (abhi: "
+                        + PriyaAccessibilityService.currentPackage + "). "
                         + "Agar app nahi khula to Permissions mein 'Display over other apps' on karna hoga.";
             }
+            return "VERIFIED: " + bestLabel + " screen par khul gaya.";
         }
-        return bestLabel + " khul gaya.";
+        return "UNVERIFIED: " + bestLabel + " kholne ki request bheji (Accessibility band hai, check nahi kar sakti).";
     }
 
     private String youtubePlay(String q) throws Exception {
@@ -294,10 +316,13 @@ public class ActionExecutor {
         if (forbidden(text)) return BLOCKED;
         PriyaAccessibilityService a = PriyaAccessibilityService.get();
         if (a == null) return NEED_A11Y;
+        boolean send = !longPress && PriyaAccessibilityService.sendLike(text);
+        String inputBefore = send ? a.inputText() : null;
+        String sigBefore = a.screenSig();
         String r = a.clickSmart(text, Math.max(0, index - 1), longPress, false);
         if (r.startsWith("OK")) {
-            SystemClock.sleep(600);
-            return r + ". Ab read_screen / wait_for_text se check karo ki sahi screen khuli.";
+            if (send) return r + ". " + a.verifySent(inputBefore, inputBefore == null ? "" : inputBefore.trim());
+            return r + ". " + afterEffect(a, sigBefore);
         }
         switch (r) {
             case "FORBIDDEN": return BLOCKED;
@@ -308,11 +333,33 @@ public class ActionExecutor {
         }
     }
 
+    /** Waits briefly and reports honestly whether the screen changed after an action. */
+    private static String afterEffect(PriyaAccessibilityService a, String sigBefore) {
+        String sig = sigBefore;
+        for (int i = 0; i < 6; i++) {
+            SystemClock.sleep(250);
+            sig = a.screenSig();
+            if (!sig.equals(sigBefore)) break;
+        }
+        if (!sig.equals(sigBefore)) {
+            return "SCREEN CHANGED (app: " + PriyaAccessibilityService.currentPackage + "). Kaam pakka hua ya nahi, read_screen se dekh kar hi bolo.";
+        }
+        return "NO_CHANGE: tap ke baad screen bilkul nahi badli — shayad galat jagah tap hua ya kuch nahi hua. "
+                + "Ise 'ho gaya' mat samjho; read_screen/look_at_screen se dekho aur doosra tareeka try karo.";
+    }
+
+    private String pressSend(String expect) {
+        PriyaAccessibilityService a = PriyaAccessibilityService.get();
+        if (a == null) return NEED_A11Y;
+        return a.pressSendVerified(expect);
+    }
+
     private String typeText(String text, String field, boolean enter) {
         PriyaAccessibilityService a = PriyaAccessibilityService.get();
         if (a == null) return NEED_A11Y;
         String r = a.typeInto(text, field, enter);
-        if (r.startsWith("OK")) return "Type kar diya" + r.substring(2) + ".";
+        if (r.startsWith("OK")) return "Type kar diya." + r.substring(2) + ". (Ye sirf likha hai, BHEJA NAHI — bhejna ho to press_send.)";
+        if (r.startsWith("SET_TEXT_UNVERIFIED")) return "FAILED: " + r + ". Field par tap karke dobara type_text karo.";
         if (r.equals("NO_FIELD")) return "Koi text field nahi mila. Pehle search box / input par click_on_screen ya tap_at karo, phir type_text.";
         return "Field mila par text set nahi hua. Field par tap karke dobara try karo.";
     }
@@ -351,11 +398,15 @@ public class ActionExecutor {
         String bad = a.unsafeAt(Math.round(fx), Math.round(fy));
         if (bad != null) return bad.startsWith("AD") ? "BLOCKED: wahan ad hai (" + bad + "). Tap nahi kiya." : BLOCKED + " (" + bad + ")";
         String what = a.labelAt(Math.round(fx), Math.round(fy));
+        boolean send = !longPress && PriyaAccessibilityService.sendLike(what);
+        String inputBefore = send ? a.inputText() : null;
+        String sigBefore = a.screenSig();
         boolean ok = longPress ? a.longPress(fx, fy, 900) : a.tap(fx, fy);
-        SystemClock.sleep(500);
-        return ok ? (longPress ? "Long-press" : "Tap") + " kiya @" + Math.round(fx) + "," + Math.round(fy)
-                + (what.isEmpty() ? "" : " ('" + what + "')") + ". Ab check karo kya hua."
-                : "Gesture nahi chala.";
+        if (!ok) return "FAILED: gesture nahi chala, kuch nahi hua.";
+        String head = (longPress ? "Long-press" : "Tap") + " kiya @" + Math.round(fx) + "," + Math.round(fy)
+                + (what.isEmpty() ? "" : " ('" + what + "')") + ". ";
+        if (send) return head + a.verifySent(inputBefore, inputBefore == null ? "" : inputBefore.trim());
+        return head + afterEffect(a, sigBefore);
     }
 
     private String swipeTool(JSONObject args) {

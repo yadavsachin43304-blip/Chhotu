@@ -28,12 +28,22 @@ public class GeminiLiveClient {
     private static final String HOST = "generativelanguage.googleapis.com";
     private static final String PATH =
             "/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=";
-    private static final String PATH_ALPHA =
-            "/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=";
 
-    /** Affective (emotion-aware) dialog is only offered on native-audio Live models. */
+    /**
+     * Affective (emotion-aware) dialog: per the Live API docs it is NOT available on gemini-3.8-live
+     * (removed from the API) nor on 3.1 Flash Live; only the 2.5 native-audio fallback still takes it.
+     */
     private boolean affective() {
         return model != null && model.contains("native-audio");
+    }
+
+    /**
+     * gemini-3.8-live runs function calls asynchronously (NON_BLOCKING) by default: the model keeps talking
+     * while the tool runs and can say "bhej diya" before anything happened. We force BLOCKING so it must
+     * wait for the real (verified) tool result before it speaks about the outcome.
+     */
+    private boolean asyncByDefault() {
+        return model != null && model.startsWith("gemini-3.8");
     }
 
     private final String apiKey;
@@ -70,7 +80,8 @@ public class GeminiLiveClient {
     public void connect() {
         String path;
         try {
-            path = ((full && affective()) ? PATH_ALPHA : PATH) + URLEncoder.encode(apiKey, "UTF-8");
+            // Docs: affective dialog / proactive audio use api version v1beta (same as everything else).
+            path = PATH + URLEncoder.encode(apiKey, "UTF-8");
         } catch (Exception e) {
             path = PATH + apiKey;
         }
@@ -150,23 +161,33 @@ public class GeminiLiveClient {
 
             JSONObject gen = new JSONObject();
             gen.put("responseModalities", new JSONArray().put("AUDIO"));
-            gen.put("temperature", 0.9);
+            // Lower temperature = steadier voice/prosody (high values make native audio drift) and more exact command following.
+            gen.put("temperature", 0.6);
+            // ONE pinned female voice in every setup (full, simple fallback, reconnect, resume, test).
+            // No languageCode: native-audio Live models pick the language themselves and reject a fixed code.
+            String v = (voice == null || voice.isEmpty()) ? Prefs.VOICE : voice;
             gen.put("speechConfig", new JSONObject().put("voiceConfig",
-                    new JSONObject().put("prebuiltVoiceConfig", new JSONObject().put("voiceName", voice))));
+                    new JSONObject().put("prebuiltVoiceConfig", new JSONObject().put("voiceName", v))));
             setup.put("generationConfig", gen);
 
             setup.put("systemInstruction", new JSONObject().put("parts",
                     new JSONArray().put(new JSONObject().put("text", systemText))));
-            setup.put("tools", new JSONArray().put(new JSONObject().put("functionDeclarations", toolDeclarations())));
+            setup.put("tools", new JSONArray().put(new JSONObject().put("functionDeclarations",
+                    toolDeclarations(asyncByDefault()))));
             setup.put("inputAudioTranscription", new JSONObject());
             setup.put("outputAudioTranscription", new JSONObject());
 
-            if (model != null && model.startsWith("gemini-2.5")) {
-                // no hidden "thinking" pass: replies start much faster
-                gen.put("thinkingConfig", new JSONObject().put("thinkingBudget", 0));
+            // THINKING (docs, Live API "Thinking"):
+            //  - gemini-3.8-live: interleaved reasoning is built in and always on; thinkingLevel/thinkingConfig
+            //    must be omitted (sending it is an error).
+            //  - gemini-3.1-flash-live-preview: thinkingLevel minimal|low|medium|high, default minimal -> use "low"
+            //    so she reasons before acting without long silences.
+            //  - 2.5 native-audio fallback: leave thinking at its default (the old thinkingBudget=0 made her dumb).
+            if (model != null && model.startsWith("gemini-3.1")) {
+                gen.put("thinkingConfig", new JSONObject().put("thinkingLevel", "LOW"));
             }
             if (full && affective()) {
-                // Emotion-aware voice: tone follows the user's mood (native-audio models, v1alpha).
+                // Emotion-aware voice (2.5 native-audio only; removed on 3.8, unsupported on 3.1).
                 gen.put("enableAffectiveDialog", true);
                 setup.put("proactivity", new JSONObject().put("proactiveAudio", true));
             }
@@ -217,6 +238,18 @@ public class GeminiLiveClient {
     }
 
     static JSONArray toolDeclarations() throws JSONException {
+        return toolDeclarations(false);
+    }
+
+    static JSONArray toolDeclarations(boolean forceBlocking) throws JSONException {
+        JSONArray a = declarations();
+        if (forceBlocking) {
+            for (int i = 0; i < a.length(); i++) a.getJSONObject(i).put("behavior", "BLOCKING");
+        }
+        return a;
+    }
+
+    private static JSONArray declarations() throws JSONException {
         JSONArray a = new JSONArray();
         a.put(fn("open_app", "Open an installed Android app by its name (e.g. WhatsApp, CapCut, Chrome, Settings) or its package name.",
                 new JSONObject().put("app_name", str("App name as the user says it, or package name like com.lemon.lvoverseas")), "app_name"));
@@ -258,6 +291,8 @@ public class GeminiLiveClient {
                 new JSONObject().put("text", str("Text to type"))
                         .put("field", str("Optional: hint/label of the field, e.g. 'Search'"))
                         .put("press_enter", bool("true = press Enter/Search after typing")), "text"));
+        a.put(fn("press_send", "Press the Send / submit arrow of the message or prompt box that is open now (WhatsApp, Messages, Instagram, Telegram, ChatGPT, Gemini, any chat) and VERIFY on screen that the message really went (box emptied + message visible in the chat). Only after Sachin said to send. Returns VERIFIED_SENT, or NOT_SENT with what is on screen.",
+                new JSONObject().put("expect_text", str("The message/prompt text that should be sent (to check it appears in the chat)"))));
         a.put(fn("read_screen", "Read the current screen: every visible element with [tap]/[input]/[scroll] tags and its centre @x,y in pixels, incl. popups. Use before acting and to verify after.", null));
         a.put(fn("look_at_screen", "Take a screenshot and look at it (image). Use when read_screen is not enough: icons without text, video thumbnails, CapCut timeline/handles, images. Then use tap_at / swipe with 0-1 fractions.", null));
         a.put(fn("task_plan", "Manager mode: before a big multi-step order, save the plan (goal + ordered steps). Only for a task Sachin explicitly ordered.",
@@ -298,7 +333,7 @@ public class GeminiLiveClient {
                         .put("label", str("Alarm label")), "hour"));
         a.put(fn("open_link", "Open a website link in the browser.",
                 new JSONObject().put("url", str("Website URL")), "url"));
-        a.put(fn("whatsapp_chat", "Open a WhatsApp chat with a phone number and pre-type a message (does not send). Confirm with the user, then click 'Send'.",
+        a.put(fn("whatsapp_chat", "Open a WhatsApp chat with a phone number and pre-type a message. It does NOT send. After Sachin confirms, call press_send to actually send and verify.",
                 new JSONObject().put("phone", str("Phone number with or without country code"))
                         .put("text", str("Message text")), "phone"));
         a.put(fn("remember", "Save something to Priya's permanent memory: a promise (VAADA) the user made or Priya made, a fact about the user, or a note.",
