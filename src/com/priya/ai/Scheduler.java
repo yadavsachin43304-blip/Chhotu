@@ -173,7 +173,7 @@ final class Scheduler {
             JSONObject s = create(c, a.optString("task", ""), a.optString("repeat", "once"), h, m, a.optString("date", ""),
                     a.optString("weekday", ""), scopes, a.optString("recipients", ""));
             return "VERIFIED: schedule save ho gaya — " + describe(s) + (exactAllowed(c) ? "" :
-                    "\nNOTE: 'Alarms & reminders' (exact alarm) permission off hai, isliye time thoda aage-peeche ho sakta hai. Sachin Menu > Schedules mein Allow kare.");
+                    "\nNOTE: 'Alarms & reminders' (exact alarm) permission off hai, isliye time thoda aage-peeche ho sakta hai. Sachin Menu > Permissions > 'Alarms & reminders' mein Allow kare.");
         } catch (IllegalArgumentException e) {
             return e.getMessage();
         }

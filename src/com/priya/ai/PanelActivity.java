@@ -24,6 +24,7 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -168,6 +169,9 @@ public class PanelActivity extends Activity {
             if (Build.VERSION.SDK_INT >= 33 && !has("android.permission.POST_NOTIFICATIONS")) {
                 need.add("android.permission.POST_NOTIFICATIONS");
             }
+            String audioPerm = Build.VERSION.SDK_INT >= 33 ? "android.permission.READ_MEDIA_AUDIO"
+                    : Manifest.permission.READ_EXTERNAL_STORAGE;
+            if (!has(audioPerm)) need.add(audioPerm);
             if (TermuxBridge.installed(this) && !has(TermuxBridge.PERM)) need.add(TermuxBridge.PERM);
             if (need.isEmpty()) toast("Saari runtime permissions pehle se allowed hain.");
             else requestPermissions(need.toArray(new String[0]), REQ_PERMS);
@@ -188,6 +192,29 @@ public class PanelActivity extends Activity {
             permCard("Notifications", "Background listening ka notification (aur Stop button) dikhane ke liye.",
                     has("android.permission.POST_NOTIFICATIONS"), "Allow karo",
                     v -> requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, REQ_PERMS));
+        }
+
+        final String audioP = Build.VERSION.SDK_INT >= 33 ? "android.permission.READ_MEDIA_AUDIO"
+                : Manifest.permission.READ_EXTERNAL_STORAGE;
+        permCard("Music & audio files", "Studio / faceless video ke liye phone ki audio files padhna ("
+                        + (Build.VERSION.SDK_INT >= 33 ? "READ_MEDIA_AUDIO" : "READ_EXTERNAL_STORAGE") + ").",
+                has(audioP), "Allow karo",
+                v -> requestPermissions(new String[]{audioP}, REQ_PERMS));
+
+        if (Build.VERSION.SDK_INT >= 31) {
+            android.app.AlarmManager am = (android.app.AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            boolean exact = am != null && am.canScheduleExactAlarms();
+            permCard("Alarms & reminders", "Schedules aur reminders theek time par chalane ke liye (exact alarm).",
+                    exact, "Alarms & reminders kholo",
+                    v -> {
+                        try {
+                            startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                    Uri.parse("package:" + getPackageName())));
+                        } catch (Exception e) {
+                            start(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.parse("package:" + getPackageName())));
+                        }
+                    });
         }
 
         permCard("Accessibility Service",
@@ -673,51 +700,133 @@ public class PanelActivity extends Activity {
 
     // ================================================================== skills
 
+    private static final int REQ_SKILL_MD = 31;
+    private String editingSkillId = null;
+
+    private void reRenderSkills() {
+        content.removeAllViews();
+        renderSkills();
+    }
+
     private void renderSkills() {
         final SkillStore store = new SkillStore(this);
         TextView intro = Ui.text(this, "Priya har kaam se pehle dekhti hai ki uske paas us kaam ka skill hai ya nahi. "
-                + "Nahi hota to aapse poochhti hai ki naya skill banaye ya nahi.", 12.5f, Ui.SUB, false);
+                + "Nahi hota to aapse poochhti hai ki naya skill banaye ya nahi. Band (OFF) skills Priya ko nahi dikhte.", 12.5f, Ui.SUB, false);
         intro.setPadding(0, 0, 0, Ui.dp(this, 8));
         content.addView(intro);
 
+        Button md = Ui.button(this, "📄 .md file se skill banao", Ui.ACCENT, 0xFF06202A);
+        md.setOnClickListener(v -> pickSkillFile());
+        content.addView(md, Ui.matchWrap(this, 0));
+
+        final SkillStore.Skill editing = editingSkillId == null ? null : store.byId(editingSkillId);
+        if (editing == null) editingSkillId = null;
+
         LinearLayout add = Ui.card(this);
-        add.addView(Ui.text(this, "➕ Naya skill", 16, Ui.TEXT, true));
+        add.addView(Ui.text(this, editing == null ? "➕ Nayi skill" : "✏️ Skill edit karo", 16, Ui.TEXT, true));
         final EditText nm = field("Skill ka naam (jaise: Instagram Caption Writer)", true);
-        final EditText ds = field("Kab use kare (ek line)", true);
-        final EditText in = field("Steps / instructions (Priya ye follow karegi)", false);
+        final EditText ds = field("Kab use kare (ek line, optional)", true);
+        final EditText in = field("Instructions (Priya ye follow karegi)", false);
+        if (editing != null) {
+            nm.setText(editing.name);
+            ds.setText(editing.description);
+            in.setText(editing.instructions);
+        }
         add.addView(nm, Ui.matchWrap(this, 6));
         add.addView(ds, Ui.matchWrap(this, 6));
         add.addView(in, Ui.matchWrap(this, 6));
-        Button save = Ui.button(this, "Save skill", Ui.ACCENT, 0xFF06202A);
+        Button save = Ui.button(this, editing == null ? "Save skill" : "Update skill", Ui.ACCENT, 0xFF06202A);
         save.setOnClickListener(v -> {
-            if (nm.getText().toString().trim().isEmpty()) { toast("Naam likho."); return; }
-            store.save(nm.getText().toString(), ds.getText().toString(), in.getText().toString());
-            toast("Skill save ho gaya ✓ (Priya ko OFF/ON karo)");
-            content.removeAllViews();
-            renderSkills();
+            String n = nm.getText().toString().trim();
+            String ins = in.getText().toString().trim();
+            if (n.isEmpty()) { toast("Naam likho."); return; }
+            if (ins.isEmpty()) { toast("Instructions likho."); return; }
+            String d = ds.getText().toString().trim();
+            if (d.isEmpty()) d = ins.split("\n")[0];
+            if (d.length() > 140) d = d.substring(0, 140) + "…";
+            store.saveWithId(editingSkillId, n, d, ins);
+            toast((editingSkillId == null ? "Skill save ho gaya ✓" : "Skill update ho gaya ✓") + " (Priya ko OFF/ON karo)");
+            editingSkillId = null;
+            reRenderSkills();
         });
         add.addView(save, Ui.matchWrap(this, 8));
+        if (editing != null) {
+            Button cancel = Ui.button(this, "Cancel edit", Ui.CARD, Ui.TEXT);
+            cancel.setOnClickListener(v -> { editingSkillId = null; reRenderSkills(); });
+            add.addView(cancel, Ui.matchWrap(this, 6));
+        }
         content.addView(add);
 
         for (final SkillStore.Skill sk : store.list()) {
             LinearLayout c = Ui.card(this);
-            c.addView(Ui.text(this, "🧩 " + sk.name, 16, Ui.TEXT, true));
-            TextView d = Ui.text(this, sk.description, 12.5f, Ui.SUB, false);
+            LinearLayout head = new LinearLayout(this);
+            head.setOrientation(LinearLayout.HORIZONTAL);
+            head.setGravity(Gravity.CENTER_VERTICAL);
+            TextView title = Ui.text(this, "🧩 " + sk.name, 16, sk.enabled ? Ui.TEXT : Ui.SUB, true);
+            head.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            final Switch sw = new Switch(this);
+            sw.setChecked(sk.enabled);
+            sw.setOnCheckedChangeListener((btn, on) -> {
+                store.setEnabled(sk.id, on);
+                toast(sk.name + (on ? " ON ✓" : " OFF") + " (Priya ko OFF/ON karo)");
+                title.setTextColor(on ? Ui.TEXT : Ui.SUB);
+            });
+            head.addView(sw);
+            c.addView(head);
+            TextView d = Ui.text(this, (sk.enabled ? "" : "[OFF] ") + sk.description, 12.5f, Ui.SUB, false);
             d.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
             c.addView(d);
-            final TextView body = Ui.text(this, sk.instructions, 12.5f, Ui.TEXT, false);
-            body.setVisibility(View.GONE);
-            c.addView(body);
-            c.setOnClickListener(v -> body.setVisibility(body.getVisibility() == View.GONE ? View.VISIBLE : View.GONE));
+            c.setOnClickListener(v -> {
+                editingSkillId = sk.id;
+                reRenderSkills();
+                toast("'" + sk.name + "' edit ho raha hai (upar form mein)");
+            });
             Button del = Ui.button(this, "Hatao (sirf aap)", 0xFF3A2030, Ui.BAD);
             del.setOnClickListener(v -> confirm("'" + sk.name + "' skill hatana hai?", () -> {
                 store.deleteByUser(sk.id);
-                content.removeAllViews();
-                renderSkills();
+                if (sk.id.equals(editingSkillId)) editingSkillId = null;
+                reRenderSkills();
             }));
             c.addView(del, Ui.matchWrap(this, 6));
             content.addView(c);
         }
+    }
+
+    private void pickSkillFile() {
+        try {
+            Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+            i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"text/markdown", "text/x-markdown", "text/plain", "*/*"});
+            startActivityForResult(i, REQ_SKILL_MD);
+        } catch (Exception e) {
+            toast("File picker nahi khula: " + e.getMessage());
+        }
+    }
+
+    @Override protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req != REQ_SKILL_MD || res != RESULT_OK || data == null || data.getData() == null) return;
+        Uri uri = data.getData();
+        String fileName = "skill.md";
+        try (android.database.Cursor cur = getContentResolver().query(uri, null, null, null, null)) {
+            if (cur != null && cur.moveToFirst()) {
+                int ix = cur.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                if (ix >= 0 && cur.getString(ix) != null) fileName = cur.getString(ix);
+            }
+        } catch (Exception ignored) { }
+        try (java.io.InputStream is = getContentResolver().openInputStream(uri)) {
+            if (is == null) { toast("File nahi khuli."); return; }
+            java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = is.read(buf)) > 0 && bo.size() < 256 * 1024) bo.write(buf, 0, n);
+            String text = new String(bo.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+            SkillStore.Skill sk = new SkillStore(this).importMarkdown(fileName, text);
+            if (sk == null) toast("File khaali hai ya padhi nahi gayi.");
+            else toast("Skill '" + sk.name + "' ban gaya ✓ (Priya ko OFF/ON karo)");
+        } catch (Exception e) {
+            toast("File padh nahi paayi: " + e.getMessage());
+        }
+        if ("skills".equals(page)) reRenderSkills();
     }
 
     private EditText field(String hint, boolean single) {

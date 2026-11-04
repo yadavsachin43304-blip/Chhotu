@@ -67,6 +67,27 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         buildPowerButton();
         buildDrawer();
         setContentView(root);
+        askStartupPermissions();
+    }
+
+    private static final int REQ_BOOT_PERMS = 52;
+
+    /** v29: once per install, ask for audio-file (Studio) and notification permissions. */
+    private void askStartupPermissions() {
+        try {
+            android.content.SharedPreferences sp = getSharedPreferences("priya_boot", MODE_PRIVATE);
+            if (sp.getBoolean("asked_v29", false)) return;
+            sp.edit().putBoolean("asked_v29", true).apply();
+            ArrayList<String> need = new ArrayList<>();
+            String audio = Build.VERSION.SDK_INT >= 33 ? "android.permission.READ_MEDIA_AUDIO"
+                    : Manifest.permission.READ_EXTERNAL_STORAGE;
+            if (checkSelfPermission(audio) != PackageManager.PERMISSION_GRANTED) need.add(audio);
+            if (Build.VERSION.SDK_INT >= 33
+                    && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                need.add("android.permission.POST_NOTIFICATIONS");
+            }
+            if (!need.isEmpty()) requestPermissions(need.toArray(new String[0]), REQ_BOOT_PERMS);
+        } catch (Exception ignored) { }
     }
 
     // ------------------------------------------------------------------ front ON / OFF button
@@ -304,12 +325,23 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         list.addView(menuItem("🔐", "Permissions", "Mic, Accessibility, Overlay, Contacts, Calls…", v -> openPanel("permissions")));
         list.addView(menuItem("🔑", "API (Gemini)", "API key aur model save karo", v -> openPanel("api")));
         list.addView(menuItem("🧩", "Skills", "Priya ke skills dekho, naya skill banao", v -> openPanel("skills")));
+        list.addView(menuItem("⏰", "Schedules", "Scheduled kaam: pause / resume / abhi chalao", v -> openBrain("schedules")));
+        list.addView(menuItem("🎬", "Studio", "Audio file chuno — faceless video shuru karo", v -> openBrain("pick_audio")));
         list.addView(menuItem("🧠", "Memory (30 MB)", "Vaade, notes aur conversation text", v -> openPanel("memory")));
         list.addView(menuItem("⚙️", "Settings", "Always listening, echo guard, voice", v -> openPanel("settings")));
 
         drawer.addView(panel, new FrameLayout.LayoutParams(panelW, ViewGroup.LayoutParams.MATCH_PARENT));
         root.addView(drawer, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    private void openBrain(String page) {
+        closeDrawer();
+        try {
+            startActivity(new Intent(this, BrainActivity.class).putExtra("page", page));
+        } catch (Exception e) {
+            Toast.makeText(this, "Screen nahi khula: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private View menuItem(String icon, String title, String sub, View.OnClickListener l) {

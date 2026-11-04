@@ -19,8 +19,13 @@ public final class SkillStore {
 
     public static final class Skill {
         public final String id, name, description, instructions;
+        public final boolean enabled;
         Skill(String id, String name, String description, String instructions) {
+            this(id, name, description, instructions, true);
+        }
+        Skill(String id, String name, String description, String instructions, boolean enabled) {
             this.id = id; this.name = name; this.description = description; this.instructions = instructions;
+            this.enabled = enabled;
         }
     }
 
@@ -32,6 +37,41 @@ public final class SkillStore {
         seed();
         seedV2();
         seedV3();
+        seedV4();
+    }
+
+    /** v29: built-in GrowthPilot Manager skill (added only if missing). */
+    private void seedV4() {
+        File marker = new File(dir, ".seeded_v4");
+        if (marker.exists()) return;
+        if (!new File(dir, idFor("GrowthPilot Manager") + ".skill").exists()) {
+            save("GrowthPilot Manager",
+                    "GrowthPilot Consulting ka business chalana: clients dhundhna, email outreach, form, free health check, paid audits, 'work done, please pay' email.",
+                    "GrowthPilot Consulting (business email: growthpilotconsulting1@gmail.com, tagline 'Data • Strategy • Growth'). Sachin ka consulting business.\n"
+                            + "SERVICES (price ladder):\n"
+                            + "1. FREE Business Health Check — Rs 0, 24 ghante mein: Business Health Score, website quick review, social media analysis, brand visibility, top 5 strengths/improvements, top 3 growth opportunities, 30-day quick wins, professional summary report.\n"
+                            + "2. Express Business Audit — Rs 999, 24-48 ghante: executive summary, website performance, brand identity, SEO overview, social + competitor snapshot, marketing review, health score, action plan (PDF 5-7 pages).\n"
+                            + "3. Standard Business Growth Audit — Rs 2,999, 2-3 business days: SWOT, website/SEO/social/competitor audits, brand positioning, marketing + pricing review, 30-day action plan (PDF 20-30 pages).\n"
+                            + "4. Premium Growth Audit — Rs 7,999 (flagship), 3-5 business days: full health assessment, competitor intelligence, SWOT+PESTLE, technical SEO, customer persona/journey, sales funnel, lead gen, revenue + cost optimization, AI automation recommendations, risk matrix, 30/90/365-day roadmaps (PDF 60-80 pages).\n"
+                            + "5. Growth Partnership Program — Rs 24,999/month se: dedicated consultant, monthly strategy + review, KPI, marketing/sales/branding, AI automation guidance, SEO, competitor monitoring, priority support.\n"
+                            + "6. AI Automation — AI WhatsApp/email assistant, appointment booking, document processing, AI content, e-commerce automation, data sync/reporting (free consultation, price baad mein tay).\n"
+                            + "Target: coaching institutes, schools, restaurants, hotels, clinics, salons, gyms, retail, e-commerce, startups, manufacturing, healthcare, chhote-madhyam business.\n"
+                            + "PIPELINE (step by step, har step ke baad task_progress):\n"
+                            + "1. Businesses dhundho: web search / Google Maps (naam, city, category, website, public business email).\n"
+                            + "2. Unhe professional email bhejo (free Business Health Check offer) growthpilotconsulting1@gmail.com se.\n"
+                            + "3. Interest dikhaye to intake form bhejo (form bharo > hum package banate hain > 'work done' email > payment > turant delivery).\n"
+                            + "4. Free service (Health Check) bina payment ke deliver karo — high value, taaki client trust kare.\n"
+                            + "5. Paid order par kaam karo (audit/report taiyaar).\n"
+                            + "6. Kaam poora hone par email: 'Work done, please pay' (amount + service naam).\n"
+                            + "RULES (hamesha):\n"
+                            + "- Kabhi kuch delete mat karo (email, draft, file, sheet row, lead, task) — archive karo ya status mark karo. Delete lagta ho to pehle Sachin se poochho.\n"
+                            + "- Paid kaam ki FINAL delivery se pehle Sachin se poochho: 'Payment received?' — unki 'haan' ke baad hi deliver karo.\n"
+                            + "- Kabhi paisa kharch mat karo (koi purchase, ad, subscription, payment nahi).\n"
+                            + "- Outreach sirf businesses ko (public business email), kabhi personal logon ko nahi. Spam nahi, har email personal aur sahi.\n"
+                            + "- Koi password ya API key kabhi bolna/likhna nahi.\n"
+                            + "- Aakhir mein short report: kitne businesses mile, kisko email gaya, kya pending hai.");
+        }
+        try { marker.createNewFile(); } catch (Exception ignored) { }
     }
 
     /** v26: truthful phone control (verify every step, press_send for messages, problem-solving loop). */
@@ -139,9 +179,14 @@ public final class SkillStore {
     }
 
     public synchronized Skill save(String name, String description, String instructions) {
+        return saveWithId(null, name, description, instructions);
+    }
+
+    /** Save (or edit) a skill. A non-null id keeps the same file, so editing keeps the same skill. */
+    public synchronized Skill saveWithId(String keepId, String name, String description, String instructions) {
         name = name == null ? "" : name.trim();
         if (name.isEmpty()) return null;
-        String id = idFor(name);
+        String id = (keepId != null && !keepId.isEmpty()) ? keepId : idFor(name);
         String body = name + "\n" + (description == null ? "" : description.replace('\n', ' ').trim()) + "\n"
                 + (instructions == null ? "" : instructions.trim()) + "\n";
         try (FileOutputStream o = new FileOutputStream(new File(dir, id + ".skill"))) {
@@ -161,7 +206,7 @@ public final class SkillStore {
             String[] parts = s.split("\n", 3);
             String id = f.getName().replace(".skill", "");
             return new Skill(id, parts[0].trim(), parts.length > 1 ? parts[1].trim() : "",
-                    parts.length > 2 ? parts[2].trim() : "");
+                    parts.length > 2 ? parts[2].trim() : "", !new File(dir, id + ".off").exists());
         } catch (Exception e) {
             return null;
         }
@@ -179,11 +224,82 @@ public final class SkillStore {
         return out;
     }
 
+    /** Turn a skill on/off. Disabled skills stay saved but are not offered to the model. */
+    public synchronized void setEnabled(String id, boolean on) {
+        File off = new File(dir, id + ".off");
+        try {
+            if (on) off.delete();   // removes only the internal on/off flag, never the skill itself
+            else off.createNewFile();
+        } catch (Exception ignored) { }
+    }
+
+    public synchronized Skill byId(String id) {
+        File f = new File(dir, id + ".skill");
+        return f.exists() ? read(f) : null;
+    }
+
+    /** Import a Markdown skill file (Gemini/Claude style): name from front matter, else first # heading, else filename. */
+    public synchronized Skill importMarkdown(String fileName, String text) {
+        if (text == null) return null;
+        text = text.replace("\r\n", "\n").replace('\r', '\n');
+        if (text.startsWith("\uFEFF")) text = text.substring(1);
+        String name = null, desc = "";
+        String body = text;
+        if (body.startsWith("---")) {
+            int end = body.indexOf("\n---", 3);
+            if (end > 0) {
+                String fm = body.substring(3, end);
+                for (String line : fm.split("\n")) {
+                    int c = line.indexOf(':');
+                    if (c <= 0) continue;
+                    String k = line.substring(0, c).trim().toLowerCase(Locale.ROOT);
+                    String v = line.substring(c + 1).trim().replaceAll("^[\"']|[\"']$", "");
+                    if ((k.equals("name") || k.equals("title")) && !v.isEmpty()) name = v;
+                    else if (k.equals("description") && !v.isEmpty()) desc = v;
+                }
+                int nl = body.indexOf('\n', end + 4);
+                body = nl < 0 ? "" : body.substring(nl + 1);
+            }
+        }
+        if (name == null) {
+            String[] lines = body.split("\n");
+            for (int i = 0; i < lines.length; i++) {
+                String l = lines[i].trim();
+                if (l.isEmpty()) continue;
+                if (l.startsWith("# ")) {
+                    name = l.substring(2).trim();
+                    StringBuilder rest = new StringBuilder();
+                    for (int j = i + 1; j < lines.length; j++) rest.append(lines[j]).append('\n');
+                    body = rest.toString();
+                }
+                break;
+            }
+        }
+        if (name == null || name.isEmpty()) {
+            String fn = fileName == null ? "" : fileName;
+            int dot = fn.lastIndexOf('.');
+            if (dot > 0) fn = fn.substring(0, dot);
+            name = fn.replace('_', ' ').replace('-', ' ').trim();
+            if (name.isEmpty()) name = "Imported skill";
+        }
+        body = body.trim();
+        if (desc.isEmpty()) {
+            for (String l : body.split("\n")) {
+                String t = l.trim().replaceAll("^[#>*\\-\\s]+", "");
+                if (!t.isEmpty()) { desc = t.length() > 140 ? t.substring(0, 140) + "…" : t; break; }
+            }
+        }
+        if (body.isEmpty()) return null;
+        return save(name, desc, body);
+    }
+
+    /** Only enabled skills are visible to the model (use_skill). */
     public synchronized Skill find(String name) {
         if (name == null) return null;
         String q = name.toLowerCase(Locale.ROOT).trim();
         Skill partial = null;
         for (Skill s : list()) {
+            if (!s.enabled) continue;
             String n = s.name.toLowerCase(Locale.ROOT);
             if (n.equals(q) || s.id.equals(idFor(name))) return s;
             if (partial == null && (n.contains(q) || q.contains(n))) partial = s;
@@ -198,7 +314,7 @@ public final class SkillStore {
 
     public String summaryForPrompt() {
         StringBuilder sb = new StringBuilder();
-        for (Skill s : list()) sb.append("- ").append(s.name).append(": ").append(s.description).append('\n');
+        for (Skill s : list()) if (s.enabled) sb.append("- ").append(s.name).append(": ").append(s.description).append('\n');
         return sb.toString();
     }
 }

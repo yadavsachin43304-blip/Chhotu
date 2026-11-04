@@ -296,8 +296,8 @@ final class Studio {
     static String listRecentAudio(Context c, int limit) {
         List<AudioItem> l = recentAudio(c, Math.max(3, Math.min(limit <= 0 ? 8 : limit, 20)));
         if (l.isEmpty()) {
-            return "Koi recent audio nahi mila. Options: (1) pick_audio_file se Sachin khud file chun le, (2) Priya Menu > Studio mein "
-                    + "'Audio permission' Allow karein, (3) Termux setup (termux-setup-storage) taaki main Downloads/WhatsApp folders dekh sakoon.";
+            return "Koi recent audio nahi mila. Options: (1) pick_audio_file se Sachin khud file chun le, (2) Priya Menu > Permissions mein "
+                    + "'Music & audio files' Allow karein (phir Menu > Studio se file chunein), (3) Termux setup (termux-setup-storage) taaki main Downloads/WhatsApp folders dekh sakoon.";
         }
         StringBuilder sb = new StringBuilder("RECENT AUDIO (naya pehle):\n");
         SimpleDateFormat f = new SimpleDateFormat("d MMM HH:mm", Locale.ROOT);
