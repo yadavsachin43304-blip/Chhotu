@@ -106,6 +106,10 @@ public class ThemeView extends View {
     /** Where the avatar artwork sits (px, in this view), clipped clear of the top icons and the text below it. */
     public RectF avatarRect() { return avatarBox; }
 
+    private final RectF avatarFull = new RectF();
+    /** The whole avatar picture's rect (px, in this view; can extend past avatarRect, which is clipped). */
+    public RectF avatarImageRect() { return avatarFull; }
+
     public void setTheme(int newTheme) {
         if (newTheme == theme) return;
         theme = newTheme;
@@ -161,6 +165,7 @@ public class ThemeView extends View {
         }
         avH = avW * ratio;
         textTop = avCy + avH / 2f + dp(2);
+        avatarFull.set(avCx - avW / 2f, avCy - avH / 2f, avCx + avW / 2f, avCy + avH / 2f);
         avatarBox.set(Math.max(0, avCx - avW / 2f), Math.max(dp(76), avCy - avH / 2f),
                 Math.min(W, avCx + avW / 2f), Math.min(textTop, theme == 1 ? panelT : H));
         if (avatarRectListener != null) post(avatarRectListener);

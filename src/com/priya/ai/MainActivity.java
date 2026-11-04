@@ -92,23 +92,24 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         } catch (Exception ignored) { }
     }
 
-    // ------------------------------------------------------------------ live 3D avatar (falls back to pictures)
+    // ------------------------------------------------------------------ living portrait (falls back to pictures)
+    // (v33: the procedural Avatar3DView heads are no longer used; Priya's own picture is animated instead)
 
-    private Avatar3DView av3d;
+    private LivePortraitView av3d;
 
-    /** Adds / removes the 3D avatar to match the Settings toggle; pictures are used if GL is off or broke. */
+    /** Adds / removes the live avatar to match the Settings toggle; pictures are used if GL is off or broke. */
     private void ensureAvatar3D() {
-        boolean want = Prefs.avatar3D(this) && Avatar3DView.supported(this);
+        boolean want = Prefs.avatar3D(this) && LivePortraitView.supported(this);
         if (want && av3d == null) {
             try {
-                av3d = new Avatar3DView(this, false);
+                av3d = new LivePortraitView(this, false);
                 av3d.setStyle(Prefs.theme(this));
                 av3d.setFailListener(this::dropAvatar3D);
                 root.addView(av3d, 1, new FrameLayout.LayoutParams(1, 1));
                 view.setAvatar3D(true);
                 placeAvatar3D();
             } catch (Throwable t) {
-                Avatar3DView.failed = true;
+                LivePortraitView.failed = true;
                 dropAvatar3D();
             }
         } else if (!want && av3d != null) {
@@ -132,6 +133,8 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) av3d.getLayoutParams();
         int w = Math.round(r.width()), h = Math.round(r.height());
         int l = Math.round(r.left), t = Math.round(r.top);
+        android.graphics.RectF full = view.avatarImageRect();   // the picture, relative to the GL view
+        av3d.setImageRect(full.left - l, full.top - t, full.right - l, full.bottom - t);
         if (lp.width == w && lp.height == h && lp.leftMargin == l && lp.topMargin == t) return;
         lp.width = w; lp.height = h;
         lp.gravity = Gravity.TOP | Gravity.START;

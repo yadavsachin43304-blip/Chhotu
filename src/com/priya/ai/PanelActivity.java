@@ -678,7 +678,7 @@ public class PanelActivity extends Activity {
                     }
                 }));
         cf.addView(Ui.switchRow(this, "3D avatar",
-                "Priya ka live 3D chehra (palak jhapakna, sir hilana, bolte waqt honth). Band karo ya phone support na kare to purani tasveer dikhegi.",
+                "Priya ki apni tasveer zinda: bolte waqt asli honth hilte hain, palak jhapakti hai, sir halka ghoomta hai, saans. Band karo ya phone support na kare to seedhi tasveer dikhegi.",
                 Prefs.avatar3D(this), (b, on) -> Prefs.setAvatar3D(this, on)));
         content.addView(cf);
 

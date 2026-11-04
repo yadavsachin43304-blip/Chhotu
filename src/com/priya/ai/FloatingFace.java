@@ -45,7 +45,7 @@ public class FloatingFace extends View {
     private final int size;
     /** The view actually in the window: the live 3D face, or this picture view (fallback). */
     private View shown;
-    private Avatar3DView gl;
+    private LivePortraitView gl;
 
     public FloatingFace(Context c) {
         super(c.getApplicationContext());
@@ -80,10 +80,10 @@ public class FloatingFace extends View {
     }
 
     private void show() {
-        if (Prefs.avatar3D(getContext()) && Avatar3DView.supported(getContext())) {
+        if (Prefs.avatar3D(getContext()) && LivePortraitView.supported(getContext())) {
             try {
                 if (gl == null) {
-                    gl = new Avatar3DView(getContext(), true);
+                    gl = new LivePortraitView(getContext(), true);
                     gl.setFailListener(this::fallbackToPicture);
                     gl.setOnTouchListener((v, e) -> handleTouch(e));
                 }
@@ -94,7 +94,7 @@ public class FloatingFace extends View {
                 h.post(frame);
                 return;
             } catch (Throwable t) {
-                Avatar3DView.failed = true;
+                LivePortraitView.failed = true;
                 gl = null;
             }
         }
