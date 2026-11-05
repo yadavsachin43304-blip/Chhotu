@@ -52,6 +52,12 @@ final class HeadlessAgent {
     private String prevName;
     private JSONObject prevArgs;
     private String prevRes;
+    /** AI agent run (AgentRunner): its id ("" = plain schedule / background task), handoff depth, extra announce. */
+    private final String agentId;
+    private final int agentDepth;
+    private final boolean announceSteps;
+    /** An owner approval was used in this run (lets the approved money/delivery text be typed). */
+    private boolean approvedThisRun = false;
 
     HeadlessAgent(Context c, JSONObject schedule) {
         ctx = c.getApplicationContext();
@@ -59,6 +65,9 @@ final class HeadlessAgent {
         task = schedule.optString("task", "");
         recipients = schedule.optString("recipients", "");
         live = schedule.optBoolean("live", false);
+        agentId = schedule.optString("agent_id", "");
+        agentDepth = schedule.optInt("agent_depth", 1);
+        announceSteps = live || schedule.optBoolean("announce", false);
         JSONArray sc = schedule.optJSONArray("scopes");
         if (sc != null) {
             for (int i = 0; i < sc.length(); i++) {
@@ -70,6 +79,10 @@ final class HeadlessAgent {
                     default: break;
                 }
             }
+        }
+        if (!agentId.isEmpty()) {
+            allowed.addAll(AgentRunner.INTERNAL_TOOLS);
+            if (agentDepth >= AgentRunner.MAX_DEPTH) allowed.remove("agent_handoff");
         }
         exec = new ActionExecutor(ctx, new MemoryStore(ctx));
     }
@@ -89,7 +102,7 @@ final class HeadlessAgent {
 
     /** Announces one step: what just finished (with its real outcome) and what starts now. */
     private void announce(String nextName, JSONObject nextArgs) {
-        if (job == null || !live) return;
+        if (job == null || !announceSteps) return;
         try {
             String line = ProgressText.step(prevName, argsOf(prevArgs), prevRes, nextName, argsOf(nextArgs));
             if (line != null) PriyaJobs.progress(job, line);
@@ -132,6 +145,15 @@ final class HeadlessAgent {
             if (d.has("parameters")) f.put("parameters", lower(d.getJSONObject("parameters")));
             else f.put("parameters", new JSONObject().put("type", "object").put("properties", new JSONObject()));
             out.put(f);
+        }
+        if (!agentId.isEmpty()) {
+            JSONArray in = AgentRunner.internalDeclarations(agentDepth);
+            for (int i = 0; i < in.length(); i++) {
+                JSONObject d = in.getJSONObject(i);
+                if (!allowed.contains(d.optString("name"))) continue;
+                out.put(new JSONObject().put("type", "function").put("name", d.optString("name")).put("description", d.optString("description"))
+                        .put("parameters", lower(d.getJSONObject("parameters"))));
+            }
         }
         if (withSearch) out.put(new JSONObject().put("type", "google_search"));
         return out;
@@ -199,14 +221,17 @@ final class HeadlessAgent {
                 return null;
             }
             case "whatsapp_chat":
-                if (!inRecipients(args.optString("phone", ""))) {
+                if (!inRecipients(args.optString("phone", "")) && !agentRecipient(args.optString("phone", ""))) {
                     return "BLOCKED: ye number schedule ke recipients mein nahi hai (" + recipients + "). Sirf unhi ko message ja sakta hai.";
                 }
-                return null;
+                return agentSendGate(name, args.optString("phone", ""), args.optString("text", ""));
             case "email_compose":
-                if (!inRecipients(args.optString("to", ""))) {
+                if (!inRecipients(args.optString("to", "")) && !agentRecipient(args.optString("to", ""))) {
                     return "BLOCKED: ye email schedule ke recipients mein nahi hai (" + recipients + "). Draft/report bana kar Sachin ko notify karo.";
                 }
+                return agentSendGate(name, args.optString("to", ""), args.optString("subject", "") + "\n" + args.optString("body", ""));
+            case "type_text":
+                if (!agentId.isEmpty()) return AgentRunner.typeGate(ctx, agentId, args.optString("text", ""), args.optString("field", ""), approvedThisRun);
                 return null;
             case "press_send":
                 return sendGuard();
@@ -216,6 +241,19 @@ final class HeadlessAgent {
             default:
                 return null;
         }
+    }
+
+    /** AI agent: its own recipient rule (owner's list / contactable rows of its table). Never used outside an agent run. */
+    private boolean agentRecipient(String value) {
+        return !agentId.isEmpty() && allowed.contains("press_send") && AgentRunner.recipientOk(ctx, agentId, value);
+    }
+
+    /** AI agent: daily cap + owner approvals (money request, final paid delivery, owner's own rules). Adds blocks only. */
+    private String agentSendGate(String tool, String to, String text) {
+        if (agentId.isEmpty()) return null;
+        String g = AgentRunner.sendGate(ctx, agentId, tool, to, text);
+        if (AgentRunner.APPROVED.equals(g)) { approvedThisRun = true; return null; }
+        return g;
     }
 
     /** Tools that only read/think (same idea as PriyaService's live gate): allowed without a fresh owner order. */
@@ -242,7 +280,8 @@ final class HeadlessAgent {
         String input = (live ? "BACKGROUND TASK (Sachin ne abhi live baat mein order diya hai; wo tumse baat karta rehta hai, tum peeche kaam karo; har step ki chhoti khabar unhe apne aap sunai jaati hai): "
                 : "SCHEDULED TASK (Sachin ne pehle se order diya tha, ab chalana hai): ") + task
                 + "\nAllowed tools: " + allowed + (recipients.isEmpty() ? "" : "\nMessage/email sirf inko: " + recipients)
-                + "\nKaam poora karo, har step verify karo, aur aakhir mein report do.";
+                + "\nKaam poora karo, har step verify karo, aur aakhir mein report do."
+                + sched.optString("agent_context", "");
         boolean withSearch = true;
         int modelIdx = 0;
         JSONObject r = null;
@@ -281,7 +320,9 @@ final class HeadlessAgent {
                 if (job != null) PriyaJobs.stage(job, "step " + (turn + 1) + ": " + name);
                 announce(name, args);
                 String res = guard(name, args);
-                if (res == null) {
+                if (res == null && !agentId.isEmpty() && AgentRunner.INTERNAL_TOOLS.contains(name)) {
+                    res = AgentRunner.tool(ctx, sched, job, name, args);
+                } else if (res == null) {
                     res = exec.run(name, args);
                     if ((name.equals("whatsapp_chat") || name.equals("email_compose")) && (res.startsWith("VERIFIED") || res.startsWith("PARTIAL"))) recipientOpened = true;
                     if (name.equals("open_app") || name.equals("open_link")) recipientOpened = false;

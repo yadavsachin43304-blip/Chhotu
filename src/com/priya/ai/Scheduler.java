@@ -179,6 +179,35 @@ final class Scheduler {
         }
     }
 
+    /**
+     * Creates or updates the schedule of an AI agent (AgentStore). The schedule only names the agent; at run time
+     * TaskRunnerService hands it to AgentRunner, which reads the agent's current goal, tools and rules.
+     * Returns the schedule id.
+     */
+    static synchronized String upsertAgentSchedule(Context c, AgentStore.Agent a) {
+        try {
+            JSONObject s = a.scheduleId.isEmpty() ? null : get(c, a.scheduleId);
+            if (s == null) {
+                s = new JSONObject().put("id", "S" + Long.toString(System.currentTimeMillis() % 10000000L, 36).toUpperCase(Locale.ROOT))
+                        .put("created", System.currentTimeMillis()).put("lastRun", 0).put("lastResult", "");
+            }
+            String[] hm = a.time.split(":");
+            int dow = Calendar.MONDAY;
+            String w = a.weekday.toLowerCase(Locale.ROOT);
+            for (int i = 0; i < DAYS.length; i++) if (w.length() >= 3 && DAYS[i].startsWith(w.substring(0, 3))) dow = i + 1;
+            s.put("task", "AI Agent: " + a.name).put("agent_id", a.id).put("repeat", a.trigger)
+                    .put("hour", Integer.parseInt(hm[0])).put("minute", Integer.parseInt(hm[1])).put("every_h", a.everyHours)
+                    .put("date", -1).put("dow", dow).put("scopes", new JSONArray()).put("recipients", "")
+                    .put("status", "active");
+            s.put("next", nextTime(s, System.currentTimeMillis()));
+            put(c, s);
+            arm(c, s);
+            return s.optString("id");
+        } catch (Exception e) {
+            return a.scheduleId;
+        }
+    }
+
     // ------------------------------------------------------------------ timing
 
     static long nextTime(JSONObject s, long now) {
@@ -204,6 +233,16 @@ final class Scheduler {
         if (rep.equals("weekly")) {
             int dow = s.optInt("dow", Calendar.MONDAY);
             while (cal.get(Calendar.DAY_OF_WEEK) != dow || cal.getTimeInMillis() <= now + 5000) cal.add(Calendar.DAY_OF_YEAR, 1);
+        } else if (rep.equals("weekdays")) {
+            while (cal.getTimeInMillis() <= now + 5000 || cal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY
+                    || cal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) cal.add(Calendar.DAY_OF_YEAR, 1);
+        } else if (rep.equals("hourly")) {
+            // every N hours, anchored at HH:MM of today
+            long step = Math.max(1, Math.min(24, s.optInt("every_h", 4))) * 3600000L;
+            long t = cal.getTimeInMillis();
+            if (t > now + 5000) { while (t - step > now + 5000) t -= step; }
+            else { while (t <= now + 5000) t += step; }
+            return t;
         } else {
             while (cal.getTimeInMillis() <= now + 5000) cal.add(Calendar.DAY_OF_YEAR, 1);
         }
@@ -319,6 +358,8 @@ final class Scheduler {
         String rep = s.optString("repeat");
         String when = String.format(Locale.ROOT, "%02d:%02d", s.optInt("hour"), s.optInt("minute"));
         if (rep.equals("daily")) when = "roz " + when;
+        else if (rep.equals("weekdays")) when = "Mon-Fri " + when;
+        else if (rep.equals("hourly")) when = "har " + s.optInt("every_h", 4) + " ghante (" + when + " se)";
         else if (rep.equals("weekly")) when = "har " + DAYS[Math.max(0, s.optInt("dow", 2) - 1)] + " " + when;
         else when = "ek baar " + when;
         long next = s.optLong("next", -1);

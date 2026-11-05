@@ -53,7 +53,8 @@ final class SelfUpdate {
             "src/com/priya/ai/ActionExecutor.java", "src/com/priya/ai/HeadlessAgent.java",
             "src/com/priya/ai/SelfUpdate.java", "src/com/priya/ai/PriyaService.java",
             "src/com/priya/ai/Owner.java", "src/com/priya/ai/SpeakerVerifier.java",
-            "src/com/priya/ai/TermuxBridge.java", "src/com/priya/ai/InstallReceiver.java"));
+            "src/com/priya/ai/TermuxBridge.java", "src/com/priya/ai/InstallReceiver.java",
+            "src/com/priya/ai/AgentStore.java", "src/com/priya/ai/AgentRunner.java"));
 
     private static final long EDIT_WINDOW_MS = 20 * 60 * 1000L;
     private static final long INSTALL_WINDOW_MS = 3 * 60 * 1000L;

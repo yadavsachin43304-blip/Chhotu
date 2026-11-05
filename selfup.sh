@@ -24,7 +24,8 @@ mkdir -p "$BK" "$LOG" "$STATE" "$APKS" 2>/dev/null
 PROTECTED="selfup.sh build.sh align.py priya-release.jks \
 src/com/priya/ai/ActionExecutor.java src/com/priya/ai/HeadlessAgent.java src/com/priya/ai/SelfUpdate.java \
 src/com/priya/ai/PriyaService.java src/com/priya/ai/Owner.java src/com/priya/ai/SpeakerVerifier.java \
-src/com/priya/ai/TermuxBridge.java src/com/priya/ai/InstallReceiver.java"
+src/com/priya/ai/TermuxBridge.java src/com/priya/ai/InstallReceiver.java \
+src/com/priya/ai/AgentStore.java src/com/priya/ai/AgentRunner.java"
 
 cmd="${1:-status}"; shift || true
 

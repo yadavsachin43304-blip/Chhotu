@@ -382,6 +382,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         list.addView(menuItem("🔑", "API (Gemini)", "API key aur model save karo", v -> openPanel("api")));
         list.addView(menuItem("🧩", "Skills", "Maya ke skills dekho, naya skill banao", v -> openPanel("skills")));
         list.addView(menuItem("🔧", "Self-upgrade", "Maya khud ko update kare (Termux se)", v -> openPanel("selfup")));
+        list.addView(menuItem("🤖", "AI Agents", "Apne AI agents: banao, ON/OFF, abhi chalao, table, history", v -> openAgents()));
         list.addView(menuItem("⏰", "Schedules", "Scheduled kaam: pause / resume / abhi chalao", v -> openBrain("schedules")));
         list.addView(menuItem("🎬", "Studio", "Audio file chuno — faceless video shuru karo", v -> openBrain("pick_audio")));
         list.addView(menuItem("🧠", "Memory (30 MB)", "Vaade, notes aur conversation text", v -> openPanel("memory")));
@@ -390,6 +391,15 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         drawer.addView(panel, new FrameLayout.LayoutParams(panelW, ViewGroup.LayoutParams.MATCH_PARENT));
         root.addView(drawer, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    private void openAgents() {
+        closeDrawer();
+        try {
+            startActivity(new Intent(this, AgentsActivity.class));
+        } catch (Exception e) {
+            Toast.makeText(this, "Screen nahi khula: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void openBrain(String page) {

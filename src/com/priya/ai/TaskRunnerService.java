@@ -147,7 +147,8 @@ public class TaskRunnerService extends Service {
         String result;
         String status;
         try {
-            result = new HeadlessAgent(this, s).run();
+            String agentId = s.optString("agent_id", "");
+            result = agentId.isEmpty() ? new HeadlessAgent(this, s).run() : AgentRunner.runScheduled(this, agentId, manual);
             status = result.startsWith("FAILED") || result.startsWith("BLOCKED") ? "FAILED" : "DONE";
         } catch (Throwable e) {
             result = "FAILED: " + e.getClass().getSimpleName() + ": " + e.getMessage();

@@ -26,7 +26,7 @@ final class BrainTools {
     /** Tools that only read/think (no phone action): allowed without a fresh owner order. */
     static final Set<String> READ_ONLY = new HashSet<>(Arrays.asList(
             "web_fetch", "research", "generate_text", "job_status", "list_schedules", "list_recent_audio", "find_best_tool",
-            "deep_think", "cancel_background"));
+            "deep_think", "cancel_background", "list_agents", "agent_report", "agent_approvals"));
 
     // ------------------------------------------------------------------ declaration helpers (Live API schema, upper-case types)
 
@@ -120,6 +120,7 @@ final class BrainTools {
                 new JSONObject().put("problem", str("The problem with all numbers, constraints and the goal"))
                         .put("context", str("Optional: what is already known or tried"))
                         .put("search", bool("true = may use Google Search, default false")), "problem"));
+        AgentTools.declare(a);
         SelfUpdate.declare(a);
     }
 
@@ -166,6 +167,7 @@ final class BrainTools {
                 }
             }
             default:
+                if (AgentTools.NAMES.contains(name)) return AgentTools.run(ctx, name, args);
                 if (SelfUpdate.isSelfTool(name)) return SelfUpdate.run(ctx, name, args);
                 return null;
         }

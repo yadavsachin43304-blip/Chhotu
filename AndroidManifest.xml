@@ -58,6 +58,11 @@
             android:exported="false"
             android:screenOrientation="portrait" />
 
+        <activity
+            android:name=".AgentsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
         <service
             android:name=".PriyaService"
             android:exported="false"

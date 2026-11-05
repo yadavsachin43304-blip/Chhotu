@@ -34,8 +34,17 @@ final class Brain {
 
     /** Added to the live system prompt. */
     static String prompt(Context ctx) {
-        return CORE;
+        String on = AgentRunner.voiceSummary(ctx);
+        return CORE + AGENTS + (on.isEmpty() ? "Abhi koi agent ON nahi. " : "ON agents: " + on + ". Owner ki baat kisi agent ke phrase/naam se mile to run_agent. ");
     }
+
+    private static final String AGENTS =
+            "AI AGENTS (Menu > AI Agents): owner apne agent bana sakta hai jo khud kaam karte hain (schedule / voice phrase / 'abhi chalao'). "
+            + "'Agent banao ...' → tum khud naam, goal (steps), tools, trigger, approval rules socho aur create_agent(confirm=false) — jo 2 line summary aaye wahi owner ko sunao aur poochho 'bana doon?'; "
+            + "SIRF saaf 'haan' par create_agent(confirm=true, draft_id). Badlav: edit_agent (wahi 2-step). list_agents, run_agent, agent_on_off, agent_report. "
+            + "Agent owner ki haan maange (payment mila? / paise wala email) to wahi line poochho; 'haan' par agent_approve(approve=true), 'na' par false — khud se kabhi approve nahi. "
+            + "GrowthPilot ke 6 agent (Lead Finder, Outreach, Form Follow-up, Health Check, Paid Order Worker, Pipeline Manager) bane hue hain, OFF hain jab tak owner ON na kare. "
+            + "Agent kabhi delete nahi hota (archive), kabhi payment/kharid nahi, sirf allowed logon ko message. ";
 
     /** System prompt for a scheduled (headless, no-voice) run limited to {@code allowed} tools. */
     static String headlessPrompt(Context ctx, JSONObject sched, Set<String> allowed) {
@@ -51,7 +60,9 @@ final class Brain {
         sb.append("Abhi ka samay: ").append(now()).append(". ");
         sb.append("Task (Sachin ka pehle diya hua order): ").append(task).append(". ");
         sb.append("SIRF ye tools use kar sakti ho: ").append(allowed).append(". Inke bahar ka koi kaam mat karo; zaroori ho to report mein likho ki kis permission ki kami thi. ");
-        if (!rec.isEmpty()) sb.append("Message/email SIRF inko: ").append(rec).append(" — kisi aur ko kabhi nahi. ");
+        String rule = sched == null ? "" : sched.optString("recipients_rule", "");
+        if (!rule.isEmpty()) sb.append("Ye ek AI AGENT run hai. Message/email SIRF is rule ke andar: ").append(rule).append(" Kisi aur ko kabhi nahi; BLOCKED / APPROVAL_NEEDED aaye to bypass nahi. ");
+        else if (!rec.isEmpty()) sb.append("Message/email SIRF inko: ").append(rec).append(" — kisi aur ko kabhi nahi. ");
         else sb.append("Is task mein kisi ko message/email bhejna allowed nahi hai jab tak recipients diye na hon. ");
         sb.append(CORE);
         sb.append("Background mode: koi kaam adhoora/unclear ho to andaza mat lagao — jitna pakka ho utna karo aur baaki report mein poochho. ");

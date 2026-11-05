@@ -23,7 +23,7 @@ final class ProgressText {
     static boolean silent(String tool) {
         switch (tool == null ? "" : tool) {
             case "knowledge": case "recall": case "use_skill": case "remember": case "task_progress":
-            case "job_status": case "notify_owner": case "list_schedules":
+            case "job_status": case "notify_owner": case "list_schedules": case "agent_note":
                 return true;
             default:
                 return false;
@@ -133,6 +133,11 @@ final class ProgressText {
             case "code_write_file": return "code file '" + q(a.get("path"), 30) + "' likh rahi hoon";
             case "code_read_file": return "code file padh rahi hoon";
             case "code_run": return "command chala rahi hoon";
+            case "agent_table_read": return "agent ki table padh rahi hoon";
+            case "agent_table_upsert": return "table mein entries likh rahi hoon";
+            case "agent_request_approval": return "aapki haan ke liye request bhej rahi hoon";
+            case "agent_save_pdf": return "PDF bana rahi hoon";
+            case "agent_handoff": return "'" + q(a.get("agent"), 30) + "' agent ko kaam de rahi hoon";
             default: return q(tool, 24) + " chala rahi hoon";
         }
     }
@@ -201,6 +206,11 @@ final class ProgressText {
             case "code_write_file": return "code file likh di";
             case "code_read_file": return "code file padh li";
             case "code_run": return "command chal gayi";
+            case "agent_table_read": return "table padh li";
+            case "agent_table_upsert": return "table update kar di";
+            case "agent_request_approval": return "aapse haan ki request bhej di";
+            case "agent_save_pdf": return "PDF save ho gayi";
+            case "agent_handoff": return "'" + q(a.get("agent"), 30) + "' agent ka kaam khatam hua";
             default: return q(t, 24) + " ho gaya";
         }
     }

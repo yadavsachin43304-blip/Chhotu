@@ -1,4 +1,4 @@
-# Maya AI v36 — Vivek ji ki apni AI assistant (Gemini Live)
+# Maya AI v37 — Vivek ji ki apni AI assistant (Gemini Live)
 
 > **Naya naam:** Priya ab **Maya** hai ("Main Maya hoon"). Package `com.priya.ai`, signing key, purani yaadein/settings/folders
 > (`~/PriyaAI`, `~/PriyaCode`, `Pictures/Priya` ...) waise hi hain, isliye update ke baad sab data bacha rehta hai.
@@ -9,6 +9,18 @@
 > ("WhatsApp khol liya, ab Rahul ki chat dhoondh rahi hoon"), notification mein bhi wahi dikhta hai. Steps 1.5 sec se jaldi aayein to ek line
 > mein jud jaate hain; aap bol rahe ho to khabar ruk kar baad mein aati hai. "Kaam ho gaya" sirf VERIFIED natije par. Chhota "ruko / cancel /
 > stop" bolo to kaam turant rukta hai. Delete-block aur owner-order gate (20 min, anjaan awaaz par kuch nahi) background mein bhi lagte hain.
+
+> **v37 — AI Agent Builder (Menu > 🤖 AI Agents):** apne AI agent banao jo khud kaam karein. Agent = naam + goal (Markdown steps)
+> + tool groups (phone / content / messages / coding; research, likhna, notes aur apni data table hamesha) + trigger (manual, roz, har N ghante,
+> Mon-Fri, hafte mein ek din, ya voice phrase) + approval rules + apni table (leads/orders, CSV jaisi) + notes + pichhle 30 run (purane archive mein).
+> Bolo *"Maya, ek agent banao jo roz subah Pune ke cafes dhoondhe"* — Maya naam/goal/tools/trigger khud socha kar 2 line sunati hai, **"haan"** par hi banati hai.
+> Voice: `create_agent`, `edit_agent`, `list_agents`, `run_agent`, `agent_on_off`, `agent_report`, `agent_approvals`, `agent_approve`.
+> GrowthPilot ke 6 agent pehle se bane hain (**OFF**, aap ON karo): Lead Finder → Outreach Emailer (roz max 20, sirf table ke leads) → Form Follow-up →
+> Free Health Check Builder (PDF + email, pre-approved) → Paid Order Worker → Daily Pipeline Manager (a→e kram se + subah ki report). Plus "Custom agent" template.
+> **Safety:** agent kabhi kuch delete nahi karta (archive / status), kabhi payment/kharid nahi, sirf allowed logon (owner ki list ya table ke contacts,
+> bounced/do_not_contact kabhi nahi) ko message. **Paise wala message (please pay / invoice / UPI) aur paid kaam ki final delivery hamesha aapki "haan"
+> ke baad** ("payment mila?") — ye rule band nahi ho sakta. Delete-block aur owner-order gate waise hi. `AgentStore` + `AgentRunner` ab protected files mein.
+> Test: `javac -encoding UTF-8 -d /tmp/as src/com/priya/ai/MiniJson.java src/com/priya/ai/AgentStore.java src/com/priya/ai/AgentTemplates.java tests/AgentStoreCheck.java && java -cp /tmp/as com.priya.ai.AgentStoreCheck`
 
 Female voice mein baat karne wali assistant: phone control (Accessibility), YouTube/WhatsApp/Gmail, echo-cancel, hamesha sunna,
 30 MB text memory, 3 avatar (3D / portrait), skills, schedules, Termux coding, faceless video — aur ab **khud ko upgrade** karna.
