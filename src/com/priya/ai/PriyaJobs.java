@@ -20,13 +20,27 @@ import java.util.concurrent.Executors;
 /**
  * Long background jobs (faceless video etc.). A job never claims success by itself: it ends VERIFIED only when
  * its own check (file exists, size > 0, duration ok) passed. When it ends, the owner gets a notification and the
- * live Priya session (if open) gets a SYSTEM NOTE so she can report the real result.
+ * live Maya session (if open) gets a SYSTEM NOTE so she can report the real result.
+ *
+ * v36 duplex: while a background agent works, every step produces a short [PROGRESS] line ({@link #progress}) that is
+ * paced ({@link Pacer}: merged when steps come < 1.5 s apart, held while the owner is talking, briefly held while Maya
+ * is still speaking) and injected into the live session so she says it in one short sentence; the job notification
+ * shows the same line. Final results go through the same pacer, so they never cut the owner off.
  */
 final class PriyaJobs {
 
     interface LiveSink { void note(String systemNote); }
     /** Set by PriyaService while a live session runs. */
     static volatile LiveSink live;
+
+    /**
+     * Owner-order gate shared with background agents (written by PriyaService): when the owner's voice was last heard
+     * and when a stranger's voice was last heard (0 = never). HeadlessAgent in live mode refuses acting steps when
+     * the owner has been silent for more than ORDER_WINDOW_MS or a stranger was heard in the last STRANGER_HOLD_MS.
+     */
+    static volatile long ownerHeardMs = 0, strangerHeardMs = 0;
+    static final long ORDER_WINDOW_MS = 20 * 60 * 1000L;
+    static final long STRANGER_HOLD_MS = 10 * 1000L;
 
     interface Work { String run(Job j) throws Exception; }
 
@@ -38,6 +52,10 @@ final class PriyaJobs {
         volatile boolean cancel;              // owner said stop: background agents check this between steps
         volatile String stage = "shuru";
         volatile String result = "";
+        volatile int steps;                   // progress lines emitted so far
+        volatile boolean phone;               // drives the shared screen (live phone tools must wait)
+        volatile long lastNotifyMs;
+        Context app;
         Job(String id, String kind, String title) { this.id = id; this.kind = kind; this.title = title; }
         String line() {
             String t = new SimpleDateFormat("d MMM HH:mm", Locale.ROOT).format(new Date(started));
@@ -57,6 +75,7 @@ final class PriyaJobs {
         final Context app = ctx.getApplicationContext();
         String id = kind.substring(0, Math.min(3, kind.length())) + "-" + new SimpleDateFormat("HHmmss", Locale.ROOT).format(new Date());
         final Job j = new Job(id, kind, title);
+        j.app = app;
         synchronized (JOBS) { JOBS.put(id, j); }
         TaskRunnerService.keepAlive(app, title);
         (kind.equals("bg") ? EXEC_BG : EXEC).execute(() -> {
@@ -74,14 +93,13 @@ final class PriyaJobs {
             j.ended = System.currentTimeMillis();
             notifyOwner(app, (j.status.equals("VERIFIED") || j.status.equals("DONE") ? "✅ " : "⚠️ ") + j.title,
                     GeminiRest.clip(j.result, 600), j.id.hashCode());
-            LiveSink s = live;
-            if (s != null) {
+            if (live != null) {
                 try {
                     String how = j.status.equals("DONE")
                             ? "\n(Ye background agent ki apni report hai. File/proof/link report mein ho to 'ho gaya' bolo, warna 'agent ne ye bataya' kaho.)"
                             : j.status.equals("CANCELLED") ? "\n(Owner ke kehne par roka gaya; bas ek chhoti line mein batao ki ruk gaya.)"
                             : "\n(Sirf jo VERIFIED hai wahi 'ho gaya' bolo.)";
-                    s.note("[SYSTEM NOTE, user ne nahi bola] Background job " + j.id + " (" + j.title + ") khatam: " + j.status
+                    Pacer.finalNote(j.id, "[SYSTEM NOTE, user ne nahi bola] Background job " + j.id + " (" + j.title + ") khatam: " + j.status
                             + ". Result: " + GeminiRest.clip(j.result, 900)
                             + "\nSachin ko 1-2 line ka professional report do, abhi ki baat ke beech mein tameez se." + how);
                 } catch (Throwable ignored) { }
@@ -93,6 +111,131 @@ final class PriyaJobs {
 
     static void stage(Job j, String s) {
         j.stage = s;
+    }
+
+    /**
+     * One step of a running background job finished / started: remember it for job_status, show it in the job
+     * notification (max ~1/s) and hand it to the live session through the pacer as a [PROGRESS] note.
+     */
+    static void progress(Job j, String line) {
+        if (j == null || line == null || line.trim().isEmpty() || j.cancel) return;
+        line = line.trim();
+        j.stage = line;
+        j.steps++;
+        long now = System.currentTimeMillis();
+        if (j.app != null && now - j.lastNotifyMs > 1000) {
+            j.lastNotifyMs = now;
+            try { TaskRunnerService.keepAlive(j.app, j.title + " — " + line); } catch (Throwable ignored) { }
+        }
+        if (live != null) Pacer.add(j.id, j.title, line);
+    }
+
+    /** True while a background job that may drive the phone screen is running. */
+    static Job phoneJobRunning() {
+        synchronized (JOBS) {
+            for (Job j : JOBS.values()) if (j.phone && j.status.equals("RUNNING")) return j;
+        }
+        return null;
+    }
+
+    /**
+     * Paces what background jobs tell the live session so Maya does not talk over herself or over the owner.
+     *  - progress lines: sent at once when the last note went out >= 1.5 s ago; lines arriving faster are merged
+     *    into one sentence ({@link ProgressText#merge});
+     *  - while the owner is talking (PriyaBus.userTalking) everything waits;
+     *  - while Maya is still speaking, progress waits up to 6 s (then goes, merged);
+     *  - a job's final note drops its stale progress lines and goes as soon as the owner is quiet (max hold 30 s).
+     */
+    static final class Pacer {
+        static final long GAP_MS = 1500, SPEAK_HOLD_MS = 6000, FINAL_HOLD_MS = 30000;
+        private static final class Item {
+            final String job, title, text; final boolean fin; final long at = System.currentTimeMillis();
+            Item(String job, String title, String text, boolean fin) { this.job = job; this.title = title; this.text = text; this.fin = fin; }
+        }
+        private static final List<Item> Q = new ArrayList<>();
+        private static long lastSentMs = 0;
+        private static java.util.concurrent.ScheduledExecutorService timer;
+
+        private Pacer() {}
+
+        static void add(String job, String title, String line) { put(new Item(job, title, line, false)); }
+
+        static void finalNote(String job, String note) { put(new Item(job, "", note, true)); }
+
+        private static void put(Item it) {
+            synchronized (Q) {
+                if (it.fin) {
+                    for (int i = Q.size() - 1; i >= 0; i--) if (!Q.get(i).fin && Q.get(i).job.equals(it.job)) Q.remove(i);
+                } else {
+                    int n = 0;                                                 // keep at most 6 waiting lines per job
+                    for (Item x : Q) if (!x.fin && x.job.equals(it.job)) n++;
+                    if (n >= 6) for (int i = 0; i < Q.size(); i++) if (!Q.get(i).fin && Q.get(i).job.equals(it.job)) { Q.remove(i); break; }
+                }
+                Q.add(it);
+                if (timer == null) {
+                    timer = Executors.newSingleThreadScheduledExecutor();
+                    timer.scheduleWithFixedDelay(Pacer::tick, 0, 250, java.util.concurrent.TimeUnit.MILLISECONDS);
+                }
+            }
+            tick();
+        }
+
+        static void tick() {
+            String send = null;
+            synchronized (Q) {
+                if (Q.isEmpty()) return;
+                LiveSink s = live;
+                if (s == null) { Q.clear(); return; }
+                long now = System.currentTimeMillis();
+                boolean ownerTalking = PriyaBus.userTalking;
+                boolean speaking = PriyaBus.state == PriyaBus.SPEAKING;
+                // finals first
+                for (int i = 0; i < Q.size(); i++) {
+                    Item it = Q.get(i);
+                    if (!it.fin) continue;
+                    if ((ownerTalking || now - lastSentMs < GAP_MS) && now - it.at < FINAL_HOLD_MS) return;
+                    Q.remove(i);
+                    send = it.text;
+                    break;
+                }
+                if (send == null) {
+                    if (ownerTalking || now - lastSentMs < GAP_MS) return;
+                    long oldest = Long.MAX_VALUE;
+                    for (Item it : Q) oldest = Math.min(oldest, it.at);
+                    if (speaking && now - oldest < SPEAK_HOLD_MS) return;
+                    // merge every waiting line, grouped per job (normally only one job runs on the screen)
+                    Map<String, List<String>> by = new LinkedHashMap<>();
+                    Map<String, String> titles = new LinkedHashMap<>();
+                    for (Item it : Q) {
+                        if (!by.containsKey(it.job)) by.put(it.job, new ArrayList<String>());
+                        by.get(it.job).add(it.text);
+                        titles.put(it.job, it.title);
+                    }
+                    Q.clear();
+                    StringBuilder sb = new StringBuilder();
+                    for (Map.Entry<String, List<String>> e : by.entrySet()) {
+                        String m = ProgressText.merge(e.getValue());
+                        if (m == null) continue;
+                        if (sb.length() > 0) sb.append(" | ");
+                        sb.append(by.size() > 1 ? titles.get(e.getKey()) + ": " : "").append(m);
+                    }
+                    if (sb.length() == 0) return;
+                    send = progressNote(sb.toString());
+                }
+                lastSentMs = now;
+            }
+            LiveSink s = live;
+            if (s != null && send != null) {
+                try { s.note(send); } catch (Throwable ignored) { }
+            }
+        }
+    }
+
+    /** The [PROGRESS] note Maya reads out (the live prompt explains the format). */
+    static String progressNote(String line) {
+        return "[PROGRESS, user ne nahi bola] " + line
+                + "\n(Ye background kaam ka step update hai: Sachin ko ABHI ek chhoti line mein bolo, apne shabdon mein, max ~15 shabd, phir chup. "
+                + "Ye poora kaam hone ki khabar NAHI hai — 'kaam ho gaya' sirf final SYSTEM NOTE par. Sachin kuch poochh rahe the to pehle unka jawab.)";
     }
 
     static boolean anyRunning() {
@@ -152,7 +295,7 @@ final class PriyaJobs {
     static void ensureChannel(Context c) {
         NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm != null && nm.getNotificationChannel(CHANNEL) == null) {
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Priya kaam / results", NotificationManager.IMPORTANCE_DEFAULT));
+            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Maya kaam / results", NotificationManager.IMPORTANCE_DEFAULT));
         }
     }
 

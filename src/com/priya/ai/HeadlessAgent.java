@@ -16,6 +16,9 @@ import java.util.regex.Pattern;
  * Runs one scheduled task without the owner present: Gemini text model + function calling over the Interactions API.
  * SAFETY: only the tools of the scopes the owner chose at creation; delete/remove/reset hard block (ActionExecutor) stays;
  * no payments; messages/emails only to the recipients named in the schedule; no calls, no new schedules, no new skills.
+ * Live mode (background_task from the voice chat) additionally keeps the owner-order gate: acting steps are refused
+ * when the owner's voice has not been heard for 20 min or a stranger's voice was heard in the last 10 s, and every
+ * step is announced to the owner through PriyaJobs.progress (ProgressText).
  */
 final class HeadlessAgent {
 
@@ -45,6 +48,10 @@ final class HeadlessAgent {
     /** true = started by the owner from the live chat (background_task), false = scheduled run. */
     private final boolean live;
     private PriyaJobs.Job job;
+    /** Previous step, for the "X ho gaya, ab Y kar rahi hoon" progress line. */
+    private String prevName;
+    private JSONObject prevArgs;
+    private String prevRes;
 
     HeadlessAgent(Context c, JSONObject schedule) {
         ctx = c.getApplicationContext();
@@ -70,7 +77,23 @@ final class HeadlessAgent {
     /** Lets the owner cancel this run (job.cancel) and shows the current step in job_status. */
     HeadlessAgent attach(PriyaJobs.Job j) {
         job = j;
+        if (j != null) {
+            for (String t : PHONE) if (allowed.contains(t)) { j.phone = true; break; }
+        }
         return this;
+    }
+
+    private static ProgressText.Args argsOf(final JSONObject o) {
+        return k -> o == null ? "" : o.optString(k, "");
+    }
+
+    /** Announces one step: what just finished (with its real outcome) and what starts now. */
+    private void announce(String nextName, JSONObject nextArgs) {
+        if (job == null || !live) return;
+        try {
+            String line = ProgressText.step(prevName, argsOf(prevArgs), prevRes, nextName, argsOf(nextArgs));
+            if (line != null) PriyaJobs.progress(job, line);
+        } catch (Throwable ignored) { }
     }
 
     private boolean cancelled() { return job != null && job.cancel; }
@@ -148,6 +171,15 @@ final class HeadlessAgent {
             return "BLOCKED: '" + name + "' is scheduled task ke allowed scope mein nahi hai (owner ne creation par nahi diya). "
                     + "Bina is tool ke jo ho sakta hai wo karo, warna report mein likho ki Sachin ki permission chahiye.";
         }
+        if (live && acts(name)) {
+            long now = System.currentTimeMillis();
+            if (Prefs.voiceLock(ctx) && PriyaJobs.strangerHeardMs > 0 && now - PriyaJobs.strangerHeardMs < PriyaJobs.STRANGER_HOLD_MS) {
+                return "BLOCKED: abhi anjaan awaaz suni gayi thi — bina owner ke saaf order ke koi action nahi. Thoda ruk kar dobara koshish karo; na ho to report mein likho.";
+            }
+            if (PriyaJobs.ownerHeardMs > 0 && now - PriyaJobs.ownerHeardMs > PriyaJobs.ORDER_WINDOW_MS) {
+                return "BLOCKED: Sachin ki awaaz 20 minute se nahi suni — owner ke taaze order ke bina aage koi action nahi. Ab tak ka report do.";
+            }
+        }
         switch (name) {
             case "click_on_screen": {
                 String t = args.optString("text", "");
@@ -186,6 +218,15 @@ final class HeadlessAgent {
         }
     }
 
+    /** Tools that only read/think (same idea as PriyaService's live gate): allowed without a fresh owner order. */
+    private static final Set<String> READ_ONLY = new HashSet<>(Arrays.asList(
+            "read_screen", "look_at_screen", "knowledge", "use_skill", "recall", "list_apps", "wait_for_text",
+            "task_progress", "code_read_file", "termux_check", "task_plan", "remember", "notify_owner"));
+
+    private static boolean acts(String name) {
+        return !READ_ONLY.contains(name) && !BrainTools.READ_ONLY.contains(name);
+    }
+
     private String sendGuard() {
         if (!allowed.contains("press_send")) return "BLOCKED: is scheduled task ko message/email bhejne ki permission nahi hai.";
         if (recipientOpened || screenShowsRecipient()) return null;
@@ -198,7 +239,7 @@ final class HeadlessAgent {
         long deadline = System.currentTimeMillis() + (live ? 30 : 20) * 60 * 1000L;
         final int maxTurns = live ? 60 : 40;
         String system = Brain.headlessPrompt(ctx, sched, allowed);
-        String input = (live ? "BACKGROUND TASK (Sachin ne abhi live baat mein order diya hai; wo tumse baat karta rehta hai, tum peeche kaam karo): "
+        String input = (live ? "BACKGROUND TASK (Sachin ne abhi live baat mein order diya hai; wo tumse baat karta rehta hai, tum peeche kaam karo; har step ki chhoti khabar unhe apne aap sunai jaati hai): "
                 : "SCHEDULED TASK (Sachin ne pehle se order diya tha, ab chalana hai): ") + task
                 + "\nAllowed tools: " + allowed + (recipients.isEmpty() ? "" : "\nMessage/email sirf inko: " + recipients)
                 + "\nKaam poora karo, har step verify karo, aur aakhir mein report do.";
@@ -238,12 +279,16 @@ final class HeadlessAgent {
                 else { try { args = new JSONObject(String.valueOf(argObj)); } catch (Exception e) { args = new JSONObject(); } }
                 if (cancelled()) return "CANCELLED: owner ne roka.\nAb tak:\n" + GeminiRest.clip(trace.toString(), 1200);
                 if (job != null) PriyaJobs.stage(job, "step " + (turn + 1) + ": " + name);
+                announce(name, args);
                 String res = guard(name, args);
                 if (res == null) {
                     res = exec.run(name, args);
                     if ((name.equals("whatsapp_chat") || name.equals("email_compose")) && (res.startsWith("VERIFIED") || res.startsWith("PARTIAL"))) recipientOpened = true;
                     if (name.equals("open_app") || name.equals("open_link")) recipientOpened = false;
                 }
+                prevName = name;
+                prevArgs = args;
+                prevRes = res;
                 trace.append(name).append(" → ").append(GeminiRest.clip(res.replace('\n', ' '), 90)).append('\n');
                 results.put(new JSONObject().put("type", "function_result").put("name", name).put("call_id", s.optString("id"))
                         .put("result", new JSONArray().put(new JSONObject().put("type", "text").put("text", GeminiRest.clip(res, 12000)))));

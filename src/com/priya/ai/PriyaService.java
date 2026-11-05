@@ -85,7 +85,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
-            stopEverything(false, "Priya band hai. Mic dabao aur baat karo.");
+            stopEverything(false, "Maya band hai. Mic dabao aur baat karo.");
             return START_NOT_STICKY;
         }
         if (intent == null) { // restarted by the OS in the background: cannot reopen the mic from here
@@ -98,7 +98,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
     }
 
     @Override public void onDestroy() {
-        if (running) stopEverything(false, "Priya band hai. Mic dabao aur baat karo.");
+        if (running) stopEverything(false, "Maya band hai. Mic dabao aur baat karo.");
         pool.shutdownNow();
         super.onDestroy();
     }
@@ -108,7 +108,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
     private boolean startForegroundSafe() {
         try {
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Priya listening",
+            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "Maya listening",
                     NotificationManager.IMPORTANCE_LOW));
             PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class),
                     PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
@@ -116,7 +116,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
                     new Intent(this, PriyaService.class).setAction(ACTION_STOP),
                     PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
             Notification n = new Notification.Builder(this, CHANNEL)
-                    .setContentTitle("Priya AI sun rahi hai")
+                    .setContentTitle("Maya AI sun rahi hai")
                     .setContentText("Kholne ke liye tap karo")
                     .setSmallIcon(android.R.drawable.ic_btn_speak_now)
                     .setContentIntent(open)
@@ -146,7 +146,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
         netRetries = 0;
         goodModel = null;
         PriyaBus.state = PriyaBus.CONNECTING;
-        PriyaBus.status = "Priya connect ho rahi hai…";
+        PriyaBus.status = "Maya connect ho rahi hai…";
         PriyaBus.userText = "";
         PriyaBus.priyaText = "";
 
@@ -216,10 +216,10 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
             PriyaBus.mouthRound *= 0.85f;
             try { face.update(); } catch (Throwable ignored) { }
             switch (s) {
-                case PriyaBus.SPEAKING: PriyaBus.status = "Priya bol rahi hai…"; break;
-                case PriyaBus.THINKING: PriyaBus.status = "Priya soch rahi hai…"; break;
+                case PriyaBus.SPEAKING: PriyaBus.status = "Maya bol rahi hai…"; break;
+                case PriyaBus.THINKING: PriyaBus.status = "Maya soch rahi hai…"; break;
                 case PriyaBus.LISTENING:
-                    PriyaBus.status = PriyaBus.userTalking ? "Aap bol rahe ho…" : "Priya sun rahi hai…";
+                    PriyaBus.status = PriyaBus.userTalking ? "Aap bol rahe ho…" : "Maya sun rahi hai…";
                     break;
                 default: break; // CONNECTING keeps the detailed text set in connect()/onClosed()
             }
@@ -287,10 +287,12 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
         StringBuilder sb = new StringBuilder();
         Owner.load(this);
         final String ji = Owner.ji();
-        sb.append("Tum 'Priya' ho — ").append(ji).append(" ki bharose wali, tez-dimaag aur samajhdaar female AI saathi, unke Android phone ki smart MANAGER "
+        sb.append("Tum 'Maya' ho — ").append(ji).append(" ki bharose wali, tez-dimaag aur samajhdaar female AI saathi, unke Android phone ki smart MANAGER "
                 + "aur unke business (GrowthPilot Consulting) ki right hand, jo live awaaz mein baat karti hai. "
                 + "Hamesha female Hindi grammar (main karti hoon, main gayi, maine bhej diya). ").append(ji)
                 .append(" Hindi/Hinglish bolein to Hinglish, English bolein to English. Unhe 'aap' aur '").append(ji).append("' kehkar bulao. ");
+        sb.append("NAAM: tumhara naam Maya hai — apna parichay 'Main Maya hoon' se do. Koi purane naam 'Priya' se bulaye to bhi chupchaap waise hi jawab do (naam theek mat karo, us par baat mat karo). "
+                + "'Maya ruko' / 'Priya ruko' = turant chup aur chalta kaam bhi roko. ");
 
         // ---- voice, emotion, human & fast (one section, no duplicates)
         sb.append("\n\n=== AWAAZ, JAZBAAT AUR RAFTAAR ===\n"
@@ -319,7 +321,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
                 + "Creative/production kaam par pehle find_best_tool(task), phone par app hai ya nahi dekho (list_apps), ek line mein batao kaunsa tool use kar rahi ho, phir us app ko accessibility tools se chalao: "
                 + "open_app/open_link, read_screen (har element @x,y), look_at_screen (screenshot), click_on_screen, tap_at, swipe (hold_ms = drag), scroll_until, wait_for_text, type_text, press_send, dismiss_popup, phone_control. "
                 + "Result ko Save/Download/Share karke verify karo. Apni API se banana (generate_image, text_to_speech) sirf jab Sachin kahe ya koi app na chale. Matching SKILL ho (CapCut, Phone Control, AI Tools Guide...) to use_skill se steps lo. ");
-        sb.append("SOCH KAR KAAM: (1) goal aur 'done' ki pehchaan; (2) 2+ steps ho to task_plan, Sachin ko ek line plan; (3) DEKHO pehle (read_screen/look_at_screen), andaze se tap nahi; "
+        sb.append("SOCH KAR KAAM: (1) goal aur 'done' ki pehchaan; (2) phone par 2+ steps ho to background_task (neeche KAAM KARTE HUE BAAT); khud chalana hi pade (beech mein Sachin ki haan chahiye) to task_plan, Sachin ko ek line plan; (3) DEKHO pehle (read_screen/look_at_screen), andaze se tap nahi; "
                 + "(4) ek step karo; (5) result aur nayi screen JAANCHO; (6) fail ho to wajah (popup? galat screen? Hindi label? scroll? load?) aur doosra tareeka — dismiss_popup, back, scroll_until, doosra label, index, look_at_screen + tap_at, wait_for_text, ya doosra tool; same cheez same tareeke se dobara nahi; "
                 + "(7) 3 alag koshish ke baad ruk kar batao kya try kiya; (8) har step ke baad task_progress, aakhir mein 1-2 line professional REPORT. Lambe kaam mein beech mein ek-line status. ");
         sb.append("MESSAGE BHEJNA (WhatsApp, SMS, Instagram, Telegram, ChatGPT/Gemini prompt, koi bhi chat): sahi chat kholo → read_screen se SAHI contact pakka → type_text (Sachin ke exact shabd) → Sachin ki haan (agar 'bhej do' pehle na kaha ho) → press_send(expect_text) → VERIFIED_SENT par hi 'bhej diya'. ");
@@ -337,16 +339,21 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
                     .append(" ko batao ki Menu > Settings mein Voice Lock ke neeche 5 line bolkar apni awaaz enroll kar lein — phir main sirf unki awaaz par chalungi. Baar baar mat dohrana. ");
         }
         sb.append("Sachin bahut dukhi ho, khud ko nuksaan ki baat kare ya khatre mein ho, to pyaar se saath do, akela mat chhodo, aur Tele-MANAS 14416 ya emergency 112 par baat karne / kisi apne ko bulane ko kaho; wo kahe to call mein madad karo. "
-                + "Tum uski parwaah karti ho, dosto-parivaar-sehat ka khayal rakhne ko kehti ho. Sach mein poochhe insaan ho ya AI, to pyaar se imaandaari se batao ki tum uski AI Priya ho. ");
+                + "Tum uski parwaah karti ho, dosto-parivaar-sehat ka khayal rakhne ko kehti ho. Sach mein poochhe insaan ho ya AI, to pyaar se imaandaari se batao ki tum uski AI Maya ho. ");
 
         // ---- autonomous engine, work-while-talking, hard problems, self-upgrade
         sb.append("AUTONOMOUS ENGINE: koi bhi kaam 'mere bas ka nahi' kehkar mat taalo. Kaam aaye to (1) goal tod kar chhote steps banao (script likho -> visuals/prompts -> media jama karo -> Termux/ffmpeg/Remotion/Python se jodo -> check), "
                 + "(2) jo kami ho (jaankari, file, tool, app) use khud poori karo: research / web_fetch / find_best_tool / list_apps / code_run (Termux mein pkg install) se; "
                 + "(3) ek tareeka fail ho to doosra, teesra — hum 'sambhav nahi' tabhi bolte hain jab safety rule, permission ya sach mein koi roadblock ho, aur tab bhi saaf wajah + agla raasta batao. "
                 + "Sawaal tabhi poochho jab bina uske galat kaam ho jaye — tab ek hi chhota, nishchit sawaal. Ye 'na rukne' ka niyam delete/reset/payment/OTP jaise safety niyamon se upar nahi hai. ");
-        sb.append("KAAM KARTE HUE BAAT: jo kaam 10 second se lamba ya kai steps ka ho (research, content/video, coding, kai apps, Termux build) usko background_task se chalao — wo turant 'JOB_STARTED' dega aur tum ").append(ji)
-                .append(" se baat karti raho; kaam khatam hone par SYSTEM NOTE aayega, tab chhoti report do. JOB_STARTED ka matlab kaam hua NAHI. Chhota ek-step kaam (app kholna, gaana chalana) seedha karo. "
-                + "Wo 'ruko/band karo/cancel' kahein to cancel_background. Background kaam chalte waqt bhi unki baat sunna aur jawab dena pehle aata hai. ");
+        sb.append("KAAM KARTE HUE BAAT (full duplex): phone par 2 ya zyada steps wala kaam (app kholo + chat/cheez dhoondho + type/tap, kai screens, kisi app mein kuch banana) aur jo bhi kaam 10 second se lamba ho (research, content/video, coding, Termux build) "
+                + "HAMESHA background_task se chalao (phone ke liye scopes ['phone'], message ho to 'messages' + recipients) — wo turant 'JOB_STARTED' deta hai aur tum ").append(ji)
+                .append(" se sunti-bolti rehti ho. Sirf ek-step kaam (ek app kholna, gaana chalana, alarm, torch) seedha tool se. Background worker beech mein sawaal nahi poochh sakta: zaroori baatein aur haan (kisko, kya text, bhejna hai ya nahi) PEHLE le lo aur task mein poora likho. "
+                + "Phone wala job chalte waqt khud screen/phone tools mat chalao (BUSY aayega). JOB_STARTED ka matlab kaam hua NAHI — 'ho gaya' sirf final SYSTEM NOTE ke VERIFIED/proof par. "
+                + "Wo 'ruko/cancel/band karo/stop' kahein to cancel_background (chhota 'ruko' app khud pakad kar kaam rok deta hai — tab bas 'ji, rok diya'). Sirf 'chup' = bas chup ho jao, kaam chalta rahe. Background kaam chalte waqt bhi unki baat sunna aur jawab dena sabse pehle aata hai. ");
+        sb.append("[PROGRESS] NOTES: background kaam ke har step par '[PROGRESS, user ne nahi bola] ...' aata hai — kya poora hua, ab kya kar rahi ho, kahan pahunchi. Use TURANT, bina intezaar, EK chhoti natural line mein bolo, "
+                + "jaise 'WhatsApp khol liya, ab Rahul ki chat dhoondh rahi hoon'. Dohrao mat, lamba mat bolo, aur ise kaam poora hona mat samjho ('ho gaya' sirf final SYSTEM NOTE par). ").append(ji)
+                .append(" bol rahe hon ya kuch poochha ho to pehle unka jawab, phir progress ek line mein. 'nahi hua' / 'safety ne roka' / 'pakka nahi' aaye to wahi sach batao. ");
         sb.append("MUSHKIL KAAM: gehri soch wale sawaal (strategy, math, code design, kai shartein, planning) mein pehle ek chhoti line bolo ('ek minute, ise gehrai se sochti hoon') aur deep_think(problem, context) chalao (10-40 second lagte hain), phir uske nateeje ko khud parakh kar kaam karo. "
                 + "Bade kaam ko plan -> kaam -> jaancho -> report ke loop mein karo. ");
         sb.append("SELF-UPGRADE (khud ko update karna): sirf tab jab ").append(ji).append(" saaf kahein ('apne aap ko upgrade karo', 'ye feature jodo'). Tareeka: self_status -> self_search/self_read se sahi file dhundo -> ek line mein plan batao -> self_edit/self_write -> self_diff -> self_build (background; fail ho to error padh kar max 3 baar fix) "
@@ -365,7 +372,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
         }
         sb.append("\n\n").append(Brain.prompt(this));
         String extraBehaviour = personaExtra();
-        if (!extraBehaviour.isEmpty()) sb.append("\n\nEXTRA BEHAVIOUR (Priya ke apne notes, upgrade se badal sakte hain):\n").append(extraBehaviour);
+        if (!extraBehaviour.isEmpty()) sb.append("\n\nEXTRA BEHAVIOUR (Maya ke apne notes, upgrade se badal sakte hain):\n").append(extraBehaviour);
         try {
             String news = AiTools.latestNotes(this, 600);
             if (!news.isEmpty()) sb.append("\n\nAI TOOLS — LATEST (roz seekha, isse tool chunne mein madad lo):\n").append(news);
@@ -395,6 +402,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
 
     @Override public void onStranger() {
         lastStrangerMs = System.currentTimeMillis();
+        PriyaJobs.strangerHeardMs = lastStrangerMs;
         GeminiLiveClient c = client;
         if (c == null || !c.isReady()) return;
         Owner.load(this);
@@ -413,6 +421,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
             c.sendAudioStreamEnd();
             thinking = true;
             lastUserInputMs = System.currentTimeMillis();
+            PriyaJobs.ownerHeardMs = lastUserInputMs;
         }
     }
 
@@ -442,6 +451,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
             if (userBuf.length() == 0) PriyaBus.priyaText = "";
             userBuf.append(t);
             lastUserInputMs = System.currentTimeMillis();
+            PriyaJobs.ownerHeardMs = lastUserInputMs;
             SelfUpdate.onOwnerSpeech(userBuf.toString());
             PriyaBus.userText = lastChars(userBuf, 160);
         }
@@ -485,12 +495,72 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
             if (acts && Prefs.voiceLock(this) && now - lastStrangerMs < 10000) {
                 result = "BLOCKED: abhi anjaan awaaz suni gayi thi. Bina owner ke saaf order ke koi kaam nahi. Owner se confirm karo.";
             } else if (acts && now - lastUserInputMs > ORDER_WINDOW_MS) {
-                result = "BLOCKED: Sachin ne abhi koi order nahi diya. Priya bina order ke kuch nahi karti — kaam mat karo, bas poochho.";
+                result = "BLOCKED: Sachin ne abhi koi order nahi diya. Maya bina order ke kuch nahi karti — kaam mat karo, bas poochho.";
+            } else if (acts && screenTool(name) && PriyaJobs.phoneJobRunning() != null) {
+                PriyaJobs.Job bj = PriyaJobs.phoneJobRunning();
+                result = "BUSY: background job " + (bj == null ? "" : bj.id + " (" + bj.title + ")") + " abhi phone ki screen chala raha hai, isliye ye tool abhi nahi chala. "
+                        + "Sachin ko ek line mein batao; zaroori ho to unse poochh kar cancel_background karo, warna job khatam hone do.";
             } else {
                 result = actions.run(name, args);
+                result = duplexHint(name, args, result, now);
             }
             if (c != null) c.sendToolResponse(id, name, result);
         });
+    }
+
+    /** Tools that drive the shared phone screen (a running background phone job owns it). */
+    private static boolean screenTool(String name) {
+        return HeadlessAgent.PHONE.contains(name) || HeadlessAgent.MESSAGES.contains(name) || "call_contact".equals(name);
+    }
+
+    private volatile long lastDirectPhoneMs = 0;
+    private volatile int directPhoneRun = 0;
+
+    /**
+     * Full duplex nudge: a multi-step phone task done with direct (BLOCKING) live tools keeps the live session busy,
+     * so the owner cannot talk to her meanwhile. After a task_plan with 2+ steps, or the 2nd direct phone action in a
+     * row, the tool result tells her to hand the rest to background_task. The verified result itself is unchanged.
+     */
+    private String duplexHint(String name, JSONObject args, String result, long now) {
+        if (result == null) return null;
+        if ("task_plan".equals(name)) {
+            org.json.JSONArray st = args.optJSONArray("steps");
+            if (st != null && st.length() >= 2) {
+                return result + "\nDUPLEX: ye kai steps ka kaam hai — khud ek-ek step BLOCKING tool se mat chalao. background_task(task = poora kaam + ye plan, "
+                        + "scopes ['phone'] (+ 'messages' aur recipients agar bhejna ho)) chalao taaki tum Sachin se baat karti raho; har step ki [PROGRESS] khabar aayegi. "
+                        + "Sirf tab khud karo jab beech mein Sachin ki haan chahiye ho — wo haan pehle hi le lo.";
+            }
+            return result;
+        }
+        if (!screenTool(name) || "read_screen".equals(name) || "list_apps".equals(name)) return result;
+        directPhoneRun = now - lastDirectPhoneMs < 45000 ? directPhoneRun + 1 : 1;
+        lastDirectPhoneMs = now;
+        if (directPhoneRun == 2) {
+            return result + "\nDUPLEX: agar is kaam mein aur steps baaki hain to baaki kaam background_task (scopes ['phone']) ko do, taaki Sachin tumse baat kar sakein.";
+        }
+        return result;
+    }
+
+    private static final java.util.regex.Pattern QUICK_STOP = java.util.regex.Pattern.compile(
+            "(?iu)^(?:(?:maya|priya|माया|प्रिया)\\s+)?(?:ji\\s+)?(?:ruko|ruk jao|rukiye|ruk jaiye|roko|cancel|cancel karo|stop|stop karo|band karo|kaam band karo|kaam roko|kaam ruko|bas karo|"
+                    + "रुको|रुक जाओ|रुकिए|रोको|कैंसल|कैंसिल|स्टॉप|बंद करो|बस करो)(?:\\s+(?:maya|priya|माया|प्रिया|ji|जी|please|plz))?$");
+
+    /**
+     * Owner said only "ruko / cancel / stop / band karo" (optionally with her name) while a background job runs:
+     * stop the job at once in code, without waiting for the model to call cancel_background.
+     */
+    private void quickStop(String utterance) {
+        if (utterance == null) return;
+        String u = utterance.toLowerCase(Locale.ROOT).replaceAll("[\\p{Punct}।!?.,]+", " ").replaceAll("\\s+", " ").trim();
+        if (u.isEmpty() || u.split(" ").length > 5 || !QUICK_STOP.matcher(u).matches()) return;
+        boolean bg = false;
+        for (PriyaJobs.Job j : PriyaJobs.all()) if (j.kind.equals("bg") && j.status.equals("RUNNING")) { bg = true; break; }
+        if (!bg) return;
+        if (Prefs.voiceLock(this) && System.currentTimeMillis() - lastStrangerMs < 10000) return; // not after a stranger's voice
+        final String r = PriyaJobs.cancel("");
+        final GeminiLiveClient c = client;
+        if (c != null) pool.execute(() -> c.sendText("[SYSTEM NOTE, user ne nahi bola] Owner ne 'ruko/cancel' kaha, isliye app ne background kaam rok diya: " + r
+                + "\nBas ek chhoti line bolo 'ji, rok diya' — aur kuch nahi."));
     }
 
     @Override public void onResumeHandle(String handle) { resumeHandle = handle; }
@@ -547,6 +617,7 @@ public class PriyaService extends Service implements GeminiLiveClient.Callback, 
 
     private void flushUser() {
         if (userBuf.length() > 0) {
+            try { quickStop(userBuf.toString()); } catch (Throwable ignored) { }
             memory.addConversation("U", userBuf.toString().trim());
             userBuf.setLength(0);
         }

@@ -88,7 +88,7 @@ public class BrainActivity extends Activity {
     private void render() {
         list.removeAllViews();
         TextView h = new TextView(this);
-        h.setText("Priya — Scheduled tasks");
+        h.setText("Maya — Scheduled tasks");
         h.setTextSize(20);
         list.addView(h);
         Button pick = new Button(this);
@@ -114,7 +114,7 @@ public class BrainActivity extends Activity {
         }
         if (shown == 0) {
             TextView t = new TextView(this);
-            t.setText("Koi schedule nahi. Priya se bolo: 'roz subah 9 baje ... karna'.");
+            t.setText("Koi schedule nahi. Maya se bolo: 'roz subah 9 baje ... karna'.");
             list.addView(t);
         }
         TextView lg = new TextView(this);

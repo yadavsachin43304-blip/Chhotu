@@ -135,9 +135,9 @@ public class PanelActivity extends Activity {
 
     private void renderSelfUp() {
         TextView intro = Ui.text(this,
-                "Priya Termux mein apna source badal kar, naya APK bana kar khud ko update kar sakti hai. Bolo: \"Priya, apne aap ko upgrade karo — ...\". "
+                "Maya Termux mein apna source badal kar, naya APK bana kar khud ko update kar sakti hai. Bolo: \"Maya, apne aap ko upgrade karo — ...\". "
                         + "Har badlav se pehle backup banta hai, install se pehle aapki 'haan' zaroori hai, aur kuch bigde to rollback hota hai. "
-                        + "Safety files (delete-block, voice lock, installer) Priya khud nahi badal sakti.", 13, Ui.SUB, false);
+                        + "Safety files (delete-block, voice lock, installer) Maya khud nahi badal sakti.", 13, Ui.SUB, false);
         intro.setPadding(0, 0, 0, Ui.dp(this, 10));
         content.addView(intro);
 
@@ -194,7 +194,7 @@ public class PanelActivity extends Activity {
         LinearLayout c4 = Ui.card(this);
         c4.addView(Ui.text(this, "Kuch bigad jaye to", 16, Ui.TEXT, true));
         TextView rb = Ui.text(this,
-                "Priya se bolo: \"pichla version wapas lao\" (rollback).\n"
+                "Maya se bolo: \"pichla version wapas lao\" (rollback).\n"
                         + "Ya khud Termux mein:  cd ~/PriyaAI && bash selfup.sh rollback && termux-open PriyaAI.apk\n"
                         + "Backups: ~/PriyaSelf/backups  |  Build log: ~/PriyaSelf/log/build.log",
                 12.5f, Ui.SUB, false);
@@ -238,7 +238,7 @@ public class PanelActivity extends Activity {
 
     private void renderPermissions() {
         TextView intro = Ui.text(this,
-                "Priya ko poori tarah kaam karne ke liye ye saari permissions chahiye. Har card par status dikh raha hai.",
+                "Maya ko poori tarah kaam karne ke liye ye saari permissions chahiye. Har card par status dikh raha hai.",
                 13, Ui.SUB, false);
         intro.setPadding(0, 0, 0, Ui.dp(this, 10));
         content.addView(intro);
@@ -267,7 +267,7 @@ public class PanelActivity extends Activity {
         View gap = new View(this);
         content.addView(gap, new LinearLayout.LayoutParams(1, Ui.dp(this, 14)));
 
-        permCard("Microphone", "Priya ki awaaz sunne ke liye (RECORD_AUDIO).",
+        permCard("Microphone", "Maya ki awaaz sunne ke liye (RECORD_AUDIO).",
                 has(Manifest.permission.RECORD_AUDIO), "Allow karo",
                 v -> requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_PERMS));
 
@@ -315,14 +315,14 @@ public class PanelActivity extends Activity {
 
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         permCard("Battery: Unrestricted",
-                "Always-listening ke dauran Android Priya ko band na kare.",
+                "Always-listening ke dauran Android Maya ko band na kare.",
                 pm.isIgnoringBatteryOptimizations(getPackageName()), "Allow karo",
                 v -> start(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                         Uri.parse("package:" + getPackageName()))));
 
         if (Build.VERSION.SDK_INT >= 26) {
             permCard("Install unknown apps (self-upgrade)",
-                    "Priya apna naya version (jo Termux mein bana) install kar sake — sirf aapki 'haan' ke baad. Termux ka 'Termux commands' permission bhi upar ke 'Saari runtime permissions' se do.",
+                    "Maya apna naya version (jo Termux mein bana) install kar sake — sirf aapki 'haan' ke baad. Termux ka 'Termux commands' permission bhi upar ke 'Saari runtime permissions' se do.",
                     SelfUpdate.canInstall(this), "Allow karo",
                     v -> start(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName()))));
         }
@@ -331,13 +331,13 @@ public class PanelActivity extends Activity {
                 has(Manifest.permission.READ_CONTACTS), "Allow karo",
                 v -> requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, REQ_PERMS));
 
-        permCard("Phone calls", "Call seedha laga dene ke liye (CALL_PHONE). Priya call se pehle aapse confirm karegi.",
+        permCard("Phone calls", "Call seedha laga dene ke liye (CALL_PHONE). Maya call se pehle aapse confirm karegi.",
                 has(Manifest.permission.CALL_PHONE), "Allow karo",
                 v -> requestPermissions(new String[]{Manifest.permission.CALL_PHONE}, REQ_PERMS));
 
         boolean termux = TermuxBridge.installed(this);
         permCard("Termux commands (Coding)",
-                termux ? "Priya Termux mein code likh kar chala sake (RUN_COMMAND). Termux mein ek baar ye bhi chalana:\n"
+                termux ? "Maya Termux mein code likh kar chala sake (RUN_COMMAND). Termux mein ek baar ye bhi chalana:\n"
                         + "mkdir -p ~/.termux && echo \"allow-external-apps=true\" >> ~/.termux/termux.properties && termux-reload-settings\n"
                         + "termux-setup-storage\npkg install -y python nodejs git clang"
                         : "Coding ke liye Termux chahiye — F-Droid se install karo (Play Store wala purana hai). Install ke baad yahan wapas aakar Allow karo.",
@@ -416,7 +416,7 @@ public class PanelActivity extends Activity {
 
         LinearLayout c2 = Ui.card(this);
         c2.addView(Ui.text(this, "Gemini Live model", 16, Ui.TEXT, true));
-        TextView mh = Ui.text(this, "Agar ye model na chale to Priya khud agla model try karti hai.", 12.5f, Ui.SUB, false);
+        TextView mh = Ui.text(this, "Agar ye model na chale to Maya khud agla model try karti hai.", 12.5f, Ui.SUB, false);
         mh.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 8));
         c2.addView(mh);
         final EditText model = new EditText(this);
@@ -432,7 +432,7 @@ public class PanelActivity extends Activity {
         content.addView(c2);
 
         LinearLayout c3 = Ui.card(this);
-        c3.addView(Ui.text(this, "Priya ki awaaz (female voice)", 16, Ui.TEXT, true));
+        c3.addView(Ui.text(this, "Maya ki awaaz (female voice)", 16, Ui.TEXT, true));
         chosenVoice = Prefs.VOICE;
         TextView vh = Ui.text(this, "Ek hi pakki female awaaz: " + Prefs.VOICE
                 + ". Har connection / reconnect par yahi awaaz rehti hai, kabhi nahi badalti.", 12.5f, Ui.SUB, false);
@@ -553,7 +553,7 @@ public class PanelActivity extends Activity {
         LinearLayout c3 = Ui.card(this);
         c3.addView(Ui.text(this, "Saved vaade / notes (latest 40)", 16, Ui.TEXT, true));
         List<String> notes = mem.recentNotes(40);
-        TextView nt = Ui.text(this, notes.isEmpty() ? "Abhi kuch save nahi hai. Priya se bolo: \"ye yaad rakhna…\""
+        TextView nt = Ui.text(this, notes.isEmpty() ? "Abhi kuch save nahi hai. Maya se bolo: \"ye yaad rakhna…\""
                 : TextUtilsJoin(notes), 12.5f, Ui.TEXT, false);
         nt.setPadding(0, Ui.dp(this, 6), 0, 0);
         nt.setTextIsSelectable(true);
@@ -593,17 +593,17 @@ public class PanelActivity extends Activity {
     private void renderSettings() {
         LinearLayout c1 = Ui.card(this);
         c1.addView(Ui.switchRow(this, "Background mein hamesha sunna",
-                "ON: app band/minimise karne par bhi Priya sunti rahegi (notification dikhega). OFF: sirf app khula ho tab.",
+                "ON: app band/minimise karne par bhi Maya sunti rahegi (notification dikhega). OFF: sirf app khula ho tab.",
                 Prefs.alwaysOn(this), (b, on) -> Prefs.setAlwaysOn(this, on)));
         c1.addView(Ui.switchRow(this, "Echo guard (khud ki awaaz na sune)",
-                "Priya bolte waqt mic stream band rehta hai. OFF karne par aap beech mein tok sakte ho, par echo ka risk badhta hai.",
+                "Maya bolte waqt mic stream band rehta hai. OFF karne par aap beech mein tok sakte ho, par echo ka risk badhta hai.",
                 Prefs.strictEcho(this), (b, on) -> Prefs.setStrictEcho(this, on)));
         c1.addView(Ui.switchRow(this, "Speaker se bolna",
                 "Headphone ya Bluetooth laga ho to wahi use hota hai.",
                 Prefs.forceSpeaker(this), (b, on) -> Prefs.setForceSpeaker(this, on)));
         c1.addView(Ui.switchRow(this, "Natural HD awaaz",
-                "ON (best): Priya ki asli 24 kHz awaaz, bina phone-call wali processing ke — robotic nahi lagegi. "
-                        + "Agar Priya apni hi awaaz sun kar khud ko rokne lage to OFF karo (call mode, strong echo cancel).",
+                "ON (best): Maya ki asli 24 kHz awaaz, bina phone-call wali processing ke — robotic nahi lagegi. "
+                        + "Agar Maya apni hi awaaz sun kar khud ko rokne lage to OFF karo (call mode, strong echo cancel).",
                 Prefs.naturalVoice(this), (b, on) -> Prefs.setNaturalVoice(this, on)));
         content.addView(c1);
 
@@ -625,7 +625,7 @@ public class PanelActivity extends Activity {
             @Override public void onStopTrackingTouch(SeekBar s) { }
         });
         c2.addView(sb, Ui.matchWrap(this, 6));
-        c2.addView(Ui.text(this, "Rok-tok (beech mein bolkar Priya ko rokna)", 14, Ui.TEXT, true), Ui.matchWrap(this, 12));
+        c2.addView(Ui.text(this, "Rok-tok (beech mein bolkar Maya ko rokna)", 14, Ui.TEXT, true), Ui.matchWrap(this, 12));
         LinearLayout bargeRow = new LinearLayout(this);
         bargeRow.setOrientation(LinearLayout.HORIZONTAL);
         final String[] bl = {"Dheere", "Normal", "Turant"};
@@ -637,21 +637,21 @@ public class PanelActivity extends Activity {
             bbtn[k].setOnClickListener(v -> {
                 Prefs.setBargeLevel(this, lvl);
                 for (int q = 0; q < 3; q++) bbtn[q].setAlpha(q == lvl ? 1f : 0.45f);
-                toast("Rok-tok: " + bl[lvl] + " (Priya ko OFF/ON karne par lagu)");
+                toast("Rok-tok: " + bl[lvl] + " (Maya ko OFF/ON karne par lagu)");
             });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             lp.setMargins(k == 0 ? 0 : Ui.dp(this, 4), 0, 0, 0);
             bargeRow.addView(bbtn[k], lp);
         }
         c2.addView(bargeRow, Ui.matchWrap(this, 4));
-        c2.addView(Ui.text(this, "Turant = Priya ke bolte waqt aap bolein to ~0.3 sec mein chup. Agar wo apni hi awaaz se khud ruk jaye to Normal/Dheere karo (ya Voice Lock enroll karo).", 12, Ui.SUB, false));
+        c2.addView(Ui.text(this, "Turant = Maya ke bolte waqt aap bolein to ~0.3 sec mein chup. Agar wo apni hi awaaz se khud ruk jaye to Normal/Dheere karo (ya Voice Lock enroll karo).", 12, Ui.SUB, false));
         content.addView(c2);
 
         LinearLayout c3 = Ui.card(this);
         c3.addView(Ui.text(this, "Aapka naam", 16, Ui.TEXT, true));
         final EditText name = new EditText(this);
         name.setText(Prefs.userName(this));
-        name.setHint("Priya aapko kis naam se bulaye?");
+        name.setHint("Maya aapko kis naam se bulaye?");
         name.setHintTextColor(Ui.SUB);
         name.setTextColor(Ui.TEXT);
         name.setSingleLine(true);
@@ -712,7 +712,7 @@ public class PanelActivity extends Activity {
         cv.addView(Ui.text(this, "Low = aasaan (shor wali jagah), High = sabse sakht (koi aur bilkul nahi).", 12, Ui.SUB, false));
 
         final String[] phrases = {
-                "Priya, mera naam " + Prefs.ownerName(this) + " hai aur ye meri awaaz hai.",
+                "Maya, mera naam " + Prefs.ownerName(this) + " hai aur ye meri awaaz hai.",
                 "Aaj ka mausam kaisa hai, zara bata do.",
                 "WhatsApp kholo aur Rahul ko message bhejo.",
                 "Ek, do, teen, chaar, paanch, chhe, saat, aath, nau, das.",
@@ -721,7 +721,7 @@ public class PanelActivity extends Activity {
                 ? "🎙  Dobara enroll karo (5 lines)" : "🎙  Meri awaaz enroll karo (5 lines)", Ui.ACCENT, 0xFF06202A);
         Button restore = Ui.button(this, "↺  Original enrollment wapas lao", Ui.LINE, Ui.TEXT);
         rec.setOnClickListener(v -> {
-            if (PriyaBus.running()) { toast("Pehle Priya OFF karo."); return; }
+            if (PriyaBus.running()) { toast("Pehle Maya OFF karo."); return; }
             if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 7); return;
             }
@@ -753,7 +753,7 @@ public class PanelActivity extends Activity {
                         if (vp.ownerPitch() > 0) Prefs.setVoiceF0(this, vp.ownerPitch());
                         Prefs.setVoiceLock(this, true);
                         rec.setText("🎙  Dobara enroll karo (5 lines)");
-                        vInfo.setText("Ho gaya ✓ Aapka voiceprint save hai. Voice Lock ON. Priya ko OFF/ON karo.");
+                        vInfo.setText("Ho gaya ✓ Aapka voiceprint save hai. Voice Lock ON. Maya ko OFF/ON karo.");
                     } else {
                         vInfo.setText(err != null ? err : "Awaaz kaafi nahi mili. Shaant jagah mein dobara try karo.");
                     }
@@ -764,15 +764,15 @@ public class PanelActivity extends Activity {
         restore.setOnClickListener(v -> {
             if (SpeakerVerifier.restoreBackup(this)) {
                 vInfo.setText(voiceLockInfo());
-                toast("Original enrollment wapas aa gaya ✓ Priya ko OFF/ON karo.");
+                toast("Original enrollment wapas aa gaya ✓ Maya ko OFF/ON karo.");
             } else toast("Abhi koi backup nahi hai — pehle enroll karo.");
         });
         cv.addView(restore, Ui.matchWrap(this, 6));
         content.addView(cv);
 
         LinearLayout cf = Ui.card(this);
-        cf.addView(Ui.switchRow(this, "Home screen par Priya ka chhota face",
-                "Priya ON ho aur aap app se bahar ho to chhota face bolte hue dikhega. 'Overlay' permission chahiye.",
+        cf.addView(Ui.switchRow(this, "Home screen par Maya ka chhota face",
+                "Maya ON ho aur aap app se bahar ho to chhota face bolte hue dikhega. 'Overlay' permission chahiye.",
                 Prefs.floatingFace(this), (b, on) -> {
                     Prefs.setFloatingFace(this, on);
                     if (on && !Settings.canDrawOverlays(this)) {
@@ -780,7 +780,7 @@ public class PanelActivity extends Activity {
                     }
                 }));
         cf.addView(Ui.switchRow(this, "3D avatar",
-                "Priya ki apni tasveer zinda: bolte waqt asli honth hilte hain, palak jhapakti hai, sir halka ghoomta hai, saans. Band karo ya phone support na kare to seedhi tasveer dikhegi.",
+                "Maya ki apni tasveer zinda: bolte waqt asli honth hilte hain, palak jhapakti hai, sir halka ghoomta hai, saans. Band karo ya phone support na kare to seedhi tasveer dikhegi.",
                 Prefs.avatar3D(this), (b, on) -> Prefs.setAvatar3D(this, on)));
         content.addView(cf);
 
@@ -788,7 +788,7 @@ public class PanelActivity extends Activity {
         LinearLayout cl = Ui.card(this);
         final TextView lInfo = Ui.text(this, aiLearnInfo(), 12.5f, Ui.SUB, false);
         cl.addView(Ui.switchRow(this, "Roz AI tools seekho",
-                "ON: Priya roz tay time par naye AI tools / updates research karke apni AI Tools Guide mein notes jodti hai (purane notes archive hote hain, delete nahi).",
+                "ON: Maya roz tay time par naye AI tools / updates research karke apni AI Tools Guide mein notes jodti hai (purane notes archive hote hain, delete nahi).",
                 Prefs.aiLearn(this), (b, on) -> {
                     Prefs.setAiLearn(this, on);
                     AiTools.armLearning(this);
@@ -807,21 +807,21 @@ public class PanelActivity extends Activity {
         Button lNow = Ui.button(this, "📚  Abhi seekho", Ui.LINE, Ui.TEXT);
         lNow.setOnClickListener(v -> {
             TaskRunnerService.runLearning(this, true);
-            toast("Priya abhi seekh rahi hai — result notification mein aayega.");
+            toast("Maya abhi seekh rahi hai — result notification mein aayega.");
         });
         cl.addView(lNow, Ui.matchWrap(this, 6));
         content.addView(cl);
 
         LinearLayout c4 = Ui.card(this);
         c4.addView(Ui.text(this, "Status", 16, Ui.TEXT, true));
-        String echo = PriyaBus.echoInfo == null || PriyaBus.echoInfo.isEmpty() ? "Priya chalu hogi tab dikhega" : PriyaBus.echoInfo;
+        String echo = PriyaBus.echoInfo == null || PriyaBus.echoInfo.isEmpty() ? "Maya chalu hogi tab dikhega" : PriyaBus.echoInfo;
         TextView st = Ui.text(this, "Audio: " + echo + "\nLast good model: "
                 + (Prefs.lastGoodModel(this).isEmpty() ? "-" : Prefs.lastGoodModel(this))
                 + "\nAccessibility: " + (accessibilityOn(this) ? "ON" : "OFF")
                 + (Prefs.lastCrash(this).isEmpty() ? "" : "\nLast error: " + Prefs.lastCrash(this).split("\n")[0]), 12.5f, Ui.SUB, false);
         st.setPadding(0, Ui.dp(this, 4), 0, 0);
         c4.addView(st);
-        TextView note = Ui.text(this, "Settings badalne ke baad Priya ko ek baar band karke dobara chalu karo.", 12, Ui.SUB, false);
+        TextView note = Ui.text(this, "Settings badalne ke baad Maya ko ek baar band karke dobara chalu karo.", 12, Ui.SUB, false);
         note.setPadding(0, Ui.dp(this, 8), 0, 0);
         c4.addView(note);
         content.addView(c4);
@@ -851,8 +851,8 @@ public class PanelActivity extends Activity {
 
     private void renderSkills() {
         final SkillStore store = new SkillStore(this);
-        TextView intro = Ui.text(this, "Priya har kaam se pehle dekhti hai ki uske paas us kaam ka skill hai ya nahi. "
-                + "Nahi hota to aapse poochhti hai ki naya skill banaye ya nahi. Band (OFF) skills Priya ko nahi dikhte.", 12.5f, Ui.SUB, false);
+        TextView intro = Ui.text(this, "Maya har kaam se pehle dekhti hai ki uske paas us kaam ka skill hai ya nahi. "
+                + "Nahi hota to aapse poochhti hai ki naya skill banaye ya nahi. Band (OFF) skills Maya ko nahi dikhte.", 12.5f, Ui.SUB, false);
         intro.setPadding(0, 0, 0, Ui.dp(this, 8));
         content.addView(intro);
 
@@ -867,7 +867,7 @@ public class PanelActivity extends Activity {
         add.addView(Ui.text(this, editing == null ? "➕ Nayi skill" : "✏️ Skill edit karo", 16, Ui.TEXT, true));
         final EditText nm = field("Skill ka naam (jaise: Instagram Caption Writer)", true);
         final EditText ds = field("Kab use kare (ek line, optional)", true);
-        final EditText in = field("Instructions (Priya ye follow karegi)", false);
+        final EditText in = field("Instructions (Maya ye follow karegi)", false);
         if (editing != null) {
             nm.setText(editing.name);
             ds.setText(editing.description);
@@ -886,7 +886,7 @@ public class PanelActivity extends Activity {
             if (d.isEmpty()) d = ins.split("\n")[0];
             if (d.length() > 140) d = d.substring(0, 140) + "…";
             store.saveWithId(editingSkillId, n, d, ins);
-            toast((editingSkillId == null ? "Skill save ho gaya ✓" : "Skill update ho gaya ✓") + " (Priya ko OFF/ON karo)");
+            toast((editingSkillId == null ? "Skill save ho gaya ✓" : "Skill update ho gaya ✓") + " (Maya ko OFF/ON karo)");
             editingSkillId = null;
             reRenderSkills();
         });
@@ -909,7 +909,7 @@ public class PanelActivity extends Activity {
             sw.setChecked(sk.enabled);
             sw.setOnCheckedChangeListener((btn, on) -> {
                 store.setEnabled(sk.id, on);
-                toast(sk.name + (on ? " ON ✓" : " OFF") + " (Priya ko OFF/ON karo)");
+                toast(sk.name + (on ? " ON ✓" : " OFF") + " (Maya ko OFF/ON karo)");
                 title.setTextColor(on ? Ui.TEXT : Ui.SUB);
             });
             head.addView(sw);
@@ -963,7 +963,7 @@ public class PanelActivity extends Activity {
             String text = new String(bo.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
             SkillStore.Skill sk = new SkillStore(this).importMarkdown(fileName, text);
             if (sk == null) toast("File khaali hai ya padhi nahi gayi.");
-            else toast("Skill '" + sk.name + "' ban gaya ✓ (Priya ko OFF/ON karo)");
+            else toast("Skill '" + sk.name + "' ban gaya ✓ (Maya ko OFF/ON karo)");
         } catch (Exception e) {
             toast("File padh nahi paayi: " + e.getMessage());
         }

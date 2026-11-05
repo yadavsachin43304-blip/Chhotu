@@ -37,7 +37,7 @@ public class InstallReceiver extends BroadcastReceiver {
                     PendingIntent open = PendingIntent.getActivity(app, 77, confirm, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
                     android.app.NotificationManager nm = (android.app.NotificationManager) app.getSystemService(Context.NOTIFICATION_SERVICE);
                     nm.notify(0x5e20, new android.app.Notification.Builder(app, PriyaJobs.CHANNEL)
-                            .setContentTitle("Priya ka update taiyaar hai")
+                            .setContentTitle("Maya ka update taiyaar hai")
                             .setContentText("Tap karke 'Update' dabayein")
                             .setSmallIcon(android.R.drawable.stat_sys_download_done)
                             .setContentIntent(open)
@@ -50,9 +50,9 @@ public class InstallReceiver extends BroadcastReceiver {
             // the process is replaced; the new version announces itself from ScheduleReceiver (MY_PACKAGE_REPLACED)
         } else {
             SelfUpdate.installing = false;
-            PriyaJobs.notifyOwner(app, "⚠️ Priya ka update install nahi hua",
+            PriyaJobs.notifyOwner(app, "⚠️ Maya ka update install nahi hua",
                     (msg == null ? "Android ne install roka (code " + status + ")." : msg)
-                            + "\nPurana version waisa hi chal raha hai. Phir koshish karne ke liye Priya se bolo.", 0x5e21);
+                            + "\nPurana version waisa hi chal raha hai. Phir koshish karne ke liye Maya se bolo.", 0x5e21);
         }
     }
 }

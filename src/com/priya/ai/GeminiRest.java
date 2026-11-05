@@ -219,7 +219,7 @@ final class GeminiRest {
 
     /** Slow, careful reasoning for hard questions: decompose, solve, self-check, answer. Result is spoken, so it stays short. */
     static String think(Context c, String problem, String background, boolean search) throws Exception {
-        String sys = "You are Priya's deep-reasoning engine. The problem may be hard: strategy, maths, code design, planning with many constraints. "
+        String sys = "You are Maya's deep-reasoning engine. The problem may be hard: strategy, maths, code design, planning with many constraints. "
                 + "Work like a careful senior engineer/consultant: (1) restate the goal and every constraint, (2) split into sub-problems, "
                 + "(3) solve each, trying at least two approaches when the choice matters, (4) CHECK the result yourself (arithmetic, edge cases, "
                 + "contradictions, safety), fix mistakes, (5) give the final answer. Never invent facts: if something is unknown say what is missing. "

@@ -168,7 +168,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         int st = on ? 1 : 0;
         if (st != lastPowerState) {
             lastPowerState = st;
-            power.setText(on ? "\u25CF  Priya ON" : "\u23FB  Priya OFF");
+            power.setText(on ? "\u25CF  Maya ON" : "\u23FB  Maya OFF");
             android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
             g.setCornerRadius(Ui.dp(this, 24));
             g.setColor(on ? 0xE61DB954 : 0xE6C62828);
@@ -202,7 +202,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         if (Prefs.apiKey(this).isEmpty() && !PriyaBus.running()) {
             PriyaBus.status = "Pehle Menu > API mein Gemini key daalo";
         } else if (!PriyaBus.running() && PriyaBus.state != PriyaBus.ERROR) {
-            PriyaBus.status = "Mic dabao aur Priya se baat karo";
+            PriyaBus.status = "Mic dabao aur Maya se baat karo";
         }
     }
 
@@ -259,7 +259,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
             if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                 startPriya();
             } else {
-                Toast.makeText(this, "Microphone permission ke bina Priya sun nahi sakti.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Microphone permission ke bina Maya sun nahi sakti.", Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -271,12 +271,12 @@ public class MainActivity extends Activity implements ThemeView.Listener {
             return;
         }
         PriyaBus.state = PriyaBus.CONNECTING;
-        PriyaBus.status = "Priya connect ho rahi hai…";
+        PriyaBus.status = "Maya connect ho rahi hai…";
         try {
             startForegroundService(new Intent(this, PriyaService.class));
         } catch (Exception e) {
             PriyaBus.state = PriyaBus.ERROR;
-            PriyaBus.status = "Priya start nahi ho paayi: " + e.getMessage();
+            PriyaBus.status = "Maya start nahi ho paayi: " + e.getMessage();
         }
     }
 
@@ -329,7 +329,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         LinearLayout ht = new LinearLayout(this);
         ht.setOrientation(LinearLayout.VERTICAL);
         ht.setPadding(Ui.dp(this, 12), 0, 0, 0);
-        ht.addView(Ui.text(this, "Priya AI", 22, Ui.TEXT, true));
+        ht.addView(Ui.text(this, "Maya AI", 22, Ui.TEXT, true));
         ht.addView(Ui.text(this, "Gemini Live voice assistant", 12, Ui.SUB, false));
         head.addView(ht);
         panel.addView(head);
@@ -380,8 +380,8 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         list.addView(sec2);
         list.addView(menuItem("🔐", "Permissions", "Mic, Accessibility, Overlay, Contacts, Calls…", v -> openPanel("permissions")));
         list.addView(menuItem("🔑", "API (Gemini)", "API key aur model save karo", v -> openPanel("api")));
-        list.addView(menuItem("🧩", "Skills", "Priya ke skills dekho, naya skill banao", v -> openPanel("skills")));
-        list.addView(menuItem("🔧", "Self-upgrade", "Priya khud ko update kare (Termux se)", v -> openPanel("selfup")));
+        list.addView(menuItem("🧩", "Skills", "Maya ke skills dekho, naya skill banao", v -> openPanel("skills")));
+        list.addView(menuItem("🔧", "Self-upgrade", "Maya khud ko update kare (Termux se)", v -> openPanel("selfup")));
         list.addView(menuItem("⏰", "Schedules", "Scheduled kaam: pause / resume / abhi chalao", v -> openBrain("schedules")));
         list.addView(menuItem("🎬", "Studio", "Audio file chuno — faceless video shuru karo", v -> openBrain("pick_audio")));
         list.addView(menuItem("🧠", "Memory (30 MB)", "Vaade, notes aur conversation text", v -> openPanel("memory")));

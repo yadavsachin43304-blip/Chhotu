@@ -43,7 +43,7 @@ public class TaskRunnerService extends Service {
             JSONObject s = Scheduler.get(c, id);
             String task = s == null ? id : s.optString("task");
             PriyaJobs.notifyOwner(c, "⏰ Scheduled task nahi chal paaya", "\"" + GeminiRest.clip(task, 120)
-                    + "\" — Android ne background start roka (" + e.getClass().getSimpleName() + "). Priya app kholo ya Schedules > 'Abhi chalao'.", id.hashCode());
+                    + "\" — Android ne background start roka (" + e.getClass().getSimpleName() + "). Maya app kholo ya Schedules > 'Abhi chalao'.", id.hashCode());
             Scheduler.finished(c, id, "FAILED", "Android ne background start roka: " + e.getMessage(), manual);
         }
     }
@@ -78,7 +78,7 @@ public class TaskRunnerService extends Service {
         PendingIntent open = PendingIntent.getActivity(this, 3, new Intent(this, BrainActivity.class).putExtra("page", "schedules"),
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification n = new Notification.Builder(this, PriyaJobs.CHANNEL)
-                .setContentTitle("Priya kaam kar rahi hai")
+                .setContentTitle("Maya kaam kar rahi hai")
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_popup_sync)
                 .setContentIntent(open)
@@ -92,7 +92,7 @@ public class TaskRunnerService extends Service {
         String action = intent == null ? "" : String.valueOf(intent.getAction());
         try {
             foreground(ACTION_SCHEDULE.equals(action) ? "Scheduled task chal raha hai…"
-                    : ACTION_LEARN.equals(action) ? "Priya naye AI tools seekh rahi hai…" : "Background kaam: " + (intent == null ? "" : intent.getStringExtra("what")));
+                    : ACTION_LEARN.equals(action) ? "Maya naye AI tools seekh rahi hai…" : "Background kaam: " + (intent == null ? "" : intent.getStringExtra("what")));
         } catch (Throwable e) {
             stopSelf();
             return START_NOT_STICKY;
@@ -123,7 +123,7 @@ public class TaskRunnerService extends Service {
                     String r;
                     try { r = AiTools.learnNow(this); } catch (Throwable e) { r = "FAILED: " + e.getMessage(); }
                     if (manual || r.startsWith("VERIFIED")) {
-                        PriyaJobs.notifyOwner(this, r.startsWith("VERIFIED") ? "📚 Priya ne aaj naye AI tools seekhe" : "📚 AI tools seekhna fail hua",
+                        PriyaJobs.notifyOwner(this, r.startsWith("VERIFIED") ? "📚 Maya ne aaj naye AI tools seekhe" : "📚 AI tools seekhna fail hua",
                                 GeminiRest.clip(r.replaceFirst("^VERIFIED: [^\\n]*\\n?", ""), 600), 0x41494c);
                     }
                 } finally {

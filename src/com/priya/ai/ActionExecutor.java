@@ -45,7 +45,7 @@ public class ActionExecutor {
         return false;
     }
 
-    private static final String BLOCKED = "BLOCKED: Delete, remove, reset (aur uninstall/format/clear data) Priya ke role ke khilaf hai. "
+    private static final String BLOCKED = "BLOCKED: Delete, remove, reset (aur uninstall/format/clear data) Maya ke role ke khilaf hai. "
             + "Ye kaam nahi kiya gaya. User ko pyaar se batao ki ye safety ke liye tum nahi karti, wo chahe to khud kar sakta hai.";
 
     private static final Map<String, String> ALIASES = new HashMap<>();
@@ -129,7 +129,7 @@ public class ActionExecutor {
                     SkillStore.Skill sk = skills.save(nm, args.optString("description", ""), args.optString("instructions", ""));
                     return sk == null ? "Skill save nahi hua." : "Naya skill '" + sk.name + "' save ho gaya. Ab isi ko use karke kaam karo.";
                 }
-                case "set_alarm":       return setAlarm(args.optInt("hour", -1), args.optInt("minute", 0), args.optString("label", "Priya"));
+                case "set_alarm":       return setAlarm(args.optInt("hour", -1), args.optInt("minute", 0), args.optString("label", "Maya"));
                 case "open_link":       return openLink(args.optString("url", ""));
                 case "whatsapp_chat":   return whatsappChat(args.optString("phone", ""), args.optString("text", ""));
                 case "remember":
@@ -328,7 +328,7 @@ public class ActionExecutor {
         }
         switch (r) {
             case "FORBIDDEN": return BLOCKED;
-            case "AD": return "BLOCKED: Ye ad/sponsored cheez hai — Priya ads par kabhi tap nahi karti. Asli item chuno.";
+            case "AD": return "BLOCKED: Ye ad/sponsored cheez hai — Maya ads par kabhi tap nahi karti. Asli item chuno.";
             case "NOT_FOUND": return "'" + text + "' screen par nahi mila. read_screen se asli label dekho, scroll_until try karo, "
                     + "ya icon ho to look_at_screen karke tap_at se position par tap karo.";
             default: return "'" + text + "' mila par tap nahi ho paya. tap_at se uske @x,y par tap karo.";
@@ -551,7 +551,7 @@ public class ActionExecutor {
                 || low.contains("guard.sha") || low.contains("priya-release");
     }
 
-    private static final String SELF_BLOCKED = "BLOCKED: Priya ka apna source / backup / signing key sirf self_* tools se badal sakta hai "
+    private static final String SELF_BLOCKED = "BLOCKED: Maya ka apna source / backup / signing key sirf self_* tools se badal sakta hai "
             + "(owner ke order + confirm ke saath). code_run / code_write_file se wahan haath nahi lagta.";
 
     private static String dangerousCode(String code) {
@@ -561,7 +561,7 @@ public class ActionExecutor {
     }
 
     private static final String CODE_BLOCKED = "BLOCKED: Is code/command mein delete/remove/reset jaisa kaam hai — "
-            + "ye Priya ke role ke khilaf hai, nahi chalaya. Bina delete wala tareeka likho, ya Sachin ko batao ki ye kaam wo khud karein.";
+            + "ye Maya ke role ke khilaf hai, nahi chalaya. Bina delete wala tareeka likho, ya Sachin ko batao ki ye kaam wo khud karein.";
 
     /** Turns a user path into an absolute path inside ~/PriyaCode (or /sdcard/PriyaCode). Null if it escapes. */
     private static String safePath(String p) {

@@ -288,7 +288,7 @@ final class AiTools {
         }
         String note;
         try {
-            note = GeminiRest.text(c, "Tum Priya ki notes likhti ho. Sirf diye gaye research se, kuch naya mat jodo.",
+            note = GeminiRest.text(c, "Tum Maya ki notes likhti ho. Sirf diye gaye research se, kuch naya mat jodo.",
                     "Is research ko 4-7 chhote Hinglish bullet points mein badlo (har line '- ToolNaam: kya naya — kis kaam ka — free/paid'). "
                             + "Kul 900 characters se kam. Koi intro/outro nahi. Agar kuch naya confirm nahi hua to sirf '- Is hafte koi bada confirmed update nahi mila.' likho.\n\n"
                             + GeminiRest.clip(raw, 8000), 90);

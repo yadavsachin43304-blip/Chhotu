@@ -159,7 +159,7 @@ final class Studio {
 
     static String generateText(Context c, String task, String kind, boolean save) {
         try {
-            String sys = "You are Priya's writing engine for Sachin (India). Write exactly what is asked, ready to use, no preamble. "
+            String sys = "You are Maya's writing engine for Sachin (India). Write exactly what is asked, ready to use, no preamble. "
                     + "Match the requested language (Hinglish/Hindi/English). For scripts: hook in first line, clear scenes, natural spoken style. "
                     + "For image/video prompts: concrete subject, setting, lighting, camera, style. Kind: " + (kind == null ? "general" : kind);
             String out = GeminiRest.text(c, sys, task, 180);
@@ -212,7 +212,7 @@ final class Studio {
             byte[] wav = m.bytes;
             if (!(wav.length > 12 && wav[0] == 'R' && wav[1] == 'I' && wav[2] == 'F' && wav[3] == 'F')) wav = pcmToWav(wav, 24000);
             String path = saveShared(c, wav, "audio/wav", "Music/Priya", "priya_voice_" + stamp() + ".wav");
-            return "VERIFIED: voiceover ban gaya (Priya ki awaaz, " + (wav.length / 1024) + " KB): " + path;
+            return "VERIFIED: voiceover ban gaya (Maya ki awaaz, " + (wav.length / 1024) + " KB): " + path;
         } catch (Exception e) {
             return "FAILED: voiceover nahi bana — " + e.getMessage();
         }
@@ -296,7 +296,7 @@ final class Studio {
     static String listRecentAudio(Context c, int limit) {
         List<AudioItem> l = recentAudio(c, Math.max(3, Math.min(limit <= 0 ? 8 : limit, 20)));
         if (l.isEmpty()) {
-            return "Koi recent audio nahi mila. Options: (1) pick_audio_file se Sachin khud file chun le, (2) Priya Menu > Permissions mein "
+            return "Koi recent audio nahi mila. Options: (1) pick_audio_file se Sachin khud file chun le, (2) Maya Menu > Permissions mein "
                     + "'Music & audio files' Allow karein (phir Menu > Studio se file chunein), (3) Termux setup (termux-setup-storage) taaki main Downloads/WhatsApp folders dekh sakoon.";
         }
         StringBuilder sb = new StringBuilder("RECENT AUDIO (naya pehle):\n");
@@ -416,7 +416,7 @@ final class Studio {
         if (audio.isEmpty()) {
             if (scriptIfNoAudio == null || scriptIfNoAudio.trim().isEmpty()) {
                 return "FAILED: kaunsa audio use karna hai pata nahi. list_recent_audio se file dikhao ya pick_audio_file se Sachin se chunwao, "
-                        + "ya agar Sachin kahe to script likh kar Priya ki awaaz mein voiceover (script_if_no_audio) se video banao.";
+                        + "ya agar Sachin kahe to script likh kar Maya ki awaaz mein voiceover (script_if_no_audio) se video banao.";
             }
             PriyaJobs.stage(j, "voiceover bana rahi hoon (TTS)");
             String t = tts(c, scriptIfNoAudio, "warm, clear, engaging narrator");
@@ -588,7 +588,7 @@ final class Studio {
         boolean durOk = Math.abs(vd - dur) < 2.5;
         return "VERIFIED: faceless video ban gaya — " + abs + " (" + (size / 1024 / 1024.0 > 1 ? String.format(Locale.ROOT, "%.1f MB", size / 1024 / 1024.0) : (size / 1024) + " KB")
                 + ", " + String.format(Locale.ROOT, "%.1f", vd) + " sec" + (durOk ? ", audio ke barabar" : ", audio " + String.format(Locale.ROOT, "%.1f", dur) + " sec (thoda farq)")
-                + ", " + n + " scenes, " + aspect + (kenBurns ? ", ken-burns zoom" : "") + (madeVoice ? ", Priya ka voiceover" : ", aapki awaaz")
+                + ", " + n + " scenes, " + aspect + (kenBurns ? ", ken-burns zoom" : "") + (madeVoice ? ", Maya ka voiceover" : ", aapki awaaz")
                 + ")." + (failed > 0 ? " Note: " + failed + " scene ki image nahi bani, pichli image reuse hui." : "")
                 + " Images: " + SD + "/" + folder + ". Gallery > Movies > Priya mein dekho.";
     }

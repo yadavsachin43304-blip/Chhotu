@@ -35,7 +35,7 @@ final class TermuxBridge {
             + "2) Termux kholo aur ye command chalao:  mkdir -p ~/.termux && echo \"allow-external-apps=true\" >> ~/.termux/termux.properties && termux-reload-settings\n"
             + "3) Phir:  termux-setup-storage   (popup aaye to Allow)\n"
             + "4) Phir:  pkg update -y && pkg install -y python nodejs git clang\n"
-            + "5) Priya app > Menu > Permissions > 'Termux commands' par Allow dabao.\n"
+            + "5) Maya app > Menu > Permissions > 'Termux commands' par Allow dabao.\n"
             + "6) Phone Settings > Apps > Termux > Battery > Unrestricted (taaki background mein command chal sake).\n"
             + "Ye ho jaye to bolna 'ho gaya', main termux_check karke code chalana shuru karungi.";
 
@@ -88,7 +88,7 @@ final class TermuxBridge {
             return res;
         }
         if (!permitted(c)) {
-            res.setupProblem = "Priya ko 'Termux commands' (RUN_COMMAND) permission nahi mili.\n" + SETUP_HELP;
+            res.setupProblem = "Maya ko 'Termux commands' (RUN_COMMAND) permission nahi mili.\n" + SETUP_HELP;
             return res;
         }
         int id = SEQ.incrementAndGet();
@@ -111,7 +111,7 @@ final class TermuxBridge {
         i.putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME);
         i.putExtra("com.termux.RUN_COMMAND_BACKGROUND", true);
         i.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0");
-        i.putExtra("com.termux.RUN_COMMAND_COMMAND_LABEL", "Priya AI");
+        i.putExtra("com.termux.RUN_COMMAND_COMMAND_LABEL", "Maya AI");
         i.putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pi);
 
         CountDownLatch latch = new CountDownLatch(1);

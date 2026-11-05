@@ -53,28 +53,28 @@ final class BrainTools {
     }
 
     static void declare(JSONArray a) throws JSONException {
-        a.put(fn("find_best_tool", "MANAGER MODE, call FIRST for any creative/production job (image, thumbnail, poster, video/reel edit, voiceover, song, script, presentation, website, research, leads). Returns the top 2 AI apps/websites for the job from Priya's AI Tools Guide, whether each app is INSTALLED on this phone, step-by-step phone steps, and the latest learned AI-tool notes.",
+        a.put(fn("find_best_tool", "MANAGER MODE, call FIRST for any creative/production job (image, thumbnail, poster, video/reel edit, voiceover, song, script, presentation, website, research, leads). Returns the top 2 AI apps/websites for the job from Maya's AI Tools Guide, whether each app is INSTALLED on this phone, step-by-step phone steps, and the latest learned AI-tool notes.",
                 new JSONObject().put("task", str("The job in Sachin's words, e.g. 'YouTube thumbnail banana', 'reel edit with captions', 'Hindi voiceover'")), "task"));
         a.put(fn("research", "Research the web with Google Search and get a factual answer with source links. Use whenever you lack knowledge, need latest info, prices, how-to steps, business leads (e.g. 'cafes in Pune with email'), or are unsure how to do a task.",
                 new JSONObject().put("question", str("Exact question, with place/time/details")), "question"));
         a.put(fn("web_fetch", "Open a web page (HTTP GET) and read its text (title + readable content, capped). Use to check a website, read an article, find a contact email on a business site, verify facts.",
                 new JSONObject().put("url", str("Full URL"))
                         .put("max_chars", integer("Max characters to return, default 6000, max 20000")), "url"));
-        a.put(fn("generate_text", "Write text with a Gemini text model (scripts, captions, emails, proposals, reports, prompts for other AI apps, plans); long results saved to Documents/Priya. OK for prompts/briefs that Priya then types into an AI app, and for emails. For big creative deliverables Sachin wants made in an app (ChatGPT/Claude/Canva...), operate that app instead unless he asks Priya to write it herself.",
+        a.put(fn("generate_text", "Write text with a Gemini text model (scripts, captions, emails, proposals, reports, prompts for other AI apps, plans); long results saved to Documents/Priya. OK for prompts/briefs that Maya then types into an AI app, and for emails. For big creative deliverables Sachin wants made in an app (ChatGPT/Claude/Canva...), operate that app instead unless he asks Maya to write it herself.",
                 new JSONObject().put("task", str("Exactly what to write, with topic, language (Hinglish/Hindi/English), length, tone, audience"))
                         .put("kind", str("script | caption | email | prompt | report | plan | other"))
                         .put("save_file", bool("true = also save as a .txt file")), "task"));
-        a.put(fn("generate_image", "FALLBACK image maker (Nano Banana API), saves to Pictures/Priya. Manager rule: for images first use find_best_tool and operate the right app/website (Canva, Gemini, ChatGPT, Leonardo, Designer...). Use this only when Sachin asks Priya to make it herself, or no suitable app/website is available/working.",
+        a.put(fn("generate_image", "FALLBACK image maker (Nano Banana API), saves to Pictures/Priya. Manager rule: for images first use find_best_tool and operate the right app/website (Canva, Gemini, ChatGPT, Leonardo, Designer...). Use this only when Sachin asks Maya to make it herself, or no suitable app/website is available/working.",
                 new JSONObject().put("prompt", str("Detailed English prompt: subject, setting, lighting, camera, style; say 'no text' if no text wanted"))
                         .put("aspect", str("9:16 (shorts/reels, default), 16:9 (YouTube), 1:1, 4:5"))
                         .put("folder", str("Optional sub-folder name")), "prompt"));
-        a.put(fn("text_to_speech", "FALLBACK voiceover (WAV, Priya's own voice) saved to Music/Priya. Manager rule: for voiceovers first find_best_tool (ElevenLabs app etc.); use this only if Sachin asks for Priya's voice or no app is available/working.",
+        a.put(fn("text_to_speech", "FALLBACK voiceover (WAV, Maya's own voice) saved to Music/Priya. Manager rule: for voiceovers first find_best_tool (ElevenLabs app etc.); use this only if Sachin asks for Maya's voice or no app is available/working.",
                 new JSONObject().put("text", str("Exact words to speak"))
                         .put("style", str("Delivery, e.g. 'warm and energetic', 'calm storyteller'")), "text"));
         a.put(fn("list_recent_audio", "List recent audio files on the phone (Downloads, WhatsApp audio/voice notes, Recordings, Music, picked files) with full paths, newest first.",
                 new JSONObject().put("limit", integer("How many, default 8"))));
         a.put(fn("pick_audio_file", "Open the Android file picker so Sachin can choose an audio file himself. The chosen file's path arrives later as a SYSTEM NOTE.", null));
-        a.put(fn("make_faceless_video", "Make a complete FACELESS video (MP4) from Sachin's voiceover: understands the audio, splits it into scenes, generates one AI image per scene, assembles images + his audio (ken-burns zoom) with ffmpeg in Termux, saves to Movies/Priya and verifies the file. Runs in background: returns JOB_STARTED; the real result comes as a SYSTEM NOTE / job_status. If no audio, can write narration with script_if_no_audio (Priya's voice).",
+        a.put(fn("make_faceless_video", "Make a complete FACELESS video (MP4) from Sachin's voiceover: understands the audio, splits it into scenes, generates one AI image per scene, assembles images + his audio (ken-burns zoom) with ffmpeg in Termux, saves to Movies/Priya and verifies the file. Runs in background: returns JOB_STARTED; the real result comes as a SYSTEM NOTE / job_status. If no audio, can write narration with script_if_no_audio (Maya's voice).",
                 new JSONObject().put("audio_path", str("Full path of the audio (from list_recent_audio / picker), or 'latest'. Empty = last picked file."))
                         .put("topic", str("What the video is about (helps scene images)"))
                         .put("style", str("Visual style, e.g. 'cinematic realistic', 'anime', '3D cartoon', 'dark documentary'"))
@@ -90,7 +90,7 @@ final class BrainTools {
                         .put("body", str("Full email body")), "to", "subject", "body"));
         a.put(fn("notify_owner", "Post a phone notification to Sachin (result, reminder, report).",
                 new JSONObject().put("title", str("Short title")).put("text", str("Message")), "title", "text"));
-        a.put(fn("schedule_task", "Schedule ANY task for later or repeating (e.g. 'kal subah 9 baje', 'roz 8 baje', 'har Monday'). Priya runs it headlessly at that time with ONLY the allowed tool scopes, then notifies the result. Before calling, confirm with Sachin: the exact task, time, repeat, and which scopes are allowed.",
+        a.put(fn("schedule_task", "Schedule ANY task for later or repeating (e.g. 'kal subah 9 baje', 'roz 8 baje', 'har Monday'). Maya runs it headlessly at that time with ONLY the allowed tool scopes, then notifies the result. Before calling, confirm with Sachin: the exact task, time, repeat, and which scopes are allowed.",
                 new JSONObject().put("task", str("Exact task text in Sachin's words (what to do, for whom, what output)"))
                         .put("repeat", enumStr("Repeat", "once", "daily", "weekly"))
                         .put("time", str("24h time HH:MM in phone local time, e.g. 09:00"))
@@ -106,7 +106,7 @@ final class BrainTools {
                 new JSONObject().put("id", str("Schedule id")).put("status", enumStr("New status", "paused", "active", "cancelled")), "id", "status"));
         a.put(fn("run_schedule_now", "Run a scheduled task right now (to test it).",
                 new JSONObject().put("id", str("Schedule id")), "id"));
-        a.put(fn("background_task", "Run a LONG or multi-step job in the background WHILE you keep talking with the owner (research, content/video, coding in Termux, several apps, reports). Returns JOB_STARTED at once - that does NOT mean it is done; the real result arrives later as a SYSTEM NOTE (or ask job_status). Only the tool groups you list are allowed. Never use it for payments, deleting things, or messaging people the owner did not name.",
+        a.put(fn("background_task", "Run a LONG or multi-step job in the background WHILE you keep talking with the owner. USE IT for every phone task with 2+ steps (open app + find chat/item + type/tap, several screens, making something inside an app) and for research, content/video, coding in Termux, reports. Each step is announced to you as a [PROGRESS] note - say it in one short line at once. Returns JOB_STARTED at once - that does NOT mean it is done; the real result arrives later as a SYSTEM NOTE (or ask job_status). Only the tool groups you list are allowed. Never use it for payments, deleting things, or messaging people the owner did not name.",
                 new JSONObject().put("task", str("The full job in clear words: goal, inputs (file paths, names), output wanted, language. The worker cannot ask questions, so include everything."))
                         .put("title", str("3-6 word name for the job"))
                         .put("scopes", new JSONObject().put("type", "ARRAY").put("items",
@@ -147,7 +147,7 @@ final class BrainTools {
             case "job_status":       return PriyaJobs.status(args.optString("job_id", ""), args.optInt("wait_sec", 0));
             case "email_compose":    return emailCompose(ctx, args.optString("to", ""), args.optString("subject", ""), args.optString("body", ""));
             case "notify_owner":
-                PriyaJobs.notifyOwner(ctx, "Priya: " + args.optString("title", ""), args.optString("text", ""), (int) SystemClock.uptimeMillis());
+                PriyaJobs.notifyOwner(ctx, "Maya: " + args.optString("title", ""), args.optString("text", ""), (int) SystemClock.uptimeMillis());
                 return "VERIFIED: notification bhej di.";
             case "schedule_task":    return Scheduler.createFromTool(ctx, args);
             case "list_schedules":   return Scheduler.describeAll(ctx);
@@ -201,7 +201,7 @@ final class BrainTools {
                     + "Ye 'ho gaya' NAHI hai. Tools allowed: " + (sc.length() == 0 ? "sirf research/likhna/notes" : sc.toString())
                     + (dropped.length() > 0 ? "; hataye gaye: " + dropped : "") + ". "
                     + (phone ? "Phone scope hai: jab tak ye chale, screen/phone tools khud mat chalao. " : "")
-                    + "Owner se baat karti raho; natija SYSTEM NOTE mein aayega, ya job_status se dekho.";
+                    + "Owner se baat karti raho; har step ki chhoti khabar [PROGRESS] note mein aayegi (ek line mein bolna), aur asli natija final SYSTEM NOTE mein, ya job_status se dekho.";
         } catch (Exception e) {
             return "FAILED: background kaam shuru nahi hua — " + e.getMessage();
         }

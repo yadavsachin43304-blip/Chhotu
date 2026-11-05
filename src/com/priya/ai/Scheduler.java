@@ -102,7 +102,7 @@ final class Scheduler {
                              List<String> scopes, String recipients) {
         task = task == null ? "" : task.trim();
         if (task.isEmpty()) throw new IllegalArgumentException("Task ka text chahiye.");
-        if (ActionExecutor.forbidden(task)) throw new IllegalArgumentException("BLOCKED: is task mein delete/remove/reset jaisa kaam hai — Priya ye schedule nahi karti.");
+        if (ActionExecutor.forbidden(task)) throw new IllegalArgumentException("BLOCKED: is task mein delete/remove/reset jaisa kaam hai — Maya ye schedule nahi karti.");
         if (hour < 0 || hour > 23 || minute < 0 || minute > 59) throw new IllegalArgumentException("Time galat hai (HH:MM 24h).");
         repeat = repeat == null ? "once" : repeat.toLowerCase(Locale.ROOT);
         if (!repeat.equals("daily") && !repeat.equals("weekly")) repeat = "once";

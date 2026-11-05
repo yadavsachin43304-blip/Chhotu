@@ -307,8 +307,8 @@ public class GeminiLiveClient {
                 new JSONObject().put("step", integer("Step number (1-based)"))
                         .put("status", enumStr("Result of this step", "done", "failed", "retrying"))
                         .put("note", str("Short note: what was verified or what went wrong")), "step", "status"));
-        a.put(fn("termux_check", "Check that Termux is installed and allows Priya to run code; returns tools available or exact setup steps for Sachin.", null));
-        a.put(fn("code_write_file", "Write a complete source file into Priya's coding workspace (~/PriyaCode in Termux). Overwrites the file with the full new content.",
+        a.put(fn("termux_check", "Check that Termux is installed and allows Maya to run code; returns tools available or exact setup steps for Sachin.", null));
+        a.put(fn("code_write_file", "Write a complete source file into Maya's coding workspace (~/PriyaCode in Termux). Overwrites the file with the full new content.",
                 new JSONObject().put("path", str("Relative path inside the workspace, e.g. 'calculator/main.py'"))
                         .put("content", str("Full file content")), "path", "content"));
         a.put(fn("code_read_file", "Read a file (with line numbers) or list a folder in the coding workspace.",
@@ -321,15 +321,15 @@ public class GeminiLiveClient {
                 new JSONObject().put("name_or_number", str("Contact name or phone number")), "name_or_number"));
         a.put(fn("web_search", "Open a Google search for the query in the browser.",
                 new JSONObject().put("query", str("Search query")), "query"));
-        a.put(fn("knowledge", "Search Priya's learned skill notes: 30 business skills (strategy, finance, pricing, marketing, funnels, SEO, automation, AI agents, SOPs, YouTube growth, scriptwriting, OKRs, negotiation) and the video editing + AI editing prompt handbook (cuts, transitions, keyframes, captions, colour, audio, prompt recipes).",
+        a.put(fn("knowledge", "Search Maya's learned skill notes: 30 business skills (strategy, finance, pricing, marketing, funnels, SEO, automation, AI agents, SOPs, YouTube growth, scriptwriting, OKRs, negotiation) and the video editing + AI editing prompt handbook (cuts, transitions, keyframes, captions, colour, audio, prompt recipes).",
                 new JSONObject().put("query", str("Keywords, e.g. 'ripple delete', 'pricing strategy', 'J cut', 'unit economics'")), "query"));
-        a.put(fn("use_skill", "Load the full instructions of one of Priya's saved skills before doing a task that matches it.",
+        a.put(fn("use_skill", "Load the full instructions of one of Maya's saved skills before doing a task that matches it.",
                 new JSONObject().put("name", str("Skill name from the SKILLS list")), "name"));
         a.put(fn("create_skill", "Create and save a NEW skill for a kind of task. Only call after the user said yes to making the skill.",
                 new JSONObject()
                         .put("name", str("Short skill name"))
                         .put("description", str("One line: when to use this skill"))
-                        .put("instructions", str("Clear numbered steps Priya should follow for this kind of task")),
+                        .put("instructions", str("Clear numbered steps Maya should follow for this kind of task")),
                 "name", "description", "instructions"));
         a.put(fn("set_alarm", "Set an alarm on the phone.",
                 new JSONObject().put("hour", new JSONObject().put("type", "INTEGER").put("description", "Hour 0-23"))
@@ -340,12 +340,12 @@ public class GeminiLiveClient {
         a.put(fn("whatsapp_chat", "Open a WhatsApp chat with a phone number and pre-type a message. It does NOT send. After Sachin confirms, call press_send to actually send and verify.",
                 new JSONObject().put("phone", str("Phone number with or without country code"))
                         .put("text", str("Message text")), "phone"));
-        a.put(fn("remember", "Save something to Priya's permanent memory: a promise (VAADA) the user made or Priya made, a fact about the user, or a note.",
+        a.put(fn("remember", "Save something to Maya's permanent memory: a promise (VAADA) the user made or Maya made, a fact about the user, or a note.",
                 new JSONObject()
                         .put("kind", enumStr("Type of memory", "VAADA", "FACT", "NOTE"))
                         .put("text", str("What to remember, written as one clear sentence with names, dates and times")),
                 "kind", "text"));
-        a.put(fn("recall", "Search Priya's saved memory (notes, vaade and past conversations) for the given keywords.",
+        a.put(fn("recall", "Search Maya's saved memory (notes, vaade and past conversations) for the given keywords.",
                 new JSONObject().put("query", str("Keywords to search for")), "query"));
         return a;
     }

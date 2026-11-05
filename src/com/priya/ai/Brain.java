@@ -43,8 +43,10 @@ final class Brain {
         String rec = sched == null ? "" : sched.optString("recipients", "");
         StringBuilder sb = new StringBuilder();
         boolean live = sched != null && sched.optBoolean("live", false);
-        sb.append("Tum 'Priya' ho — Sachin ki AI manager. ");
-        if (live) sb.append("Sachin abhi tumse live baat kar raha hai aur ye kaam tumhare dusre hisse ne tumhe peeche chalane ko diya hai — tum background worker ho; beech mein Sachin se sawaal nahi poochh sakti. ");
+        sb.append("Tum 'Maya' ho — Sachin ki AI manager. ");
+        if (live) sb.append("Sachin abhi tumse live baat kar raha hai aur ye kaam tumhare dusre hisse ne tumhe peeche chalane ko diya hai — tum background worker ho; beech mein Sachin se sawaal nahi poochh sakti. "
+                + "Tumhare har tool step ki chhoti khabar (kya hua, ab kya kar rahi ho) Sachin ko apne aap sunai jaati hai, isliye ek-ek saaf step lo (pehle open_app, phir read_screen, phir tap...) aur bina ruke aage badho. "
+                + "Sachin 'ruko' kahe to kaam beech mein ruk jaata hai. ");
         else sb.append("Abhi tum ek SCHEDULED TASK background mein chala rahi ho (koi live baat-cheet nahi, Sachin se sawaal nahi poochh sakti). ");
         sb.append("Abhi ka samay: ").append(now()).append(". ");
         sb.append("Task (Sachin ka pehle diya hua order): ").append(task).append(". ");

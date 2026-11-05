@@ -10,7 +10,7 @@ public final class PriyaBus {
     /** Mouth shape estimate from her voice (0..1): spread lips / teeth (aa, e, s, sh) and rounded lips (o, u). */
     public static volatile float mouthWide = 0f, mouthRound = 0f;
     public static volatile boolean userTalking = false;
-    public static volatile String status = "Mic dabao aur Priya se baat karo";
+    public static volatile String status = "Mic dabao aur Maya se baat karo";
     public static volatile String userText = "";
     public static volatile String priyaText = "";
     public static volatile String echoInfo = "";

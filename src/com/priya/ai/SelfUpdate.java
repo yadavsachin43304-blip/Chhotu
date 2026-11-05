@@ -101,8 +101,8 @@ final class SelfUpdate {
     }
 
     static void declare(JSONArray a) throws JSONException {
-        a.put(fn("self_status", "SELF-UPGRADE step 1: check that Priya's own source + build tools are ready in Termux (folder, tools, last build, backup). Call first when the owner asks Priya to upgrade / update / improve herself.", null));
-        a.put(fn("self_search", "SELF-UPGRADE: search Priya's own source code (Java, XML, assets) for a word / method name. Returns file:line matches.",
+        a.put(fn("self_status", "SELF-UPGRADE step 1: check that Maya's own source + build tools are ready in Termux (folder, tools, last build, backup). Call first when the owner asks Maya to upgrade / update / improve herself.", null));
+        a.put(fn("self_search", "SELF-UPGRADE: search Maya's own source code (Java, XML, assets) for a word / method name. Returns file:line matches.",
                 new JSONObject().put("query", str("Text to find, e.g. 'onToolCall' or 'barge'")), "query"));
         a.put(fn("self_read", "SELF-UPGRADE: read a source file with line numbers (e.g. 'src/com/priya/ai/BrainTools.java'). Reads 150 lines from from_line; or lists a folder.",
                 new JSONObject().put("path", str("Path relative to the source folder"))
@@ -164,7 +164,7 @@ final class SelfUpdate {
             + "1) Termux kholo aur chalao:  cd ~ && unzip -o /sdcard/Download/PriyaAI-v35.zip   (zip ka sahi naam jo bhi ho; source folder ka naam PriyaAI hona chahiye, ya Menu > Self-upgrade mein folder ka naam badlo)\n"
             + "2) cd ~/PriyaAI && bash selfup.sh guard-reset      (sirf ek baar — ye safety files ko lock karta hai)\n"
             + "3) pkg install -y openjdk-21 aapt2 apksigner d8 zip python\n"
-            + "4) Phone Settings > Priya AI > 'Install unknown apps' ON.\n"
+            + "4) Phone Settings > Maya AI > 'Install unknown apps' ON.\n"
             + "Ye ho jaye to 'ho gaya' bolein, main self_status dobara chalati hoon.";
 
     private static boolean installedVersionOk(Context c, int vc) {
@@ -274,7 +274,7 @@ final class SelfUpdate {
         sb.append(o).append('\n');
         if (missing.length() > 0) sb.append("KAMI: Termux mein ye tools nahi hain: ").append(missing).append("— chalao: pkg install -y openjdk-21 aapt2 apksigner d8 zip python\n");
         if (o.contains("GUARD=missing")) sb.append("KAMI: safety lock nahi bana. Vivek ji Termux mein ek baar chalayein: cd ~/").append(dirName(ctx)).append(" && bash selfup.sh guard-reset\n");
-        if (!canInstall) sb.append("KAMI: Android Settings > Priya AI > 'Install unknown apps' ON nahi hai (bina iske update install nahi ho sakta).\n");
+        if (!canInstall) sb.append("KAMI: Android Settings > Maya AI > 'Install unknown apps' ON nahi hai (bina iske update install nahi ho sakta).\n");
         if (missing.length() == 0 && !o.contains("GUARD=missing") && canInstall) sb.append("READY: self-upgrade ke liye sab taiyaar hai.\n");
         sb.append(note);
         return sb.toString();
@@ -335,12 +335,12 @@ final class SelfUpdate {
         String rel = cleanRel(ctx, path);
         if (rel == null) return "Path galat hai (absolute / .. / hidden file / key file mana hai).";
         if (PROTECTED.contains(rel)) {
-            return "BLOCKED: '" + rel + "' protected hai (safety / identity / build ka hissa) — ise Priya nahi badal sakti. Vivek ji chahein to wo khud badal sakte hain.";
+            return "BLOCKED: '" + rel + "' protected hai (safety / identity / build ka hissa) — ise Maya nahi badal sakti. Vivek ji chahein to wo khud badal sakte hain.";
         }
         if (!writableRoot(rel)) return "BLOCKED: sirf src/, res/, assets/ ke text files (java/xml/md/txt/json) aur AndroidManifest.xml badle ja sakte hain.";
         String bad = dangerIn(newText);
         if (bad != null) {
-            return "BLOCKED: naye code mein '" + bad + "' hai — delete / shell / package-install jaisa code Priya apne mein nahi jod sakti (role ke khilaf). Bina iske tareeka socho.";
+            return "BLOCKED: naye code mein '" + bad + "' hai — delete / shell / package-install jaisa code Maya apne mein nahi jod sakti (role ke khilaf). Bina iske tareeka socho.";
         }
         return null;
     }
@@ -409,7 +409,7 @@ final class SelfUpdate {
         if (installing) return "BLOCKED: install chal raha hai.";
         if (edits == 0 && !force) return "Abhi koi badlav nahi hua (self_edit / self_write pehle). Phir bhi build karna ho to force=true.";
         final Context app = ctx.getApplicationContext();
-        PriyaJobs.Job j = PriyaJobs.start(app, "build", "Priya apna naya version bana rahi hai", job -> {
+        PriyaJobs.Job j = PriyaJobs.start(app, "build", "Maya apna naya version bana rahi hai", job -> {
             PriyaJobs.stage(job, "compile + sign (Termux mein 1-3 minute)");
             return buildResult(app, fmt(script(app, "build", 700)));
         });
@@ -444,7 +444,7 @@ final class SelfUpdate {
         }
         if (installing) return "BLOCKED: install chal raha hai.";
         final Context app = ctx.getApplicationContext();
-        PriyaJobs.Job j = PriyaJobs.start(app, "rollback", "Priya pichla version wapas bana rahi hai", job -> {
+        PriyaJobs.Job j = PriyaJobs.start(app, "rollback", "Maya pichla version wapas bana rahi hai", job -> {
             PriyaJobs.stage(job, "backup restore + build (1-3 minute)");
             String out = fmt(script(app, "rollback", 800));
             if (out.contains("NO_SNAPSHOT")) return "FAILED: " + out;
@@ -490,7 +490,7 @@ final class SelfUpdate {
                     app.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + app.getPackageName()))
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                 } catch (Throwable ignored) { }
-                return "NEEDS_PERMISSION: Settings mein Priya AI ke liye 'Install unknown apps' ON karna hoga — maine wo screen khol di hai. "
+                return "NEEDS_PERMISSION: Settings mein Maya AI ke liye 'Install unknown apps' ON karna hoga — maine wo screen khol di hai. "
                         + "Vivek ji ko ON karne ko bolo, phir bolein 'ho gaya' aur self_install dobara.";
             }
         } catch (Throwable ignored) { }
@@ -502,7 +502,7 @@ final class SelfUpdate {
             String fail = doInstall(app);
             if (fail != null) {
                 installing = false;
-                PriyaJobs.notifyOwner(app, "⚠️ Priya ka update install nahi hua", fail, 0x5e1f);
+                PriyaJobs.notifyOwner(app, "⚠️ Maya ka update install nahi hua", fail, 0x5e1f);
             }
         }, "priya-self-install").start();
         return "INSTALL_STARTING: 5 second mein update shuru hogi. Abhi EK chhoti line bolo: 'theek hai, update ho rahi hoon — thodi der baad mic dobara dabana.' "
@@ -608,7 +608,7 @@ final class SelfUpdate {
         snapshotDone = false;
         String note = Prefs.upgradeNote(app);
         if (note != null && !note.isEmpty()) {
-            PriyaJobs.notifyOwner(app, "✅ Priya naye version par chal rahi hai", note + "\n(Mic dobara dabana.)", 0x5e1e);
+            PriyaJobs.notifyOwner(app, "✅ Maya naye version par chal rahi hai", note + "\n(Mic dobara dabana.)", 0x5e1e);
             Prefs.setUpgradeNote(app, "");
         }
         new Thread(() -> {

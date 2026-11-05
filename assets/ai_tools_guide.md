@@ -1,5 +1,5 @@
 # AI Tools Guide
-Priya ka AI tools catalog (manager mode). Har tool: app = Android package, web = website, best = kis kaam mein sabse achha, keys = dhundhne ke shabd, price, steps = phone par kaise chalana. Sachin is skill ko edit kar sakte hain: naya tool '## Naam' se shuru karo, wahi fields likho. find_best_tool isi list se top 2 chunta hai.
+Maya ka AI tools catalog (manager mode). Har tool: app = Android package, web = website, best = kis kaam mein sabse achha, keys = dhundhne ke shabd, price, steps = phone par kaise chalana. Sachin is skill ko edit kar sakte hain: naya tool '## Naam' se shuru karo, wahi fields likho. find_best_tool isi list se top 2 chunta hai.
 
 ## ChatGPT
 app: com.openai.chatgpt
