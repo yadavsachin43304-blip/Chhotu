@@ -128,7 +128,7 @@ public class GeminiLiveClient {
     public void sendText(String text) {
         if (!isReady()) return;
         try {
-            ws.send(new JSONObject().put("realtimeInput", new JSONObject().put("text", text)).toString());
+            ws.send(new JSONObject().put("realtimeInput", new JSONObject().put("text", Owner.fix(text))).toString());
         } catch (JSONException ignored) { }
     }
 
@@ -145,7 +145,7 @@ public class GeminiLiveClient {
             JSONObject fr = new JSONObject()
                     .put("id", id)
                     .put("name", name)
-                    .put("response", new JSONObject().put("result", result));
+                    .put("response", new JSONObject().put("result", Owner.fix(result)));
             JSONObject msg = new JSONObject().put("toolResponse",
                     new JSONObject().put("functionResponses", new JSONArray().put(fr)));
             ws.send(msg.toString());
@@ -182,7 +182,8 @@ public class GeminiLiveClient {
             // THINKING (docs, Live API "Thinking"):
             //  - gemini-3.8-live: interleaved reasoning is built in and always on; thinkingLevel/thinkingConfig
             //    must be omitted (sending it is an error).
-            //  - gemini-3.1-flash-live-preview: thinkingLevel minimal|low|medium|high, default minimal -> use "low"
+            //  - gemini-3.8-live-extended-thinking: same rule as 3.8 (built-in reasoning, no thinkingConfig).
+            //  - (retired 2026-11-17) gemini-3.1-flash-live-preview: thinkingLevel minimal|low|medium|high -> "low"
             //    so she reasons before acting without long silences.
             //  - 2.5 native-audio fallback: leave thinking at its default (the old thinkingBudget=0 made her dumb).
             if (model != null && model.startsWith("gemini-3.1")) {
@@ -199,7 +200,7 @@ public class GeminiLiveClient {
                 if (resumeHandle != null && !resumeHandle.isEmpty()) sr.put("handle", resumeHandle);
                 setup.put("sessionResumption", sr);
             }
-            return new JSONObject().put("setup", setup).toString();
+            return Owner.fix(new JSONObject().put("setup", setup).toString());
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }

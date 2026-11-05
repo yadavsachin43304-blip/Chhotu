@@ -22,6 +22,8 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- self-upgrade: install the new Priya build (owner enables "Install unknown apps" for Priya AI once) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- lets Priya see launcher apps (open_app) without QUERY_ALL_PACKAGES -->
     <queries>
@@ -83,6 +85,10 @@
 
         <receiver
             android:name=".TermuxResultReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".InstallReceiver"
             android:exported="false" />
 
         <service

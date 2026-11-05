@@ -23,12 +23,48 @@ final class GeminiRest {
     static final String URL_INTERACTIONS = "https://generativelanguage.googleapis.com/v1beta/interactions";
     static final String API_REVISION = "2026-05-20";
 
-    /** Text / reasoning / audio understanding / function calling models, best first. */
-    static final String[] TEXT_MODELS = {"gemini-3.8-flash", "gemini-3.6-flash", "gemini-3-flash-preview"};
+    /**
+     * Text / reasoning / audio understanding / function calling models, best first.
+     * gemini-4-argon (stable, 2026-10-13): flagship reasoning, Interactions API, text output only, NO Live API,
+     * paid tier only (no free tier), ignores temperature/top_p/top_k, thinking_level low|medium|high.
+     * If the key has no billing, Argon answers 4xx and we fall through to 3.8 Flash and remember it for a while.
+     */
+    static final String ARGON = "gemini-4-argon";
+    static final String[] TEXT_MODELS = {ARGON, "gemini-3.8-flash", "gemini-3.6-flash"};
+    /** Argon refused (no billing / quota): skip it until this time, so every call isn't slowed by a failing try. */
+    static volatile long argonSkipUntil = 0;
+
+    /** Models to try now, in order (Argon dropped while it is in its skip window). */
+    static String[] textModels() {
+        if (System.currentTimeMillis() < argonSkipUntil) {
+            String[] r = new String[TEXT_MODELS.length - 1];
+            System.arraycopy(TEXT_MODELS, 1, r, 0, r.length);
+            return r;
+        }
+        return TEXT_MODELS;
+    }
+
+    /** Call after a model failed with a try-next error. */
+    static void noteFail(String model, Exception e) {
+        if (ARGON.equals(model) && e instanceof ApiError) {
+            int code = ((ApiError) e).code;
+            if (code == 400 || code == 401 || code == 403 || code == 404 || code == 429) argonSkipUntil = System.currentTimeMillis() + 30 * 60 * 1000L;
+        }
+    }
+
+    /** Adds Argon's thinking level (only Argon gets it; others keep their defaults). */
+    static JSONObject withThinking(JSONObject b, String model, String level) throws org.json.JSONException {
+        if (ARGON.equals(model)) {
+            JSONObject g = b.optJSONObject("generation_config");
+            if (g == null) { g = new JSONObject(); b.put("generation_config", g); }
+            g.put("thinking_level", level);
+        }
+        return b;
+    }
     /** Nano Banana image models, best first. */
     static final String[] IMAGE_MODELS = {"gemini-nano-banana-2.1", "gemini-3.1-flash-image", "gemini-2.5-flash-image"};
     /** TTS models, best first. Voice pinned to Priya's voice (Kore). */
-    static final String[] TTS_MODELS = {"gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "gemini-3.1-flash-tts-preview"};
+    static final String[] TTS_MODELS = {"gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"};
 
     static final class ApiError extends Exception {
         final int code;
@@ -53,7 +89,7 @@ final class GeminiRest {
         h.setRequestProperty("Content-Type", "application/json; charset=utf-8");
         h.setRequestProperty("x-goog-api-key", k);
         h.setRequestProperty("Api-Revision", API_REVISION);
-        byte[] out = body.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] out = Owner.fix(c, body.toString()).getBytes(StandardCharsets.UTF_8);
         h.setFixedLengthStreamingMode(out.length);
         try (OutputStream os = h.getOutputStream()) { os.write(out); }
         int code = h.getResponseCode();
@@ -167,30 +203,58 @@ final class GeminiRest {
     /** Plain text generation (scripts, captions, prompts, plans). */
     static String text(Context c, String system, String prompt, int timeoutSec) throws Exception {
         Exception last = null;
-        for (String m : TEXT_MODELS) {
+        for (String m : textModels()) {
             try {
-                JSONObject b = new JSONObject().put("model", m).put("input", prompt).put("store", false);
+                JSONObject b = withThinking(new JSONObject().put("model", m).put("input", prompt).put("store", false), m, "low");
                 if (system != null && !system.isEmpty()) b.put("system_instruction", system);
-                return outputText(create(c, b, timeoutSec));
+                return outputText(create(c, b, ARGON.equals(m) ? Math.max(timeoutSec, 180) : timeoutSec));
             } catch (Exception e) {
                 last = e;
+                noteFail(m, e);
                 if (!tryNext(e)) throw e;
             }
         }
         throw last;
     }
 
+    /** Slow, careful reasoning for hard questions: decompose, solve, self-check, answer. Result is spoken, so it stays short. */
+    static String think(Context c, String problem, String background, boolean search) throws Exception {
+        String sys = "You are Priya's deep-reasoning engine. The problem may be hard: strategy, maths, code design, planning with many constraints. "
+                + "Work like a careful senior engineer/consultant: (1) restate the goal and every constraint, (2) split into sub-problems, "
+                + "(3) solve each, trying at least two approaches when the choice matters, (4) CHECK the result yourself (arithmetic, edge cases, "
+                + "contradictions, safety), fix mistakes, (5) give the final answer. Never invent facts: if something is unknown say what is missing. "
+                + "Reply in the user's language (Hinglish if the input is Hinglish) in this shape: FINAL (3-6 short spoken sentences), "
+                + "STEPS (numbered, one line each, max 8), RISKS (max 3 lines, or 'none'), UNSURE (what to verify). No markdown tables.";
+        String in = "PROBLEM:\n" + problem + (background == null || background.trim().isEmpty() ? "" : "\n\nCONTEXT:\n" + background);
+        Exception last = null;
+        for (String m : textModels()) {
+            try {
+                JSONObject b = withThinking(new JSONObject().put("model", m).put("input", in).put("store", false).put("system_instruction", sys), m, "high");
+                if (search) b.put("tools", new JSONArray().put(new JSONObject().put("type", "google_search")));
+                String t = outputText(create(c, b, ARGON.equals(m) ? 600 : 90));
+                if (!t.trim().isEmpty()) return t;
+                last = new Exception("model ne khaali jawab diya");
+            } catch (Exception e) {
+                last = e;
+                noteFail(m, e);
+                if (!tryNext(e)) throw e;
+            }
+        }
+        throw last == null ? new Exception("model nahi mila") : last;
+    }
+
     /** Google-Search-grounded answer with sources. */
     static String research(Context c, String question) throws Exception {
         Exception last = null;
-        for (String m : TEXT_MODELS) {
+        for (String m : textModels()) {
             try {
                 JSONObject b = new JSONObject().put("model", m).put("input", question).put("store", false)
                         .put("tools", new JSONArray().put(new JSONObject().put("type", "google_search")))
                         .put("system_instruction", "You are a precise research assistant. Use Google Search. Answer in the user's language "
                                 + "(Hinglish if the question is Hinglish), concise and factual, with concrete names, numbers, dates, links. "
                                 + "Say clearly if something could not be confirmed.");
-                JSONObject r = create(c, b, 120);
+                withThinking(b, m, "medium");
+                JSONObject r = create(c, b, ARGON.equals(m) ? 420 : 120);
                 String t = outputText(r);
                 java.util.LinkedHashSet<String> urls = new java.util.LinkedHashSet<>();
                 collectUrls(steps(r), urls);
@@ -202,6 +266,7 @@ final class GeminiRest {
                 return sb.toString();
             } catch (Exception e) {
                 last = e;
+                noteFail(m, e);
                 if (!tryNext(e)) throw e;
             }
         }
@@ -212,15 +277,16 @@ final class GeminiRest {
     static String audioText(Context c, byte[] audio, String mime, String prompt) throws Exception {
         Exception last = null;
         String b64 = Base64.encodeToString(audio, Base64.NO_WRAP);
-        for (String m : TEXT_MODELS) {
+        for (String m : textModels()) {
             try {
                 JSONArray in = new JSONArray()
                         .put(new JSONObject().put("type", "text").put("text", prompt))
                         .put(new JSONObject().put("type", "audio").put("data", b64).put("mime_type", mime));
-                JSONObject b = new JSONObject().put("model", m).put("input", in).put("store", false);
-                return outputText(create(c, b, 240));
+                JSONObject b = withThinking(new JSONObject().put("model", m).put("input", in).put("store", false), m, "low");
+                return outputText(create(c, b, ARGON.equals(m) ? 420 : 240));
             } catch (Exception e) {
                 last = e;
+                noteFail(m, e);
                 if (!tryNext(e)) throw e;
             }
         }

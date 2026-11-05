@@ -34,7 +34,8 @@ final class PriyaJobs {
         final String id, kind, title;
         final long started = System.currentTimeMillis();
         volatile long ended;
-        volatile String status = "RUNNING";   // RUNNING | VERIFIED | FAILED
+        volatile String status = "RUNNING";   // RUNNING | VERIFIED | DONE (agent's own report) | CANCELLED | FAILED
+        volatile boolean cancel;              // owner said stop: background agents check this between steps
         volatile String stage = "shuru";
         volatile String result = "";
         Job(String id, String kind, String title) { this.id = id; this.kind = kind; this.title = title; }
@@ -46,6 +47,8 @@ final class PriyaJobs {
 
     static final Map<String, Job> JOBS = new LinkedHashMap<>();
     private static final ExecutorService EXEC = Executors.newSingleThreadExecutor();
+    /** Background tasks started from the live chat run one after another (they may drive the phone screen). */
+    private static final ExecutorService EXEC_BG = Executors.newSingleThreadExecutor();
     static final String CHANNEL = "priya_tasks";
 
     private PriyaJobs() {}
@@ -56,24 +59,31 @@ final class PriyaJobs {
         final Job j = new Job(id, kind, title);
         synchronized (JOBS) { JOBS.put(id, j); }
         TaskRunnerService.keepAlive(app, title);
-        EXEC.execute(() -> {
+        (kind.equals("bg") ? EXEC_BG : EXEC).execute(() -> {
             try {
-                String r = w.run(j);
+                String r = j.cancel ? "CANCELLED: shuru hone se pehle hi roka gaya." : w.run(j);
                 j.result = r == null ? "" : r;
-                j.status = j.result.startsWith("VERIFIED") ? "VERIFIED" : "FAILED";
+                if (j.result.startsWith("VERIFIED")) j.status = "VERIFIED";
+                else if (j.result.startsWith("CANCELLED")) j.status = "CANCELLED";
+                else if (kind.equals("bg") && !j.result.startsWith("FAILED") && !j.result.startsWith("BLOCKED")) j.status = "DONE";
+                else j.status = "FAILED";
             } catch (Throwable e) {
                 j.status = "FAILED";
                 j.result = "FAILED: " + e.getClass().getSimpleName() + ": " + e.getMessage();
             }
             j.ended = System.currentTimeMillis();
-            notifyOwner(app, (j.status.equals("VERIFIED") ? "✅ " : "⚠️ ") + j.title,
+            notifyOwner(app, (j.status.equals("VERIFIED") || j.status.equals("DONE") ? "✅ " : "⚠️ ") + j.title,
                     GeminiRest.clip(j.result, 600), j.id.hashCode());
             LiveSink s = live;
             if (s != null) {
                 try {
+                    String how = j.status.equals("DONE")
+                            ? "\n(Ye background agent ki apni report hai. File/proof/link report mein ho to 'ho gaya' bolo, warna 'agent ne ye bataya' kaho.)"
+                            : j.status.equals("CANCELLED") ? "\n(Owner ke kehne par roka gaya; bas ek chhoti line mein batao ki ruk gaya.)"
+                            : "\n(Sirf jo VERIFIED hai wahi 'ho gaya' bolo.)";
                     s.note("[SYSTEM NOTE, user ne nahi bola] Background job " + j.id + " (" + j.title + ") khatam: " + j.status
                             + ". Result: " + GeminiRest.clip(j.result, 900)
-                            + "\nSachin ko 1-2 line ka professional report do (sirf jo VERIFIED hai wahi 'ho gaya' bolo).");
+                            + "\nSachin ko 1-2 line ka professional report do, abhi ki baat ke beech mein tameez se." + how);
                 } catch (Throwable ignored) { }
             }
             TaskRunnerService.releaseIfIdle(app);
@@ -101,6 +111,23 @@ final class PriyaJobs {
             }
             return JOBS.get(id.trim());
         }
+    }
+
+    /** Owner said stop. Empty id = every running job. Returns what was asked to stop. */
+    static String cancel(String id) {
+        int n = 0;
+        StringBuilder sb = new StringBuilder();
+        synchronized (JOBS) {
+            for (Job j : JOBS.values()) {
+                if (!j.status.equals("RUNNING")) continue;
+                if (id != null && !id.trim().isEmpty() && !j.id.equals(id.trim())) continue;
+                j.cancel = true;
+                n++;
+                sb.append(j.id).append(" (").append(j.title).append(") ");
+            }
+        }
+        if (n == 0) return "Koi chalta hua kaam nahi mila" + (id == null || id.trim().isEmpty() ? "." : " (" + id + ").");
+        return "CANCEL_REQUESTED: " + sb + "— agle step par ruk jayega (jo step chal raha hai wo poora hone mein kuch second lag sakte hain).";
     }
 
     static List<Job> all() {

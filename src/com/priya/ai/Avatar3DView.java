@@ -179,7 +179,7 @@ public class Avatar3DView extends GLSurfaceView implements GLSurfaceView.Rendere
     private static final String VS =
             "attribute vec3 aPos; attribute vec3 aNor; attribute vec4 aCol; attribute vec4 aRig; attribute float aHw;\n" +
             "uniform mat4 uVP;\n" +
-            "uniform float uJaw, uSmile, uBlink, uYaw, uPitch, uRoll, uTime, uOutline, uBrow;\n" +
+            "uniform float uJaw, uSmile, uBlink, uYaw, uPitch, uRoll, uTime, uOutline, uBrow, uWide, uRound;\n" +
             "uniform vec2 uGaze;\n" +
             "uniform vec4 uEye;   // eyeX eyeY eyeZ eyeR\n" +
             "uniform vec4 uMouth; // mouthY mouthZ jawY jawZ\n" +
@@ -198,14 +198,14 @@ public class Avatar3DView extends GLSurfaceView implements GLSurfaceView.Rendere
             "  // lips: part a little + smile pulls the corners out and up\n" +
             "  if (part > 3.5 && part < 5.5) {\n" +
             "    float corner = aRig.z; float u = aRig.w;\n" +
-            "    p.x += sign(u) * corner * (uSmile * 0.014 - uJaw * 0.006);\n" +
+            "    p.x += sign(u) * corner * (uSmile * 0.014 - uJaw * 0.006 + uWide * 0.009 - uRound * 0.013);\n" +
             "    p.y += corner * uSmile * 0.020;\n" +
             "    if (part < 4.5) p.y += uJaw * 0.008 * (1.0 - corner);\n" +
             "  }\n" +
             "  // mouth interior: opens with the jaw\n" +
             "  if (part > 5.5 && part < 6.5) {\n" +
             "    p.y = uMouth.x + (p.y - uMouth.x) * (1.0 + uJaw * 2.6) - uJaw * 0.034;\n" +
-            "    p.x *= 1.0 + uSmile * 0.10;\n" +
+            "    p.x *= 1.0 + uSmile * 0.10 + uWide * 0.14 - uRound * 0.24;\n" +
             "  }\n" +
             "  // brows lift a touch while talking / smiling\n" +
             "  if (part > 2.5 && part < 3.5) p.y += uBrow * 0.018 * (0.6 + 0.4 * aRig.z);\n" +
@@ -292,7 +292,7 @@ public class Avatar3DView extends GLSurfaceView implements GLSurfaceView.Rendere
 
     private int prog, bgProg;
     private int aPos, aNor, aCol, aRig, aHw;
-    private int uVP, uJaw, uSmile, uBlink, uYaw, uPitch, uRoll, uTime, uOutline, uBrow, uGaze, uEye, uMouth, uLidAng;
+    private int uVP, uJaw, uSmile, uBlink, uYaw, uPitch, uRoll, uTime, uOutline, uBrow, uGaze, uEye, uMouth, uLidAng, uWide, uRound;
     private int uStyle, uCam, uCircle, uPass, uDim, uTimeF, uOutlineF;
     private int bgAP, bgCircle, bgFill, bgRing, bgRingW;
     private FloatBuffer quad;
@@ -310,7 +310,7 @@ public class Avatar3DView extends GLSurfaceView implements GLSurfaceView.Rendere
 
     private final long t0 = SystemClock.uptimeMillis();
     private long lastFrame = 0, lastDraw = 0;
-    private float jaw = 0f, smile = 0.15f, brow = 0f;
+    private float jaw = 0f, smile = 0.15f, brow = 0f, lipWide = 0f, lipRound = 0f;
     private float blink = 0f;
     private long nextBlink = 0, blinkStart = -1;
     private boolean doubleBlink = false;
@@ -331,6 +331,7 @@ public class Avatar3DView extends GLSurfaceView implements GLSurfaceView.Rendere
             uVP = u("uVP"); uJaw = u("uJaw"); uSmile = u("uSmile"); uBlink = u("uBlink"); uYaw = u("uYaw");
             uPitch = u("uPitch"); uRoll = u("uRoll"); uTime = u("uTime"); uOutline = u("uOutline"); uBrow = u("uBrow");
             uGaze = u("uGaze"); uEye = u("uEye"); uMouth = u("uMouth"); uLidAng = u("uLidAng");
+            uWide = u("uWide"); uRound = u("uRound");
             uStyle = u("uStyle"); uTimeF = u("uTimeF"); uOutlineF = u("uOutlineF"); uCam = u("uCam"); uCircle = u("uCircle"); uPass = u("uPass"); uDim = u("uDim");
             bgAP = GLES20.glGetAttribLocation(bgProg, "aP");
             bgCircle = GLES20.glGetUniformLocation(bgProg, "uCircle");
@@ -468,6 +469,8 @@ public class Avatar3DView extends GLSurfaceView implements GLSurfaceView.Rendere
         GLES20.glUniform1f(uJaw, jaw);
         GLES20.glUniform1f(uSmile, smile);
         GLES20.glUniform1f(uBrow, brow);
+        GLES20.glUniform1f(uWide, lipWide);
+        GLES20.glUniform1f(uRound, lipRound);
         GLES20.glUniform1f(uBlink, blink);
         GLES20.glUniform1f(uLidAng, st == 2 ? 0.95f : 0.80f);
         float yaw = 0.055f * (float) Math.sin(t * 0.37) + 0.025f * (float) Math.sin(t * 0.93 + 1.3) + gx * 0.35f;
@@ -595,6 +598,10 @@ public class Avatar3DView extends GLSurfaceView implements GLSurfaceView.Rendere
         float tau = target > jaw ? 0.025f : 0.080f;
         jaw += (target - jaw) * Math.min(1f, dt / tau);
         if (jaw < 0.003f) jaw = 0f;
+        // mouth SHAPE from her voice: spread lips (aa, e, s) vs rounded lips (o, u); smoothed so it never flickers
+        float wT = speaking ? PriyaBus.mouthWide : 0f, rT = speaking ? PriyaBus.mouthRound : 0f;
+        lipWide += (wT - lipWide) * Math.min(1f, dt / 0.06f);
+        lipRound += (rT - lipRound) * Math.min(1f, dt / 0.06f);
         // warm smile while she talks, gentle resting smile otherwise
         float sTarget = speaking ? 0.40f + 0.15f * jaw : (PriyaBus.running() ? 0.20f : 0.12f);
         smile += (sTarget - smile) * Math.min(1f, dt / 0.5f);

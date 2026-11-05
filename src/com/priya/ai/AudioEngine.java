@@ -43,7 +43,7 @@ public class AudioEngine {
     private static final int OUT_RATE = 24000;
     private static final int FRAME = 320;          // 20 ms @ 16 kHz
     private static final int PREROLL_FRAMES = 10;  // 200 ms
-    private static final int HANG_FRAMES = 28;     // 560 ms of silence ends the utterance (fast replies)
+    // end-of-utterance silence is adaptive: see hangFor() (short commands end sooner = faster replies)
     private static final float MIN_THR = 500f;     // absolute RMS floor (16-bit scale)
     private static final long TAIL_MS = 350;       // keep mic closed a bit after Priya stops
 
@@ -68,6 +68,34 @@ public class AudioEngine {
     /** true = play through the normal assistant/media path (full-quality 24 kHz, no call processing). */
     private boolean natural = true;
     private float mult = 2.15f;
+
+    // ---- barge-in (rok-tok) tuning, set from Settings through setBargeLevel(); defaults = "Turant"
+    private boolean legacyBarge = false;
+    private int bargeNeed = 12;            // ~240 ms of sustained loud voice (20 ms frames)
+    private float bargeBaseMul = 3.0f, bargeFloorMul = 3.5f, bargeEchoMul = 1.7f;
+    private long bargeGraceMs = 400;
+    private int hangShort = 20, hangLong = 28; // silence frames that end an utterance (short / long utterances)
+    /** Learned ratio mic-level / her-playback-level while she speaks (= how much of her own voice the mic hears). */
+    private float couple = 0.8f;
+
+    /** 0 = Dheere (old behaviour), 1 = Normal, 2 = Turant (default). */
+    public void setBargeLevel(int level) {
+        switch (level) {
+            case 0:
+                legacyBarge = true; bargeNeed = natural ? 35 : 28; bargeGraceMs = 900; hangShort = 28; hangLong = 32;
+                break;
+            case 1:
+                legacyBarge = false; bargeNeed = 20; bargeBaseMul = 3.5f; bargeFloorMul = 4.5f; bargeEchoMul = 2.0f;
+                bargeGraceMs = 600; hangShort = 24; hangLong = 30;
+                break;
+            default:
+                legacyBarge = false; bargeNeed = 12; bargeBaseMul = 3.0f; bargeFloorMul = 3.5f; bargeEchoMul = 1.7f;
+                bargeGraceMs = 400; hangShort = 20; hangLong = 28;
+                break;
+        }
+    }
+
+    private int hangFor(int uttFrames) { return uttFrames < 150 ? hangShort : hangLong; }
 
     public AudioEngine(Context ctx) {
         this.ctx = ctx.getApplicationContext();
@@ -157,6 +185,7 @@ public class AudioEngine {
         headBase = 0;
         lvlR = lvlW = 0;
         cushionMs = CUSHION_START_MS;
+        couple = 0.8f;
         flushReq++;
         running = true;
         micThread = new Thread(() -> micLoop(sink), "priya-mic");
@@ -268,6 +297,7 @@ public class AudioEngine {
     private static final int RING = 128;
     private final long[] lvlFrame = new long[RING];
     private final float[] lvlVal = new float[RING];
+    private final float[] lvlWide = new float[RING], lvlRound = new float[RING];
     private int lvlW = 0, lvlR = 0;
 
     private long head(AudioTrack t) {
@@ -288,6 +318,9 @@ public class AudioEngine {
         if (lv >= 0f) {
             outRms = Math.max(lv, outRms * 0.97f); // slow decay: echo between her words never looks like a barge-in
             PriyaBus.outLevel = Math.min(1f, lv / 7000f);
+            int k = (lvlR - 1) % RING;
+            PriyaBus.mouthWide = lvlWide[k];
+            PriyaBus.mouthRound = lvlRound[k];
         }
         long pend = pendingFrames(t);
         if (pend > 0) speakEnd = Math.max(speakEnd, now + pend / FPMS);
@@ -308,6 +341,8 @@ public class AudioEngine {
         lvlR = lvlW;
         outRms = 0f;
         PriyaBus.outLevel = 0f;
+        PriyaBus.mouthWide = 0f;
+        PriyaBus.mouthRound = 0f;
         speakEnd = SystemClock.elapsedRealtime();
     }
 
@@ -320,13 +355,30 @@ public class AudioEngine {
             n &= ~1;
             if (n <= 0) break;
             // level of this slice, stamped with the frame index where it will play
-            double sum = 0;
+            double sum = 0, dsum = 0;
+            int prev = 0;
             for (int i = off; i + 1 < off + n; i += 2) {
                 int s = (short) ((b[i] & 0xff) | (b[i + 1] << 8));
                 sum += (double) s * s;
+                int d = s - prev;
+                dsum += (double) d * d;
+                prev = s;
             }
+            float sliceRms = (float) Math.sqrt(sum / (n / 2));
             lvlFrame[lvlW % RING] = framesWritten;
-            lvlVal[lvlW % RING] = (float) Math.sqrt(sum / (n / 2));
+            lvlVal[lvlW % RING] = sliceRms;
+            // mouth shape from the spectrum's "brightness" (RMS of the first difference / RMS): low = o,u (round lips),
+            // mid = aa, high = s, sh, e (spread lips, teeth). An estimate, not a phoneme recogniser.
+            float wide = 0f, round = 0f;
+            if (sliceRms > 250f) {
+                float br = (float) (Math.sqrt(dsum / Math.max(1, n / 2 - 1)) / sliceRms);
+                float tw = Math.max(0f, Math.min(1f, (br - 0.10f) / 0.20f));
+                float tr = Math.max(0f, Math.min(1f, (br - 0.07f) / 0.08f));
+                wide = tw * tw * (3f - 2f * tw);
+                round = (1f - tr * tr * (3f - 2f * tr)) * Math.min(1f, sliceRms / 2300f);
+            }
+            lvlWide[lvlW % RING] = wide;
+            lvlRound[lvlW % RING] = round;
             lvlW++;
             if (lvlW - lvlR > RING) lvlR = lvlW - RING;
             int w = t.write(b, off, n); // blocking; at most ~one slice of waiting
@@ -369,6 +421,8 @@ public class AudioEngine {
                     lastAudioEnd = SystemClock.elapsedRealtime();
                     drainedWhileGen = generating;
                     PriyaBus.outLevel = 0f;
+                    PriyaBus.mouthWide = 0f;
+                    PriyaBus.mouthRound = 0f;
                     try { trackUnderruns = t.getUnderrunCount(); } catch (Throwable ignored) { }
                 }
                 continue;
@@ -710,16 +764,25 @@ public class AudioEngine {
 
             if (speaking && strictEcho) {
                 // Barge-in (roka-toki): a clearly loud, sustained voice (the owner's, if voice lock is on) cuts Priya off.
-                float bargeThr = Math.max(MIN_THR * 5f, Math.max(floor * mult * 6f, outRms * (natural ? 2.4f : 1.5f)));
-                boolean grace = SystemClock.elapsedRealtime() - replyStart < 900;
+                if (outRms > 600f) {
+                    // learn how loud her own voice comes back into the mic: the LOWEST ratio seen is pure echo,
+                    // the owner's voice only ever raises it (so the threshold follows her volume and the room)
+                    float ratio = rms / Math.max(outRms, 1f);
+                    couple += (ratio - couple) * (ratio < couple ? 0.15f : 0.004f);
+                    couple = Math.max(0.05f, Math.min(2.5f, couple));
+                }
+                float bargeThr = legacyBarge
+                        ? Math.max(MIN_THR * 5f, Math.max(floor * mult * 6f, outRms * (natural ? 2.4f : 1.5f)))
+                        : Math.max(MIN_THR * bargeBaseMul, Math.max(floor * mult * bargeFloorMul, couple * outRms * bargeEchoMul + floor * 1.5f));
+                boolean grace = SystemClock.elapsedRealtime() - replyStart < bargeGraceMs;
                 bargeLoud = (!grace && rms > bargeThr) ? bargeLoud + 1 : Math.max(0, bargeLoud - 2);
                 // sustained (~0.7 s) loud speech, and with voice lock: the owner's voice at a STRICTER confidence
                 // than normal listening, so her own echo through the speaker can't cut her off.
-                if (bargeLoud >= (natural ? 35 : 28) && (!lockOn() || bargeOwner(new java.util.ArrayList<>(recentPitch), new java.util.ArrayList<>(recentMfcc)))) {
+                if (bargeLoud >= bargeNeed && (!lockOn() || bargeOwner(new java.util.ArrayList<>(recentPitch), new java.util.ArrayList<>(recentMfcc)))) {
                     bargeLoud = 0;
                     bargeIn();
                     inSpeech = true; deciding = false; rejected = false; uttFrames = 0; ownerUtt = false;
-                    hang = HANG_FRAMES;
+                    hang = hangFor(0);
                     loud = 0;
                     PriyaBus.userTalking = true;
                     sink.onSpeechStart();
@@ -753,7 +816,7 @@ public class AudioEngine {
                 loud = voice ? loud + 1 : 0;
                 if (loud >= 3) {
                     inSpeech = true;
-                    hang = HANG_FRAMES;
+                    hang = hangFor(0);
                     loud = 0;
                     uttFrames = 0;
                     rejected = false;
@@ -780,7 +843,7 @@ public class AudioEngine {
             } else {
                 uttFrames++;
                 boolean ended = false;
-                if (voice) hang = HANG_FRAMES;
+                if (voice) hang = hangFor(uttFrames);
                 else if (--hang <= 0) ended = true;
 
                 if (deciding) {

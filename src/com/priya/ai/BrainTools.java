@@ -25,7 +25,8 @@ final class BrainTools {
 
     /** Tools that only read/think (no phone action): allowed without a fresh owner order. */
     static final Set<String> READ_ONLY = new HashSet<>(Arrays.asList(
-            "web_fetch", "research", "generate_text", "job_status", "list_schedules", "list_recent_audio", "find_best_tool"));
+            "web_fetch", "research", "generate_text", "job_status", "list_schedules", "list_recent_audio", "find_best_tool",
+            "deep_think", "cancel_background"));
 
     // ------------------------------------------------------------------ declaration helpers (Live API schema, upper-case types)
 
@@ -105,6 +106,21 @@ final class BrainTools {
                 new JSONObject().put("id", str("Schedule id")).put("status", enumStr("New status", "paused", "active", "cancelled")), "id", "status"));
         a.put(fn("run_schedule_now", "Run a scheduled task right now (to test it).",
                 new JSONObject().put("id", str("Schedule id")), "id"));
+        a.put(fn("background_task", "Run a LONG or multi-step job in the background WHILE you keep talking with the owner (research, content/video, coding in Termux, several apps, reports). Returns JOB_STARTED at once - that does NOT mean it is done; the real result arrives later as a SYSTEM NOTE (or ask job_status). Only the tool groups you list are allowed. Never use it for payments, deleting things, or messaging people the owner did not name.",
+                new JSONObject().put("task", str("The full job in clear words: goal, inputs (file paths, names), output wanted, language. The worker cannot ask questions, so include everything."))
+                        .put("title", str("3-6 word name for the job"))
+                        .put("scopes", new JSONObject().put("type", "ARRAY").put("items",
+                                new JSONObject().put("type", "STRING").put("enum", new JSONArray().put("phone").put("content").put("messages").put("coding")))
+                                .put("description", "Allowed tool groups: phone (open apps, tap, type, read screen - the screen is shared, so do not use phone tools yourself meanwhile), content (images, voiceover, faceless video), messages (WhatsApp/email ONLY to recipients), coding (Termux). Research, writing, notes are always allowed."))
+                        .put("recipients", str("Only for 'messages': exact names / numbers / emails the owner named")),
+                "task"));
+        a.put(fn("cancel_background", "Stop a background job right now (owner said stop / ruko / cancel). Empty job_id = stop every running background job.",
+                new JSONObject().put("job_id", str("Job id from JOB_STARTED; empty = all"))));
+        a.put(fn("deep_think", "Think hard about a difficult problem before acting (strategy, maths, code design, many constraints, planning, debugging). Takes 10-40 seconds: say one short line first. Returns FINAL / STEPS / RISKS / UNSURE; judge it yourself, then act. Use search=true if it needs current facts.",
+                new JSONObject().put("problem", str("The problem with all numbers, constraints and the goal"))
+                        .put("context", str("Optional: what is already known or tried"))
+                        .put("search", bool("true = may use Google Search, default false")), "problem"));
+        SelfUpdate.declare(a);
     }
 
     // ------------------------------------------------------------------ dispatch
@@ -137,7 +153,57 @@ final class BrainTools {
             case "list_schedules":   return Scheduler.describeAll(ctx);
             case "set_schedule_status": return Scheduler.setStatus(ctx, args.optString("id", ""), args.optString("status", ""));
             case "run_schedule_now": return Scheduler.runNow(ctx, args.optString("id", ""));
-            default: return null;
+            case "background_task":  return backgroundTask(ctx, args);
+            case "cancel_background":return PriyaJobs.cancel(args.optString("job_id", ""));
+            case "deep_think": {
+                String p = args.optString("problem", "");
+                if (p.trim().length() < 5) return "Problem saaf likho.";
+                try {
+                    return "DEEP_THINK RESULT (khud parakho, phir kaam karo):\n"
+                            + GeminiRest.think(ctx, p, args.optString("context", ""), args.optBoolean("search", false));
+                } catch (Exception e) {
+                    return "FAILED: gehri soch nahi chali — " + e.getMessage() + ". Khud step-by-step soch kar aage badho.";
+                }
+            }
+            default:
+                if (SelfUpdate.isSelfTool(name)) return SelfUpdate.run(ctx, name, args);
+                return null;
+        }
+    }
+
+    /** Starts a HeadlessAgent for the owner's live order; same guards as a scheduled run (scopes, recipients, no delete/pay). */
+    private static String backgroundTask(Context ctx, JSONObject args) {
+        String task = args.optString("task", "").trim();
+        if (task.length() < 8) return "Kaam poori tarah likho (kya, kis file par, output kya) — ye worker beech mein sawaal nahi poochh sakta.";
+        String recipients = args.optString("recipients", "").trim();
+        JSONArray in = args.optJSONArray("scopes"), sc = new JSONArray();
+        boolean phone = false;
+        StringBuilder dropped = new StringBuilder();
+        if (in != null) {
+            for (int i = 0; i < in.length(); i++) {
+                String s = in.optString(i);
+                if (!(s.equals("phone") || s.equals("content") || s.equals("messages") || s.equals("coding"))) continue;
+                if (s.equals("messages") && recipients.isEmpty()) { dropped.append("messages (recipient nahi diya) "); continue; }
+                sc.put(s);
+                if (s.equals("phone")) phone = true;
+            }
+        }
+        int running = 0;
+        for (PriyaJobs.Job x : PriyaJobs.all()) if (x.kind.equals("bg") && x.status.equals("RUNNING")) running++;
+        if (running >= 3) return "BLOCKED: pehle se 3 background kaam chal rahe hain. Ek khatam hone do ya cancel_background karo.";
+        try {
+            JSONObject sched = new JSONObject().put("task", task).put("recipients", recipients).put("scopes", sc).put("live", true);
+            final HeadlessAgent agent = new HeadlessAgent(ctx, sched);
+            String title = args.optString("title", "").trim();
+            if (title.isEmpty()) title = GeminiRest.clip(task.replace('\n', ' '), 48);
+            PriyaJobs.Job j = PriyaJobs.start(ctx, "bg", title, jb -> agent.attach(jb).run());
+            return "JOB_STARTED: " + j.id + " (" + title + ") peeche chal raha hai" + (running > 0 ? " — pehle ke kaam ke baad shuru hoga (line mein)" : "") + ". "
+                    + "Ye 'ho gaya' NAHI hai. Tools allowed: " + (sc.length() == 0 ? "sirf research/likhna/notes" : sc.toString())
+                    + (dropped.length() > 0 ? "; hataye gaye: " + dropped : "") + ". "
+                    + (phone ? "Phone scope hai: jab tak ye chale, screen/phone tools khud mat chalao. " : "")
+                    + "Owner se baat karti raho; natija SYSTEM NOTE mein aayega, ya job_status se dekho.";
+        } catch (Exception e) {
+            return "FAILED: background kaam shuru nahi hua — " + e.getMessage();
         }
     }
 

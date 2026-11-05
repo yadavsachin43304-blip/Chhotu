@@ -17,6 +17,9 @@ public class ScheduleReceiver extends BroadcastReceiver {
             TaskRunnerService.runLearning(c, false);
             return;
         }
+        if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)) {
+            try { SelfUpdate.onPackageReplaced(c.getApplicationContext()); } catch (Throwable ignored) { }
+        }
         // BOOT_COMPLETED, LOCKED_BOOT_COMPLETED, MY_PACKAGE_REPLACED, SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
         try { Scheduler.rearmAll(c.getApplicationContext()); } catch (Throwable ignored) { }
         try { AiTools.armLearning(c.getApplicationContext()); } catch (Throwable ignored) { }

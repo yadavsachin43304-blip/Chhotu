@@ -91,6 +91,7 @@ public class PanelActivity extends Activity {
             case "memory": return "Memory (30 MB)";
             case "settings": return "Settings";
             case "skills": return "Skills";
+            case "selfup": return "Self-upgrade";
             default: return "Permissions";
         }
     }
@@ -102,6 +103,7 @@ public class PanelActivity extends Activity {
             case "memory": renderMemory(); break;
             case "settings": renderSettings(); break;
             case "skills": renderSkills(); break;
+            case "selfup": renderSelfUp(); break;
             default: renderPermissions(); break;
         }
     }
@@ -127,6 +129,79 @@ public class PanelActivity extends Activity {
         } catch (Exception e) {
             toast("Ye screen is phone par nahi khul paayi.");
         }
+    }
+
+    // ================================================================== self-upgrade
+
+    private void renderSelfUp() {
+        TextView intro = Ui.text(this,
+                "Priya Termux mein apna source badal kar, naya APK bana kar khud ko update kar sakti hai. Bolo: \"Priya, apne aap ko upgrade karo — ...\". "
+                        + "Har badlav se pehle backup banta hai, install se pehle aapki 'haan' zaroori hai, aur kuch bigde to rollback hota hai. "
+                        + "Safety files (delete-block, voice lock, installer) Priya khud nahi badal sakti.", 13, Ui.SUB, false);
+        intro.setPadding(0, 0, 0, Ui.dp(this, 10));
+        content.addView(intro);
+
+        LinearLayout c1 = Ui.card(this);
+        c1.addView(Ui.text(this, "Source folder (Termux home mein)", 16, Ui.TEXT, true));
+        final EditText dir = new EditText(this);
+        dir.setText(Prefs.selfSrcDir(this));
+        dir.setHint("PriyaAI");
+        dir.setHintTextColor(Ui.SUB);
+        dir.setTextColor(Ui.TEXT);
+        dir.setSingleLine(true);
+        c1.addView(dir, Ui.matchWrap(this, 4));
+        Button sv = Ui.button(this, "Save", Ui.LINE, Ui.TEXT);
+        sv.setOnClickListener(v -> {
+            String d = dir.getText().toString().trim();
+            if (!d.matches("[A-Za-z0-9._-]+")) { toast("Sirf folder ka naam (jaise PriyaAI)."); return; }
+            Prefs.setSelfSrcDir(this, d);
+            toast("Save ✓  ~/" + d);
+        });
+        c1.addView(sv, Ui.matchWrap(this, 6));
+        content.addView(c1);
+
+        LinearLayout c2 = Ui.card(this);
+        c2.addView(Ui.text(this, "Taiyaari check", 16, Ui.TEXT, true));
+        final TextView st = Ui.text(this, "Check dabao — Termux se source, tools aur backup dekhi jayegi.", 12.5f, Ui.SUB, false);
+        st.setPadding(0, Ui.dp(this, 4), 0, 0);
+        c2.addView(st);
+        final Button chk = Ui.button(this, "🔧  Check karo", Ui.ACCENT, 0xFF06202A);
+        chk.setOnClickListener(v -> {
+            chk.setEnabled(false);
+            st.setText("Termux se pooch rahi hoon…");
+            new Thread(() -> {
+                final String r = SelfUpdate.status(this);
+                ui.post(() -> { st.setText(r); chk.setEnabled(true); });
+            }).start();
+        });
+        c2.addView(chk, Ui.matchWrap(this, 10));
+        content.addView(c2);
+
+        LinearLayout c3 = Ui.card(this);
+        c3.addView(Ui.text(this, "Pehli baar setup (Termux mein)", 16, Ui.TEXT, true));
+        TextView steps = Ui.text(this,
+                "1) cd ~ && unzip -o /sdcard/Download/PriyaAI-v35.zip   (folder ka naam PriyaAI)\n"
+                        + "2) cd ~/PriyaAI && bash selfup.sh guard-reset   (ek baar: safety files lock)\n"
+                        + "3) pkg install -y openjdk-21 aapt2 apksigner d8 zip python\n"
+                        + "4) Menu > Permissions: 'Termux commands' aur 'Install unknown apps' allow.\n"
+                        + "5) Termux: mkdir -p ~/.termux && echo 'allow-external-apps=true' >> ~/.termux/termux.properties && termux-reload-settings",
+                12.5f, Ui.SUB, false);
+        steps.setPadding(0, Ui.dp(this, 4), 0, 0);
+        steps.setTextIsSelectable(true);
+        c3.addView(steps);
+        content.addView(c3);
+
+        LinearLayout c4 = Ui.card(this);
+        c4.addView(Ui.text(this, "Kuch bigad jaye to", 16, Ui.TEXT, true));
+        TextView rb = Ui.text(this,
+                "Priya se bolo: \"pichla version wapas lao\" (rollback).\n"
+                        + "Ya khud Termux mein:  cd ~/PriyaAI && bash selfup.sh rollback && termux-open PriyaAI.apk\n"
+                        + "Backups: ~/PriyaSelf/backups  |  Build log: ~/PriyaSelf/log/build.log",
+                12.5f, Ui.SUB, false);
+        rb.setPadding(0, Ui.dp(this, 4), 0, 0);
+        rb.setTextIsSelectable(true);
+        c4.addView(rb);
+        content.addView(c4);
     }
 
     // ================================================================== permissions
@@ -244,6 +319,13 @@ public class PanelActivity extends Activity {
                 pm.isIgnoringBatteryOptimizations(getPackageName()), "Allow karo",
                 v -> start(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                         Uri.parse("package:" + getPackageName()))));
+
+        if (Build.VERSION.SDK_INT >= 26) {
+            permCard("Install unknown apps (self-upgrade)",
+                    "Priya apna naya version (jo Termux mein bana) install kar sake — sirf aapki 'haan' ke baad. Termux ka 'Termux commands' permission bhi upar ke 'Saari runtime permissions' se do.",
+                    SelfUpdate.canInstall(this), "Allow karo",
+                    v -> start(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName()))));
+        }
 
         permCard("Contacts", "'Mummy ko call lagao' jaise commands mein naam dhundhne ke liye (READ_CONTACTS).",
                 has(Manifest.permission.READ_CONTACTS), "Allow karo",
@@ -543,6 +625,26 @@ public class PanelActivity extends Activity {
             @Override public void onStopTrackingTouch(SeekBar s) { }
         });
         c2.addView(sb, Ui.matchWrap(this, 6));
+        c2.addView(Ui.text(this, "Rok-tok (beech mein bolkar Priya ko rokna)", 14, Ui.TEXT, true), Ui.matchWrap(this, 12));
+        LinearLayout bargeRow = new LinearLayout(this);
+        bargeRow.setOrientation(LinearLayout.HORIZONTAL);
+        final String[] bl = {"Dheere", "Normal", "Turant"};
+        final Button[] bbtn = new Button[3];
+        for (int k = 0; k < 3; k++) {
+            final int lvl = k;
+            bbtn[k] = Ui.button(this, bl[k], Ui.LINE, Ui.TEXT);
+            bbtn[k].setAlpha(Prefs.bargeLevel(this) == k ? 1f : 0.45f);
+            bbtn[k].setOnClickListener(v -> {
+                Prefs.setBargeLevel(this, lvl);
+                for (int q = 0; q < 3; q++) bbtn[q].setAlpha(q == lvl ? 1f : 0.45f);
+                toast("Rok-tok: " + bl[lvl] + " (Priya ko OFF/ON karne par lagu)");
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp.setMargins(k == 0 ? 0 : Ui.dp(this, 4), 0, 0, 0);
+            bargeRow.addView(bbtn[k], lp);
+        }
+        c2.addView(bargeRow, Ui.matchWrap(this, 4));
+        c2.addView(Ui.text(this, "Turant = Priya ke bolte waqt aap bolein to ~0.3 sec mein chup. Agar wo apni hi awaaz se khud ruk jaye to Normal/Dheere karo (ya Voice Lock enroll karo).", 12, Ui.SUB, false));
         content.addView(c2);
 
         LinearLayout c3 = Ui.card(this);
@@ -575,7 +677,7 @@ public class PanelActivity extends Activity {
         cv.addView(Ui.text(this, "Owner ka naam", 13.5f, Ui.TEXT, true), Ui.matchWrap(this, 10));
         final EditText owner = new EditText(this);
         owner.setText(Prefs.ownerName(this));
-        owner.setHint("Sachin");
+        owner.setHint("Vivek");
         owner.setHintTextColor(Ui.SUB);
         owner.setTextColor(Ui.TEXT);
         owner.setSingleLine(true);

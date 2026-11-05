@@ -381,6 +381,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         list.addView(menuItem("🔐", "Permissions", "Mic, Accessibility, Overlay, Contacts, Calls…", v -> openPanel("permissions")));
         list.addView(menuItem("🔑", "API (Gemini)", "API key aur model save karo", v -> openPanel("api")));
         list.addView(menuItem("🧩", "Skills", "Priya ke skills dekho, naya skill banao", v -> openPanel("skills")));
+        list.addView(menuItem("🔧", "Self-upgrade", "Priya khud ko update kare (Termux se)", v -> openPanel("selfup")));
         list.addView(menuItem("⏰", "Schedules", "Scheduled kaam: pause / resume / abhi chalao", v -> openBrain("schedules")));
         list.addView(menuItem("🎬", "Studio", "Audio file chuno — faceless video shuru karo", v -> openBrain("pick_audio")));
         list.addView(menuItem("🧠", "Memory (30 MB)", "Vaade, notes aur conversation text", v -> openPanel("memory")));

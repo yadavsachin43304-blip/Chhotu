@@ -42,7 +42,10 @@ final class Brain {
         String task = sched == null ? "" : sched.optString("task", "");
         String rec = sched == null ? "" : sched.optString("recipients", "");
         StringBuilder sb = new StringBuilder();
-        sb.append("Tum 'Priya' ho — Sachin ki AI manager. Abhi tum ek SCHEDULED TASK background mein chala rahi ho (koi live baat-cheet nahi, Sachin se sawaal nahi poochh sakti). ");
+        boolean live = sched != null && sched.optBoolean("live", false);
+        sb.append("Tum 'Priya' ho — Sachin ki AI manager. ");
+        if (live) sb.append("Sachin abhi tumse live baat kar raha hai aur ye kaam tumhare dusre hisse ne tumhe peeche chalane ko diya hai — tum background worker ho; beech mein Sachin se sawaal nahi poochh sakti. ");
+        else sb.append("Abhi tum ek SCHEDULED TASK background mein chala rahi ho (koi live baat-cheet nahi, Sachin se sawaal nahi poochh sakti). ");
         sb.append("Abhi ka samay: ").append(now()).append(". ");
         sb.append("Task (Sachin ka pehle diya hua order): ").append(task).append(". ");
         sb.append("SIRF ye tools use kar sakti ho: ").append(allowed).append(". Inke bahar ka koi kaam mat karo; zaroori ho to report mein likho ki kis permission ki kami thi. ");
@@ -50,6 +53,7 @@ final class Brain {
         else sb.append("Is task mein kisi ko message/email bhejna allowed nahi hai jab tak recipients diye na hon. ");
         sb.append(CORE);
         sb.append("Background mode: koi kaam adhoora/unclear ho to andaza mat lagao — jitna pakka ho utna karo aur baaki report mein poochho. ");
+        sb.append("Kaam ko chhote steps mein todo, har step ke baad natija jaancho. 'Ye nahi ho sakta' mat bolo: jo jaankari/tool kam ho use research, web_fetch ya Termux (pkg/pip, ffmpeg, python) se khud poora karo; ek tareeka fail ho to doosra. Safety niyam (delete/payment/OTP/permission) kisi bhi haal mein nahi todne. ");
         sb.append("Aakhir mein chhota REPORT do: kya kiya, kya VERIFIED hua (file path/link ke saath), kya bacha ya fail hua.");
         return sb.toString();
     }

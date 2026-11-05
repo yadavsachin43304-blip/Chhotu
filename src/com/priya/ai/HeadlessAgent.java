@@ -42,12 +42,16 @@ final class HeadlessAgent {
     private final ActionExecutor exec;
     private boolean recipientOpened = false;
     private final StringBuilder trace = new StringBuilder();
+    /** true = started by the owner from the live chat (background_task), false = scheduled run. */
+    private final boolean live;
+    private PriyaJobs.Job job;
 
     HeadlessAgent(Context c, JSONObject schedule) {
         ctx = c.getApplicationContext();
         sched = schedule;
         task = schedule.optString("task", "");
         recipients = schedule.optString("recipients", "");
+        live = schedule.optBoolean("live", false);
         JSONArray sc = schedule.optJSONArray("scopes");
         if (sc != null) {
             for (int i = 0; i < sc.length(); i++) {
@@ -62,6 +66,14 @@ final class HeadlessAgent {
         }
         exec = new ActionExecutor(ctx, new MemoryStore(ctx));
     }
+
+    /** Lets the owner cancel this run (job.cancel) and shows the current step in job_status. */
+    HeadlessAgent attach(PriyaJobs.Job j) {
+        job = j;
+        return this;
+    }
+
+    private boolean cancelled() { return job != null && job.cancel; }
 
     // ------------------------------------------------------------------ schema conversion (Live -> Interactions)
 
@@ -183,32 +195,37 @@ final class HeadlessAgent {
     // ------------------------------------------------------------------ run
 
     String run() throws Exception {
-        long deadline = System.currentTimeMillis() + 20 * 60 * 1000L;
+        long deadline = System.currentTimeMillis() + (live ? 30 : 20) * 60 * 1000L;
+        final int maxTurns = live ? 60 : 40;
         String system = Brain.headlessPrompt(ctx, sched, allowed);
-        String input = "SCHEDULED TASK (Sachin ne pehle se order diya tha, ab chalana hai): " + task
+        String input = (live ? "BACKGROUND TASK (Sachin ne abhi live baat mein order diya hai; wo tumse baat karta rehta hai, tum peeche kaam karo): "
+                : "SCHEDULED TASK (Sachin ne pehle se order diya tha, ab chalana hai): ") + task
                 + "\nAllowed tools: " + allowed + (recipients.isEmpty() ? "" : "\nMessage/email sirf inko: " + recipients)
                 + "\nKaam poora karo, har step verify karo, aur aakhir mein report do.";
         boolean withSearch = true;
         int modelIdx = 0;
         JSONObject r = null;
         Exception last = null;
-        while (modelIdx < GeminiRest.TEXT_MODELS.length) {
+        final String[] models = GeminiRest.textModels();
+        while (modelIdx < models.length) {
             try {
-                JSONObject b = new JSONObject().put("model", GeminiRest.TEXT_MODELS[modelIdx]).put("system_instruction", system)
-                        .put("tools", tools(withSearch)).put("input", input);
-                r = GeminiRest.create(ctx, b, 180);
+                JSONObject b = GeminiRest.withThinking(new JSONObject().put("model", models[modelIdx]).put("system_instruction", system)
+                        .put("tools", tools(withSearch)).put("input", input), models[modelIdx], "medium");
+                r = GeminiRest.create(ctx, b, GeminiRest.ARGON.equals(models[modelIdx]) ? 600 : 180);
                 break;
             } catch (GeminiRest.ApiError e) {
                 last = e;
                 if (e.code == 400 && withSearch) { withSearch = false; continue; } // search + functions not accepted: drop search
+                GeminiRest.noteFail(models[modelIdx], e);
                 if (GeminiRest.tryNext(e)) { modelIdx++; withSearch = true; continue; }
                 throw e;
             }
         }
         if (r == null) throw last == null ? new Exception("model nahi mila") : last;
-        String model = GeminiRest.TEXT_MODELS[modelIdx];
+        String model = models[modelIdx];
 
-        for (int turn = 0; turn < 40; turn++) {
+        for (int turn = 0; turn < maxTurns; turn++) {
+            if (cancelled()) return "CANCELLED: owner ne roka.\nAb tak:\n" + GeminiRest.clip(trace.toString(), 1200);
             JSONArray steps = GeminiRest.steps(r);
             JSONArray results = new JSONArray();
             for (int i = 0; i < steps.length(); i++) {
@@ -219,6 +236,8 @@ final class HeadlessAgent {
                 JSONObject args;
                 if (argObj instanceof JSONObject) args = (JSONObject) argObj;
                 else { try { args = new JSONObject(String.valueOf(argObj)); } catch (Exception e) { args = new JSONObject(); } }
+                if (cancelled()) return "CANCELLED: owner ne roka.\nAb tak:\n" + GeminiRest.clip(trace.toString(), 1200);
+                if (job != null) PriyaJobs.stage(job, "step " + (turn + 1) + ": " + name);
                 String res = guard(name, args);
                 if (res == null) {
                     res = exec.run(name, args);
@@ -234,12 +253,13 @@ final class HeadlessAgent {
                 return text.isEmpty() ? "FAILED: model ne koi report nahi di.\nSteps:\n" + trace : text;
             }
             if (System.currentTimeMillis() > deadline) {
-                return "FAILED: 20 minute ki limit poori — task adhoora raha.\nAb tak:\n" + GeminiRest.clip(trace.toString(), 1200);
+                return "FAILED: " + (live ? 30 : 20) + " minute ki limit poori — task adhoora raha.\nAb tak:\n" + GeminiRest.clip(trace.toString(), 1200);
             }
             JSONObject b = new JSONObject().put("model", model).put("system_instruction", system)
                     .put("tools", tools(withSearch)).put("previous_interaction_id", r.optString("id")).put("input", results);
-            r = GeminiRest.create(ctx, b, 240);
+            GeminiRest.withThinking(b, model, "medium");
+            r = GeminiRest.create(ctx, b, GeminiRest.ARGON.equals(model) ? 600 : 240);
         }
-        return "FAILED: bahut zyada steps (40) — task rok diya.\nAb tak:\n" + GeminiRest.clip(trace.toString(), 1200);
+        return "FAILED: bahut zyada steps (" + maxTurns + ") — task rok diya.\nAb tak:\n" + GeminiRest.clip(trace.toString(), 1200);
     }
 }

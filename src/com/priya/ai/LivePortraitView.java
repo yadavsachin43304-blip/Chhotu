@@ -274,6 +274,7 @@ public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Ren
             "uniform vec4 uMouth;\n" +
             "uniform vec4 uMouth2;\n" +    // upper-lip y, open height, squash, has open picture
             "uniform float uOpen;\n" +
+            "uniform float uShape;\n" +
             "uniform float uBlink;\n" +
             "uniform float uAlpha;\n" +
             "uniform vec3 uCircle;\n" +    // floating face clip (px), z = 0: none
@@ -315,6 +316,11 @@ public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Ren
             "}\n" +
             "void main() {\n" +
             "  vec2 uv = vUV;\n" +
+            "  {\n" +   // mouth width follows the voice: spread (+) for aa/e/s, narrow (-) for o/u
+            "    vec2 m0 = (uv - uMouth.xy) / uMouth.zw;\n" +
+            "    float w0 = 1.0 - smoothstep(0.55, 1.0, length(m0));\n" +
+            "    uv.x = uMouth.x + (uv.x - uMouth.x) / (1.0 + uShape * w0);\n" +
+            "  }\n" +
             "  float sv = uv.y;\n" +
             "  vec4 lid = vec4(0.0); float lidOn = 0.0; vec4 lashC = vec4(0.0); float g = 0.0;\n" +
             "  if (uBlink > 0.001) {\n" +
@@ -394,7 +400,7 @@ public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Ren
 
     private int prog, bgProg, aUV, bgAP;
     private int uRect, uFace, uHead, uMisc, uMotion, uTime, uTex, uTexO, uEyeL, uEyeR, uLid, uMouth, uMouth2,
-            uOpen, uBlink, uAlpha, uCircle, uTilt;
+            uOpen, uBlink, uAlpha, uCircle, uTilt, uShape;
     private int bgCircle, bgFill, bgRing, bgRingW;
     private int vbo, ibo;
     private final int[] tex = new int[2];
@@ -406,7 +412,7 @@ public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Ren
     private long t0 = SystemClock.uptimeMillis(), lastDraw = 0, lastFrame = 0;
 
     // animation
-    private float open = 0, blink = 0, gx = 0, gy = 0, gtx = 0, gty = 0;
+    private float shape = 0, open = 0, blink = 0, gx = 0, gy = 0, gtx = 0, gty = 0;
     private long nextBlink = 0, blinkStart = -1, nextGaze = 0;
     private boolean doubleBlink = false;
     private final java.util.Random rnd = new java.util.Random();
@@ -419,7 +425,7 @@ public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Ren
             aUV = GLES20.glGetAttribLocation(prog, "aUV");
             uRect = u("uRect"); uFace = u("uFace"); uHead = u("uHead"); uMisc = u("uMisc"); uMotion = u("uMotion");
             uTime = u("uTime"); uTex = u("uTex"); uTexO = u("uTexO"); uEyeL = u("uEyeL"); uEyeR = u("uEyeR");
-            uLid = u("uLid"); uMouth = u("uMouth"); uMouth2 = u("uMouth2"); uOpen = u("uOpen"); uBlink = u("uBlink");
+            uLid = u("uLid"); uMouth = u("uMouth"); uMouth2 = u("uMouth2"); uOpen = u("uOpen"); uShape = u("uShape"); uBlink = u("uBlink");
             uAlpha = u("uAlpha"); uCircle = u("uCircle"); uTilt = u("uTilt");
             bgAP = GLES20.glGetAttribLocation(bgProg, "aP");
             bgCircle = GLES20.glGetUniformLocation(bgProg, "uCircle");
@@ -587,6 +593,7 @@ public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Ren
         GLES20.glUniform4f(uMotion, yaw, pitch, roll, breath);
         GLES20.glUniform1f(uTime, t % 6283.1853f);
         GLES20.glUniform1f(uOpen, open);
+        GLES20.glUniform1f(uShape, shape);
         GLES20.glUniform1f(uBlink, blink);
         GLES20.glUniform1f(uAlpha, overlay || PriyaBus.running() ? 1f : 0.85f);
         if (overlay) GLES20.glUniform3f(uCircle, vw / 2f, vh / 2f, Math.min(vw, vh) / 2f - ringW);
@@ -638,6 +645,8 @@ public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Ren
         float tau = target > open ? 0.025f : 0.080f;
         open += (target - open) * Math.min(1f, dt / tau);
         if (open < 0.003f) open = 0f;
+        float shT = speaking ? 0.10f * PriyaBus.mouthWide - 0.16f * PriyaBus.mouthRound : 0f;
+        shape += (shT - shape) * Math.min(1f, dt / 0.06f);
 
         // blink every 3-6 s (sometimes twice)
         if (nextBlink == 0) nextBlink = now + 1500 + rnd.nextInt(2500);

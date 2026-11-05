@@ -122,7 +122,7 @@ public class ActionExecutor {
                 case "use_skill": {
                     SkillStore.Skill sk = skills.find(args.optString("name", ""));
                     return sk == null ? "Is naam ka skill nahi hai. Skills: \n" + skills.summaryForPrompt()
-                            : "SKILL '" + sk.name + "' instructions:\n" + sk.instructions;
+                            : Owner.fix("SKILL '" + sk.name + "' instructions:\n" + sk.instructions);
                 }
                 case "create_skill": {
                     String nm = args.optString("name", "");
@@ -543,6 +543,17 @@ public class ActionExecutor {
         return forbidden(cmd) || DANGER_CMD.matcher(cmd).find();
     }
 
+    /** Priya's own source / backups / signing key are reachable only through the self_* tools. */
+    private static boolean touchesSelf(String s) {
+        if (s == null) return false;
+        String low = s.toLowerCase(Locale.ROOT);
+        return low.contains("priyaai") || low.contains("priyaself") || low.contains("selfup") || low.contains(".jks")
+                || low.contains("guard.sha") || low.contains("priya-release");
+    }
+
+    private static final String SELF_BLOCKED = "BLOCKED: Priya ka apna source / backup / signing key sirf self_* tools se badal sakta hai "
+            + "(owner ke order + confirm ke saath). code_run / code_write_file se wahan haath nahi lagta.";
+
     private static String dangerousCode(String code) {
         String low = code.toLowerCase(Locale.ROOT);
         for (String d : DANGER_CODE) if (low.contains(d)) return d;
@@ -582,6 +593,7 @@ public class ActionExecutor {
     private String codeWriteFile(String path, String content) {
         String abs = safePath(path);
         if (abs == null) return "Path galat hai. Project folder ke andar relative path do, jaise 'calculator/main.py'.";
+        if (touchesSelf(path) || touchesSelf(content)) return SELF_BLOCKED;
         String bad = dangerousCode(content);
         if (bad != null) return CODE_BLOCKED + " (mila: '" + bad + "')";
         if (content.length() > 200000) return "File bahut badi hai (200 KB se zyada). Chhote files mein todo.";
@@ -607,6 +619,7 @@ public class ActionExecutor {
 
     private synchronized String codeRun(String cmd, String workdir, int timeoutSec) {
         if (cmd.trim().isEmpty()) return "Kaunsi command chalani hai?";
+        if (touchesSelf(cmd) || touchesSelf(workdir)) return SELF_BLOCKED;
         if (dangerousCommand(cmd)) return CODE_BLOCKED;
         if (codeFails >= MAX_CODE_FAILS) {
             return "LIMIT: Code " + MAX_CODE_FAILS + " baar fail ho chuka hai. Ab aur try mat karo — Sachin ko asli error aur ab tak "

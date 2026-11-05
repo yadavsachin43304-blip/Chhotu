@@ -8,9 +8,20 @@ public final class Prefs {
     /** Gemini Live models, newest first. The service auto-falls-back through this list. */
     public static final String[] MODELS = {
             "gemini-3.8-live",
-            "gemini-3.1-flash-live-preview",
-            "gemini-2.5-flash-native-audio-preview-12-2025"
+            "gemini-3.8-live-extended-thinking"
     };
+    /** Live models Google shuts down on 2026-11-17 (deprecations page). A saved choice of these is moved to MODELS[0]. */
+    static final String[] RETIRED_MODELS = {
+            "gemini-3.1-flash-live-preview",
+            "gemini-2.5-flash-native-audio-preview-12-2025",
+            "gemini-live-2.5-flash-preview",
+            "gemini-2.0-flash-live-001"
+    };
+    static boolean retired(String m) {
+        if (m == null) return false;
+        for (String r : RETIRED_MODELS) if (r.equals(m.trim())) return true;
+        return false;
+    }
     /**
      * Priya has exactly ONE voice. Every setup / reconnect / fallback / test uses this same female voice,
      * so she never sounds like a different person between sessions.
@@ -29,10 +40,16 @@ public final class Prefs {
     public static String apiKey(Context c) { return sp(c).getString("api_key", ""); }
     public static void setApiKey(Context c, String v) { sp(c).edit().putString("api_key", v == null ? "" : v.trim()).apply(); }
 
-    public static String model(Context c) { return sp(c).getString("model", MODELS[0]); }
+    public static String model(Context c) {
+        String m = sp(c).getString("model", MODELS[0]);
+        return m == null || m.trim().isEmpty() || retired(m) ? MODELS[0] : m;
+    }
     public static void setModel(Context c, String v) { sp(c).edit().putString("model", v.trim()).apply(); }
 
-    public static String lastGoodModel(Context c) { return sp(c).getString("good_model", ""); }
+    public static String lastGoodModel(Context c) {
+        String m = sp(c).getString("good_model", "");
+        return retired(m) ? "" : m;
+    }
     public static boolean lastGoodFull(Context c) { return sp(c).getBoolean("good_full", true); }
     public static void setLastGood(Context c, String model, boolean full) {
         sp(c).edit().putString("good_model", model).putBoolean("good_full", full).apply();
@@ -74,15 +91,27 @@ public final class Prefs {
     public static void setVoiceF0(Context c, float v) { sp(c).edit().putFloat("voice_f0", v).apply(); }
     /** Owner's name for the voice lock line ("Main sirf <owner> ki baat sunti hoon"). */
     public static String ownerName(Context c) {
-        String v = sp(c).getString("owner_name", "Sachin");
-        return v == null || v.trim().isEmpty() ? "Sachin" : v.trim();
+        String v = sp(c).getString("owner_name", "Vivek");
+        return v == null || v.trim().isEmpty() ? "Vivek" : v.trim();
     }
     public static void setOwnerName(Context c, String v) { sp(c).edit().putString("owner_name", v == null ? "" : v.trim()).apply(); }
     /** Voice lock strictness: 0 low, 1 medium, 2 high. */
     public static int voiceStrictness(Context c) { return sp(c).getInt("voice_strict", 1); }
     public static void setVoiceStrictness(Context c, int v) { sp(c).edit().putInt("voice_strict", Math.max(0, Math.min(2, v))).apply(); }
-    public static boolean voiceLock(Context c) { return sp(c).getBoolean("voice_lock", false); }
+    /** Default ON: with no voiceprint enrolled it does nothing; once Vivek ji enrols, only that voice is obeyed. */
+    public static boolean voiceLock(Context c) { return sp(c).getBoolean("voice_lock", true); }
     public static void setVoiceLock(Context c, boolean v) { sp(c).edit().putBoolean("voice_lock", v).apply(); }
+
+    /** Barge-in (rok-tok) speed while Priya talks: 0 = careful, 1 = normal, 2 = instant (default). */
+    public static int bargeLevel(Context c) { return sp(c).getInt("barge_level", 2); }
+    public static void setBargeLevel(Context c, int v) { sp(c).edit().putInt("barge_level", Math.max(0, Math.min(2, v))).apply(); }
+
+    /** Self-upgrade: Termux folder that holds Priya's own source (the folder build.sh lives in). */
+    public static String selfSrcDir(Context c) { return sp(c).getString("self_src", "PriyaAI"); }
+    public static void setSelfSrcDir(Context c, String v) { sp(c).edit().putString("self_src", v == null ? "PriyaAI" : v.trim()).apply(); }
+    /** Text shown after an upgrade installed itself (what changed). */
+    public static String upgradeNote(Context c) { return sp(c).getString("upgrade_note", ""); }
+    public static void setUpgradeNote(Context c, String v) { sp(c).edit().putString("upgrade_note", v == null ? "" : v).commit(); }
 
     public static boolean floatingFace(Context c) { return sp(c).getBoolean("floating_face", true); }
     public static void setFloatingFace(Context c, boolean v) { sp(c).edit().putBoolean("floating_face", v).apply(); }
