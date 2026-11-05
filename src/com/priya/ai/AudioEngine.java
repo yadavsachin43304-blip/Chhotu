@@ -298,6 +298,8 @@ public class AudioEngine {
     private final long[] lvlFrame = new long[RING];
     private final float[] lvlVal = new float[RING];
     private final float[] lvlWide = new float[RING], lvlRound = new float[RING];
+    private final float[] lvlBand = new float[RING * 4];
+    private final VoiceBands vbands = new VoiceBands(24000f);
     private int lvlW = 0, lvlR = 0;
 
     private long head(AudioTrack t) {
@@ -321,6 +323,8 @@ public class AudioEngine {
             int k = (lvlR - 1) % RING;
             PriyaBus.mouthWide = lvlWide[k];
             PriyaBus.mouthRound = lvlRound[k];
+            PriyaBus.band0 = lvlBand[k * 4]; PriyaBus.band1 = lvlBand[k * 4 + 1];
+            PriyaBus.band2 = lvlBand[k * 4 + 2]; PriyaBus.band3 = lvlBand[k * 4 + 3];
         }
         long pend = pendingFrames(t);
         if (pend > 0) speakEnd = Math.max(speakEnd, now + pend / FPMS);
@@ -343,7 +347,13 @@ public class AudioEngine {
         PriyaBus.outLevel = 0f;
         PriyaBus.mouthWide = 0f;
         PriyaBus.mouthRound = 0f;
+        clearBands();
+        vbands.reset();
         speakEnd = SystemClock.elapsedRealtime();
+    }
+
+    private static void clearBands() {
+        PriyaBus.band0 = 0f; PriyaBus.band1 = 0f; PriyaBus.band2 = 0f; PriyaBus.band3 = 0f;
     }
 
     /** Writes len bytes in 20 ms slices. Returns false if an interrupt arrived (rest dropped). */
@@ -379,6 +389,8 @@ public class AudioEngine {
             }
             lvlWide[lvlW % RING] = wide;
             lvlRound[lvlW % RING] = round;
+            vbands.process(b, off, n);   // band shares for the 3D head's visemes
+            System.arraycopy(vbands.share, 0, lvlBand, (lvlW % RING) * 4, 4);
             lvlW++;
             if (lvlW - lvlR > RING) lvlR = lvlW - RING;
             int w = t.write(b, off, n); // blocking; at most ~one slice of waiting
@@ -423,6 +435,7 @@ public class AudioEngine {
                     PriyaBus.outLevel = 0f;
                     PriyaBus.mouthWide = 0f;
                     PriyaBus.mouthRound = 0f;
+                    clearBands();
                     try { trackUnderruns = t.getUnderrunCount(); } catch (Throwable ignored) { }
                 }
                 continue;

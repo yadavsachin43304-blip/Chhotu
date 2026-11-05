@@ -36,7 +36,7 @@ import javax.microedition.khronos.opengles.GL10;
  * overlay) and the small round floating face (face circle on a dark disc + state ring, setZOrderOnTop).
  * If anything about GL fails the {@link FailListener} is told (main thread) so callers fall back to the pictures.
  */
-public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Renderer {
+public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Renderer, AvatarGL {
 
     public interface FailListener { void onPortraitFailed(); }
 
@@ -110,10 +110,12 @@ public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Ren
 
     public void setFailListener(FailListener l) { failListener = l; }
 
+    @Override public void setOnGlFailed(final Runnable r) { failListener = r == null ? null : r::run; }
+
     private static int clampStyle(int s) { return Math.max(0, Math.min(2, s)); }
 
     /** Follow the avatar choice (0 Hologram, 1 Cyber, 2 Anime). */
-    public void setStyle(int s) {
+    @Override public void setStyle(int s) {
         s = clampStyle(s);
         if (s == style) return;
         style = s;
@@ -121,7 +123,7 @@ public class LivePortraitView extends GLSurfaceView implements GLSurfaceView.Ren
     }
 
     /** Main screen: the full picture's rect in this view's pixels (it may hang outside the view; it is clipped). */
-    public void setImageRect(float l, float t, float r, float b) {
+    @Override public void setImageRect(float l, float t, float r, float b) {
         rl = l; rt = t; rr = r; rb = b;
         hasRect = r - l > 2 && b - t > 2;
     }

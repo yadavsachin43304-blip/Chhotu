@@ -45,7 +45,7 @@ public class FloatingFace extends View {
     private final int size;
     /** The view actually in the window: the live 3D face, or this picture view (fallback). */
     private View shown;
-    private LivePortraitView gl;
+    private android.opengl.GLSurfaceView gl;
 
     public FloatingFace(Context c) {
         super(c.getApplicationContext());
@@ -65,7 +65,7 @@ public class FloatingFace extends View {
     private final Runnable frame = new Runnable() {
         @Override public void run() {
             if (!attached) return;
-            if (shown == gl && gl != null) gl.setStyle(Prefs.theme(getContext()));
+            if (shown == gl && gl != null) ((AvatarGL) gl).setStyle(Prefs.theme(getContext()));
             else invalidate();
             h.postDelayed(this, 40);
         }
@@ -80,21 +80,23 @@ public class FloatingFace extends View {
     }
 
     private void show() {
-        if (Prefs.avatar3D(getContext()) && LivePortraitView.supported(getContext())) {
+        boolean head = Maya3DHeadView.supported(getContext());
+        if (Prefs.avatar3D(getContext()) && (head || LivePortraitView.supported(getContext()))) {
             try {
                 if (gl == null) {
-                    gl = new LivePortraitView(getContext(), true);
-                    gl.setFailListener(this::fallbackToPicture);
+                    gl = head ? new Maya3DHeadView(getContext(), true) : new LivePortraitView(getContext(), true);
+                    ((AvatarGL) gl).setOnGlFailed(this::fallbackToPicture);
                     gl.setOnTouchListener((v, e) -> handleTouch(e));
                 }
-                gl.setStyle(Prefs.theme(getContext()));
+                ((AvatarGL) gl).setStyle(Prefs.theme(getContext()));
                 wm.addView(gl, lp);
                 shown = gl;
                 attached = true;
                 h.post(frame);
                 return;
             } catch (Throwable t) {
-                LivePortraitView.failed = true;
+                if (gl instanceof Maya3DHeadView || (gl == null && head)) Maya3DHeadView.failed = true;
+                else LivePortraitView.failed = true;
                 gl = null;
             }
         }
