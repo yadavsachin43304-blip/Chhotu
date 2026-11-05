@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Build;
+import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -92,29 +93,39 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         } catch (Exception ignored) { }
     }
 
-    // ------------------------------------------------------------------ living portrait (falls back to pictures)
-    // (v33: the procedural Avatar3DView heads are no longer used; Priya's own picture is animated instead)
+    // ------------------------------------------------------------------ live avatar (falls back step by step)
+    // v36: Maya3DHeadView (real 3D head mesh per picture) first; if its GL fails, the older LivePortraitView; if that
+    // fails too, the plain pictures drawn by ThemeView.
 
-    private LivePortraitView av3d;
+    private GLSurfaceView av3d;
 
     /** Adds / removes the live avatar to match the Settings toggle; pictures are used if GL is off or broke. */
     private void ensureAvatar3D() {
-        boolean want = Prefs.avatar3D(this) && LivePortraitView.supported(this);
+        boolean head = Maya3DHeadView.supported(this);
+        boolean want = Prefs.avatar3D(this) && (head || LivePortraitView.supported(this));
         if (want && av3d == null) {
             try {
-                av3d = new LivePortraitView(this, false);
-                av3d.setStyle(Prefs.theme(this));
-                av3d.setFailListener(this::dropAvatar3D);
+                av3d = head ? new Maya3DHeadView(this, false) : new LivePortraitView(this, false);
+                ((AvatarGL) av3d).setStyle(Prefs.theme(this));
+                ((AvatarGL) av3d).setOnGlFailed(this::avatarGlFailed);
                 root.addView(av3d, 1, new FrameLayout.LayoutParams(1, 1));
                 view.setAvatar3D(true);
                 placeAvatar3D();
             } catch (Throwable t) {
-                LivePortraitView.failed = true;
+                if (head) Maya3DHeadView.failed = true; else LivePortraitView.failed = true;
                 dropAvatar3D();
+                if (head) ensureAvatar3D();
             }
         } else if (!want && av3d != null) {
             dropAvatar3D();
         }
+    }
+
+    /** GL broke in the current avatar view: try the next one down (3D head -> live portrait -> pictures). */
+    private void avatarGlFailed() {
+        boolean wasHead = av3d instanceof Maya3DHeadView;
+        dropAvatar3D();
+        if (wasHead) ensureAvatar3D();
     }
 
     private void dropAvatar3D() {
@@ -134,7 +145,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
         int w = Math.round(r.width()), h = Math.round(r.height());
         int l = Math.round(r.left), t = Math.round(r.top);
         android.graphics.RectF full = view.avatarImageRect();   // the picture, relative to the GL view
-        av3d.setImageRect(full.left - l, full.top - t, full.right - l, full.bottom - t);
+        ((AvatarGL) av3d).setImageRect(full.left - l, full.top - t, full.right - l, full.bottom - t);
         if (lp.width == w && lp.height == h && lp.leftMargin == l && lp.topMargin == t) return;
         lp.width = w; lp.height = h;
         lp.gravity = Gravity.TOP | Gravity.START;
@@ -221,7 +232,7 @@ public class MainActivity extends Activity implements ThemeView.Listener {
 
     private void applyTheme(int t) {
         view.setTheme(t);
-        if (av3d != null) { av3d.setStyle(t); placeAvatar3D(); }
+        if (av3d != null) { ((AvatarGL) av3d).setStyle(t); placeAvatar3D(); }
         getWindow().setStatusBarColor(ThemeView.BG_TOP[t]);
         getWindow().setNavigationBarColor(ThemeView.BG_BOTTOM[t]);
         for (int i = 0; i < tiles.length; i++) {
